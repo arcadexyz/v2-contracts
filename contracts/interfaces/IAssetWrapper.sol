@@ -46,14 +46,6 @@ interface IAssetWrapper {
     function initializeBundle(address to) external;
 
     /**
-     * @dev Creates a new bundle token for `to`. Its token ID will be
-     * automatically assigned (and available on the emitted {IERC721-Transfer} event)
-     *
-     * See {ERC721-_mint}.
-     */
-    function initializeBundle(address to, uint256 tokenId) external;
-
-    /**
      * @dev Deposit some ERC20 tokens into a given bundle
      *
      * Requirements:

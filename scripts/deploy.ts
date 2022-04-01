@@ -9,6 +9,8 @@ import {
     PromissoryNote,
     RepaymentController,
     OriginationController,
+    FlashRollover,
+    PunkRouter
 } from "../typechain";
 export interface DeployedResources {
     assetWrapper: AssetWrapper;
@@ -78,6 +80,30 @@ export async function main(
     await updateOriginationControllerPermissions.wait();
 
     console.log("OriginationController deployed to:", originationController.address);
+
+    const WRAPPED_PUNKS = "0xb7F7F6C52F2e2fdb1963Eab30438024864c313F6";
+    const CRYPTO_PUNKS = "0xb47e3cd837ddf8e4c57f05d70ab865de6e193bbb";
+    const PunkRouter = await ethers.getContractFactor("PunkRouter");
+    const punkRouter = await PunkRouter.deploy(assetWrapper.address, WRAPPED_PUNKS, CRYPTO_PUNKS);
+    await punkRouter.deployed();
+
+    console.log("PunkRouter deployed to:", punkRouter.address);
+
+    const ADDRESSES_PROVIDER_ADDRESS = "0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5";
+
+    const FlashRolloverFactory = await ethers.getContractFactory("FlashRollover");
+    const flashRollover = <FlashRollover>(
+        await FlashRolloverFactory.deploy(
+            ADDRESSES_PROVIDER_ADDRESS
+        )
+    );
+
+    await flashRollover.deployed();
+
+    console.log("FlashRollover deployed to:", flashRollover.address);
+
+    // Set flash rollover in asset wrapper
+    await assetWrapper.setRContract(flashRollover.address);
 
     return {
         assetWrapper,

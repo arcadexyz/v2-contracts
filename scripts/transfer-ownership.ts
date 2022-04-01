@@ -7,6 +7,7 @@ export async function main(
     LOAN_CORE_ADDRESS = process.env.LOAN_CORE_ADDRESS,
     ADMIN_ADDRESS = process.env.ADMIN_ADDRESS,
     FEE_CONTROLLER_ADDRESS = process.env.FEE_CONTROLLER_ADDRESS,
+    ASSET_WRAPPER_ADDRESS = process.env.ASSET_WRAPPER_ADDRESS
 ): Promise<void> {
     if (!LOAN_CORE_ADDRESS) {
         throw new Error("Must specify LOAN_CORE_ADDRESS in environment!");
@@ -43,6 +44,13 @@ export async function main(
         const feeController = await ethers.getContractAt("FeeController", FEE_CONTROLLER_ADDRESS);
         const updateFeeControllerAdmin = await feeController.transferOwnership(ADMIN_ADDRESS);
         await updateFeeControllerAdmin.wait();
+    }
+
+    if (ASSET_WRAPPER_ADDRESS) {
+        // set FeeController admin
+        const assetWrapper = await ethers.getContractAt("AssetWrapper", ASSET_WRAPPER_ADDRESS);
+        const updateAssetWrapperAdmin = await assetWrapper.transferOwnership(ADMIN_ADDRESS);
+        await updateAssetWrapperAdmin.wait();
     }
 
     console.log("Transferred all ownership.\n");

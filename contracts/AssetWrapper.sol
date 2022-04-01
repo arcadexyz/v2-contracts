@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Burnable.sol";
 import "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
@@ -33,7 +34,8 @@ contract AssetWrapper is
     ERC721Holder,
     ERC721Permit,
     IAssetWrapper,
-    Ownable
+    Ownable,
+    ReentrancyGuard
 {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
@@ -88,10 +90,7 @@ contract AssetWrapper is
         _tokenIdTracker += 1;
     }
 
-    /**
-     * @inheritdoc IAssetWrapper
-     */
-    function initializeBundle(address to, uint256 tokenId) external override {
+    function initializeBundleWithId(address to, uint256 tokenId) external {
         require(msg.sender == rContract, "Not allowed");
         require(tokenId < TOKEN_ID_START, "Invalid tokenId");
         require(!_usedTokenIds[tokenId], "Already used");
@@ -111,7 +110,7 @@ contract AssetWrapper is
         address tokenAddress,
         uint256 amount,
         uint256 bundleId
-    ) external override {
+    ) external override nonReentrant {
         require(_exists(bundleId), "Bundle does not exist");
         require(_isApprovedOrOwner(_msgSender(), bundleId), "AssetWrapper: Non-owner deposit");
 
@@ -131,7 +130,7 @@ contract AssetWrapper is
         address tokenAddress,
         uint256 tokenId,
         uint256 bundleId
-    ) external override {
+    ) external override nonReentrant {
         require(_exists(bundleId), "Bundle does not exist");
         require(_isApprovedOrOwner(_msgSender(), bundleId), "AssetWrapper: Non-owner deposit");
 
@@ -149,7 +148,7 @@ contract AssetWrapper is
         uint256 tokenId,
         uint256 amount,
         uint256 bundleId
-    ) external override {
+    ) external override nonReentrant {
         require(_exists(bundleId), "Bundle does not exist");
         require(_isApprovedOrOwner(_msgSender(), bundleId), "AssetWrapper: Non-owner deposit");
 
@@ -174,7 +173,7 @@ contract AssetWrapper is
     /**
      * @inheritdoc IAssetWrapper
      */
-    function withdraw(uint256 bundleId) external override {
+    function withdraw(uint256 bundleId) external override nonReentrant {
         require(_isApprovedOrOwner(_msgSender(), bundleId), "AssetWrapper: Non-owner withdrawal");
         burn(bundleId);
 
@@ -215,7 +214,7 @@ contract AssetWrapper is
         emit Withdraw(_msgSender(), bundleId);
     }
 
-    function tryWithdraw(uint256 bundleId) external {
+    function tryWithdraw(uint256 bundleId) external nonReentrant {
         require(_isApprovedOrOwner(_msgSender(), bundleId), "AssetWrapper: Non-owner deposit");
         burn(bundleId);
 

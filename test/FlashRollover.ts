@@ -1055,7 +1055,7 @@ describe("FlashRollover", () => {
             const tx = await flashRollover.connect(borrower).rolloverLoan(contracts, loanId, loanTerms, v, r, s);
             const receipt = await tx.wait();
             const gasUsed = receipt.gasUsed;
-            expect(gasUsed.toString()).to.equal("1319889");
+            expect(gasUsed.toString()).to.equal("1316552");
         });
     });
 

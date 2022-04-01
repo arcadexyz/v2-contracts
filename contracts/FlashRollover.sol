@@ -264,20 +264,8 @@ contract FlashRollover is IFlashRollover, ReentrancyGuard {
         AssetWrapper sourceAssetWrapper = AssetWrapper(address(contracts.sourceAssetWrapper));
         AssetWrapper targetAssetWrapper = AssetWrapper(address(contracts.targetAssetWrapper));
 
-        ERC20Holding[] memory bundleERC20Holdings = new ERC20Holding[](sourceAssetWrapper.numERC20Holdings(bundleId));
         ERC721Holding[] memory bundleERC721Holdings = new ERC721Holding[](sourceAssetWrapper.numERC721Holdings(bundleId));
         ERC1155Holding[] memory bundleERC1155Holdings = new ERC1155Holding[](sourceAssetWrapper.numERC1155Holdings(bundleId));
-        uint256 ethHoldings = sourceAssetWrapper.bundleETHHoldings(oldBundleId);
-
-        for (uint256 i = 0; i < bundleERC20Holdings.length; i++) {
-            (address tokenAddr, uint256 amount) = sourceAssetWrapper.bundleERC20Holdings(oldBundleId, i);
-
-            if (tokenAddr == address(0)) {
-                break;
-            }
-
-            bundleERC20Holdings[i] = ERC20Holding(tokenAddr, amount);
-        }
 
         for (uint256 i = 0; i < bundleERC721Holdings.length; i++) {
             (address tokenAddr, uint256 tokenId) = sourceAssetWrapper.bundleERC721Holdings(oldBundleId, i);
@@ -302,18 +290,7 @@ contract FlashRollover is IFlashRollover, ReentrancyGuard {
 
         sourceAssetWrapper.withdraw(oldBundleId);
 
-        targetAssetWrapper.initializeBundle(address(this), oldBundleId);
-
-        for (uint256 i = 0; i < bundleERC20Holdings.length; i++) {
-           ERC20Holding memory h = bundleERC20Holdings[i];
-
-            if (h.tokenAddress == address(0)) {
-                break;
-            }
-
-            IERC20(h.tokenAddress).approve(address(targetAssetWrapper), h.amount);
-            targetAssetWrapper.depositERC20(h.tokenAddress, h.amount, oldBundleId);
-        }
+        targetAssetWrapper.initializeBundleWithId(address(this), oldBundleId);
 
         for (uint256 i = 0; i < bundleERC721Holdings.length; i++) {
             ERC721Holding memory h = bundleERC721Holdings[i];
@@ -336,8 +313,6 @@ contract FlashRollover is IFlashRollover, ReentrancyGuard {
             IERC1155(h.tokenAddress).setApprovalForAll(address(targetAssetWrapper), true);
             targetAssetWrapper.depositERC1155(h.tokenAddress, h.tokenId, h.amount, oldBundleId);
         }
-
-        targetAssetWrapper.depositETH{ value: ethHoldings }(oldBundleId);
     }
 
     function _getContracts(RolloverContractParams memory contracts) internal returns (OperationContracts memory) {
