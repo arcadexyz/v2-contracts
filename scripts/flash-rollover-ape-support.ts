@@ -29,35 +29,42 @@ export async function main(): Promise<void> {
     // await whale.sendTransaction({ to: BORROWER, value: ethers.utils.parseEther("1000") })
     // await whale.sendTransaction({ to: LENDER, value: ethers.utils.parseEther("1000") })
 
-    const tokenId = 10372;
+    // const tokenId = 10372;
 
-    const erc1155Factory = await ethers.getContractFactory("ERC1155");
-    const ll = await erc1155Factory.attach("0x76be3b62873462d2142405439777e971754e8e77");
-    const balance = await ll.balanceOf("0x5CB803c31e8f4F895a3AB19d8218646dC63e9Dc2", 10372);
+    const erc1155Factory = await ethers.getContractFactory("ERC721");
+    const ll = await erc1155Factory.attach("0xb7F7F6C52F2e2fdb1963Eab30438024864c313F6");
+    const balance = await ll.ownerOf(9847);
 
     console.log('BALANCE', balance.toString());
 
-    const bundleId = 225;
+    const bundleId = 13;
 
     const AssetWrapperFactory = await ethers.getContractFactory("AssetWrapper");
     const assetWrapper = <AssetWrapper>await AssetWrapperFactory.attach("0x5CB803c31e8f4F895a3AB19d8218646dC63e9Dc2");
 
-    const result = await assetWrapper.numERC1155Holdings(bundleId);
+    const result = await assetWrapper.numERC721Holdings(bundleId);
     console.log('NUM HOLDINGS', result.toString());
+
+    const result2 = await assetWrapper['bundleERC721Holdings(uint256,uint256)'](bundleId, 0);
+    console.log('NUM HOLDINGS', result2.tokenId.toString());
+    console.log('NUM HOLDINGS', result2.tokenAddress.toString());
 
     const LoanCoreFactory = await ethers.getContractFactory("LoanCore");
     const loanCore = <LoanCore>await LoanCoreFactory.attach("0x7691EE8feBD406968D46F9De96cB8CC18fC8b325");
 
-    const ld = await loanCore.getLoan(1);
+    const ld = await loanCore.getLoan(3);
+    const tokenId = ld.terms.collateralTokenId;
+
+    console.log("BUNDLE ID", tokenId.toString());
 
     const promissoryNoteFactory = await ethers.getContractFactory("PromissoryNote");
     const bn = await promissoryNoteFactory.attach("0xc3231258D6Ed397Dce7a52a27f816c8f41d22151")
     const ln = await promissoryNoteFactory.attach("0xe1eF2656D965ac9E3Fe151312f19F3D4C5f0EfA3")
 
-    console.log(await bn.ownerOf(1));
-    console.log(await ln.ownerOf(1));
+    console.log(await bn.ownerOf(3));
+    console.log(await ln.ownerOf(3));
 
-    console.log(ld)
+    // console.log(ld)
 
     process.exit();
 
