@@ -4,6 +4,8 @@ pragma experimental ABIEncoderV2;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
+import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 import "./external/interfaces/ILendingPool.sol";
@@ -28,7 +30,7 @@ import "./AssetWrapper.sol";
  * Full API docs at docs/FlashRollover.md
  *
  */
-contract FlashRollover is IFlashRollover, ReentrancyGuard {
+contract FlashRollover is IFlashRollover, ReentrancyGuard, ERC721Holder, ERC1155Holder {
     using SafeERC20 for IERC20;
 
     struct ERC20Holding {
@@ -264,28 +266,19 @@ contract FlashRollover is IFlashRollover, ReentrancyGuard {
         AssetWrapper sourceAssetWrapper = AssetWrapper(address(contracts.sourceAssetWrapper));
         AssetWrapper targetAssetWrapper = AssetWrapper(address(contracts.targetAssetWrapper));
 
-        ERC721Holding[] memory bundleERC721Holdings = new ERC721Holding[](sourceAssetWrapper.numERC721Holdings(bundleId));
-        ERC1155Holding[] memory bundleERC1155Holdings = new ERC1155Holding[](sourceAssetWrapper.numERC1155Holdings(bundleId));
+        ERC721Holding[] memory bundleERC721Holdings = new ERC721Holding[](20);
+        ERC1155Holding[] memory bundleERC1155Holdings = new ERC1155Holding[](20);
 
         for (uint256 i = 0; i < bundleERC721Holdings.length; i++) {
-            (address tokenAddr, uint256 tokenId) = sourceAssetWrapper.bundleERC721Holdings(oldBundleId, i);
-
-            if (tokenAddr == address(0)) {
-                break;
-            }
-
-            bundleERC721Holdings[i] = ERC721Holding(tokenAddr, tokenId);
+            try sourceAssetWrapper.bundleERC721Holdings(oldBundleId, i) returns (address tokenAddr, uint256 tokenId) {
+                bundleERC721Holdings[i] = ERC721Holding(tokenAddr, tokenId);
+            } catch { break; }
         }
 
         for (uint256 i = 0; i < bundleERC1155Holdings.length; i++) {
-            (address tokenAddr, uint256 tokenId, uint256 amount) =
-                sourceAssetWrapper.bundleERC1155Holdings(oldBundleId, i);
-
-            if (tokenAddr == address(0)) {
-                break;
-            }
-
-            bundleERC1155Holdings[i] = ERC1155Holding(tokenAddr, tokenId, amount);
+            try sourceAssetWrapper.bundleERC1155Holdings(oldBundleId, i) returns (address tokenAddr, uint256 tokenId, uint256 amount) {
+                bundleERC1155Holdings[i] = ERC1155Holding(tokenAddr, tokenId, amount);
+            } catch { break; }
         }
 
         sourceAssetWrapper.withdraw(oldBundleId);
@@ -313,6 +306,8 @@ contract FlashRollover is IFlashRollover, ReentrancyGuard {
             IERC1155(h.tokenAddress).setApprovalForAll(address(targetAssetWrapper), true);
             targetAssetWrapper.depositERC1155(h.tokenAddress, h.tokenId, h.amount, oldBundleId);
         }
+
+        bundleId = oldBundleId;
     }
 
     function _getContracts(RolloverContractParams memory contracts) internal returns (OperationContracts memory) {

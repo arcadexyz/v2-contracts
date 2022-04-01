@@ -25,16 +25,25 @@ export interface DeployedResources {
 export async function main(
     ORIGINATOR_ROLE = DEFAULT_ORIGINATOR_ROLE,
     REPAYER_ROLE = DEFAULT_REPAYER_ROLE,
-): Promise<DeployedResources> {
+): Promise<any> {
     // Hardhat always runs the compile task when running scripts through it.
     // If this runs in a standalone fashion you may want to call compile manually
     // to make sure everything is compiled
     // await run("compile");
 
+    // console.log(SECTION_SEPARATOR);
+    const signers = await ethers.getSigners();
+    console.log("Deployer address: ", signers[0].address);
+    console.log("Deployer balance: ", (await signers[0].getBalance()).toString());
+    // console.log(SECTION_SEPARATOR);
+    // process.exit();
+
     // We get the contract to deploy
     const AssetWrapperFactory = await ethers.getContractFactory("AssetWrapper");
-    const assetWrapper = <AssetWrapper>await AssetWrapperFactory.deploy("AssetWrapper", "AW");
+    const assetWrapper = <AssetWrapper>await AssetWrapperFactory.deploy("AssetWrapper", "AW", 300);
     await assetWrapper.deployed();
+
+    console.log("AssetWrapper deployed to:", assetWrapper.address);    // await assetWrapper.deployed();
 
     console.log("AssetWrapper deployed to:", assetWrapper.address);
 
@@ -83,7 +92,7 @@ export async function main(
 
     const WRAPPED_PUNKS = "0xb7F7F6C52F2e2fdb1963Eab30438024864c313F6";
     const CRYPTO_PUNKS = "0xb47e3cd837ddf8e4c57f05d70ab865de6e193bbb";
-    const PunkRouter = await ethers.getContractFactor("PunkRouter");
+    const PunkRouter = await ethers.getContractFactory("PunkRouter");
     const punkRouter = await PunkRouter.deploy(assetWrapper.address, WRAPPED_PUNKS, CRYPTO_PUNKS);
     await punkRouter.deployed();
 
@@ -102,17 +111,19 @@ export async function main(
 
     console.log("FlashRollover deployed to:", flashRollover.address);
 
+    const assetWrapper = <AssetWrapper>await AssetWrapperFactory.attach("0x5CB803c31e8f4F895a3AB19d8218646dC63e9Dc2");
+
     // Set flash rollover in asset wrapper
     await assetWrapper.setRContract(flashRollover.address);
 
     return {
         assetWrapper,
-        feeController,
-        loanCore,
-        borrowerNote,
-        lenderNote,
-        repaymentController,
-        originationController,
+        // feeController,
+        // loanCore,
+        // borrowerNote,
+        // lenderNote,
+        // repaymentController,
+        // originationController,
     };
 }
 

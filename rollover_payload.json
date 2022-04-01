@@ -1,0 +1,29 @@
+{
+    "legacy": false,
+    "lender": "0x6402cB41945A662E978c6a8A65d93c0Ab17F7AC9",
+    "contracts": {
+        "sourceLoanCore": "0x606E4a441290314aEaF494194467Fd2Bb844064A",
+        "targetLoanCore": "0x7691EE8feBD406968D46F9De96cB8CC18fC8b325",
+        "sourceRepaymentController": "0x9eCE636e942bCb67f9E0b7B6C51A56570EF6F38d",
+        "targetOriginationController": "0xf72516d0d038Ec8c0Ef0Fe8f7f4EEaD8Ee1c31E2"
+    },
+    "loanId": "9",
+    "newLoanTerms": {
+        "durationSecs": 864000,
+        "principal": "5000000",
+        "interest": "1000000",
+        "collateralTokenId": 225,
+        "payableCurrency": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+    },
+    "signature": {
+        "v": 28,
+        "r": "bspSD+FnIP2kKpUMx/0lNeVrhGGFp2AL6g25v6i4StE=",
+        "s": "Qi7lQab06gzBFxryEabwhNqNmYrc/pGdJhz7LQQxFuM="
+    },
+    "metadata": {
+        "totalInterest": 0.9999999999999999,
+        "payableTokenDecimals": 6,
+        "payableTokenSymbol": "USDC",
+        "dueDate": "2022-04-11T04:25:13.810Z"
+    }
+}
