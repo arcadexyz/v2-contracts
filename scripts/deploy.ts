@@ -25,69 +25,78 @@ export interface DeployedResources {
 export async function main(
     ORIGINATOR_ROLE = DEFAULT_ORIGINATOR_ROLE,
     REPAYER_ROLE = DEFAULT_REPAYER_ROLE,
-): Promise<DeployedResources> {
+): Promise<any> {
     // Hardhat always runs the compile task when running scripts through it.
     // If this runs in a standalone fashion you may want to call compile manually
     // to make sure everything is compiled
     // await run("compile");
 
+    // console.log(SECTION_SEPARATOR);
+    const signers = await ethers.getSigners();
+    console.log("Deployer address: ", signers[0].address);
+    console.log("Deployer balance: ", (await signers[0].getBalance()).toString());
+    // console.log(SECTION_SEPARATOR);
+    // process.exit();
+
     // We get the contract to deploy
     const AssetWrapperFactory = await ethers.getContractFactory("AssetWrapper");
-    const assetWrapper = <AssetWrapper>await AssetWrapperFactory.deploy("AssetWrapper", "AW");
-    await assetWrapper.deployed();
+    // const assetWrapper = <AssetWrapper>await AssetWrapperFactory.deploy("AssetWrapper", "AW", 300);
+    // await assetWrapper.deployed();
 
-    console.log("AssetWrapper deployed to:", assetWrapper.address);
+    // console.log("AssetWrapper deployed to:", assetWrapper.address);    // await assetWrapper.deployed();
 
-    const FeeControllerFactory = await ethers.getContractFactory("FeeController");
-    const feeController = <FeeController>await FeeControllerFactory.deploy();
-    await feeController.deployed();
+    // console.log("AssetWrapper deployed to:", assetWrapper.address);
 
-    console.log("FeeController deployed to: ", feeController.address);
+    // const FeeControllerFactory = await ethers.getContractFactory("FeeController");
+    // const feeController = <FeeController>await FeeControllerFactory.deploy();
+    // await feeController.deployed();
 
-    const LoanCoreFactory = await ethers.getContractFactory("LoanCore");
-    const loanCore = <LoanCore>await LoanCoreFactory.deploy(assetWrapper.address, feeController.address);
-    await loanCore.deployed();
+    // console.log("FeeController deployed to: ", feeController.address);
 
-    const promissoryNoteFactory = await ethers.getContractFactory("PromissoryNote");
-    const borrowerNoteAddr = await loanCore.borrowerNote();
-    const borrowerNote = <PromissoryNote>await promissoryNoteFactory.attach(borrowerNoteAddr);
-    const lenderNoteAddr = await loanCore.lenderNote();
-    const lenderNote = <PromissoryNote>await promissoryNoteFactory.attach(lenderNoteAddr);
+    // const LoanCoreFactory = await ethers.getContractFactory("LoanCore");
+    // const loanCore = <LoanCore>await LoanCoreFactory.deploy(assetWrapper.address, feeController.address);
+    // await loanCore.deployed();
 
-    console.log("LoanCore deployed to:", loanCore.address);
-    console.log("BorrowerNote deployed to:", borrowerNoteAddr);
-    console.log("LenderNote deployed to:", lenderNoteAddr);
+    // const promissoryNoteFactory = await ethers.getContractFactory("PromissoryNote");
+    // const borrowerNoteAddr = await loanCore.borrowerNote();
+    // const borrowerNote = <PromissoryNote>await promissoryNoteFactory.attach(borrowerNoteAddr);
+    // const lenderNoteAddr = await loanCore.lenderNote();
+    // const lenderNote = <PromissoryNote>await promissoryNoteFactory.attach(lenderNoteAddr);
 
-    const RepaymentControllerFactory = await ethers.getContractFactory("RepaymentController");
-    const repaymentController = <RepaymentController>(
-        await RepaymentControllerFactory.deploy(loanCore.address, borrowerNoteAddr, lenderNoteAddr)
-    );
-    await repaymentController.deployed();
-    const updateRepaymentControllerPermissions = await loanCore.grantRole(REPAYER_ROLE, repaymentController.address);
-    await updateRepaymentControllerPermissions.wait();
+    // console.log("LoanCore deployed to:", loanCore.address);
+    // console.log("BorrowerNote deployed to:", borrowerNoteAddr);
+    // console.log("LenderNote deployed to:", lenderNoteAddr);
 
-    console.log("RepaymentController deployed to:", repaymentController.address);
+    // const RepaymentControllerFactory = await ethers.getContractFactory("RepaymentController");
+    // const repaymentController = <RepaymentController>(
+    //     await RepaymentControllerFactory.deploy(loanCore.address, borrowerNoteAddr, lenderNoteAddr)
+    // );
+    // await repaymentController.deployed();
+    // const updateRepaymentControllerPermissions = await loanCore.grantRole(REPAYER_ROLE, repaymentController.address);
+    // await updateRepaymentControllerPermissions.wait();
 
-    const OriginationControllerFactory = await ethers.getContractFactory("OriginationController");
-    const originationController = <OriginationController>(
-        await OriginationControllerFactory.deploy(loanCore.address, assetWrapper.address)
-    );
-    await originationController.deployed();
-    const updateOriginationControllerPermissions = await loanCore.grantRole(
-        ORIGINATOR_ROLE,
-        originationController.address,
-    );
-    await updateOriginationControllerPermissions.wait();
+    // console.log("RepaymentController deployed to:", repaymentController.address);
 
-    console.log("OriginationController deployed to:", originationController.address);
+    // const OriginationControllerFactory = await ethers.getContractFactory("OriginationController");
+    // const originationController = <OriginationController>(
+    //     await OriginationControllerFactory.deploy(loanCore.address, assetWrapper.address)
+    // );
+    // await originationController.deployed();
+    // const updateOriginationControllerPermissions = await loanCore.grantRole(
+    //     ORIGINATOR_ROLE,
+    //     originationController.address,
+    // );
+    // await updateOriginationControllerPermissions.wait();
 
-    const WRAPPED_PUNKS = "0xb7F7F6C52F2e2fdb1963Eab30438024864c313F6";
-    const CRYPTO_PUNKS = "0xb47e3cd837ddf8e4c57f05d70ab865de6e193bbb";
-    const PunkRouter = await ethers.getContractFactor("PunkRouter");
-    const punkRouter = await PunkRouter.deploy(assetWrapper.address, WRAPPED_PUNKS, CRYPTO_PUNKS);
-    await punkRouter.deployed();
+    // console.log("OriginationController deployed to:", originationController.address);
 
-    console.log("PunkRouter deployed to:", punkRouter.address);
+    // const WRAPPED_PUNKS = "0xb7F7F6C52F2e2fdb1963Eab30438024864c313F6";
+    // const CRYPTO_PUNKS = "0xb47e3cd837ddf8e4c57f05d70ab865de6e193bbb";
+    // const PunkRouter = await ethers.getContractFactory("PunkRouter");
+    // const punkRouter = await PunkRouter.deploy(assetWrapper.address, WRAPPED_PUNKS, CRYPTO_PUNKS);
+    // await punkRouter.deployed();
+
+    // console.log("PunkRouter deployed to:", punkRouter.address);
 
     const ADDRESSES_PROVIDER_ADDRESS = "0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5";
 
@@ -102,17 +111,19 @@ export async function main(
 
     console.log("FlashRollover deployed to:", flashRollover.address);
 
+    const assetWrapper = <AssetWrapper>await AssetWrapperFactory.attach("0x5CB803c31e8f4F895a3AB19d8218646dC63e9Dc2");
+
     // Set flash rollover in asset wrapper
     await assetWrapper.setRContract(flashRollover.address);
 
     return {
         assetWrapper,
-        feeController,
-        loanCore,
-        borrowerNote,
-        lenderNote,
-        repaymentController,
-        originationController,
+        // feeController,
+        // loanCore,
+        // borrowerNote,
+        // lenderNote,
+        // repaymentController,
+        // originationController,
     };
 }
 
