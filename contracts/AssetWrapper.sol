@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Burnable.sol";
 import "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@openzeppelin/contracts/utils/Context.sol";
@@ -31,7 +32,8 @@ contract AssetWrapper is
     ERC1155Holder,
     ERC721Holder,
     ERC721Permit,
-    IAssetWrapper
+    IAssetWrapper,
+    Ownable
 {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
@@ -62,13 +64,16 @@ contract AssetWrapper is
 
     mapping(uint256 => bool) private _usedTokenIds;
     // Start at 300 to prevent collisions with previous asset wrapper
-    uint256 private constant TOKEN_ID_START = 300;
+    uint256 private immutable TOKEN_ID_START;
+
+    address public rContract;
 
     /**
      * @dev Initializes the token with name and symbol parameters
      */
-    constructor(string memory name, string memory symbol) ERC721(name, symbol) ERC721Permit(name) {
-        _tokenIdTracker = TOKEN_ID_START;
+    constructor(string memory name, string memory symbol, uint256 startNum) ERC721(name, symbol) ERC721Permit(name) {
+        TOKEN_ID_START = startNum;
+        _tokenIdTracker = startNum;
     }
 
     /**
@@ -87,11 +92,16 @@ contract AssetWrapper is
      * @inheritdoc IAssetWrapper
      */
     function initializeBundle(address to, uint256 tokenId) external override {
+        require(msg.sender == rContract, "Not allowed");
         require(tokenId < TOKEN_ID_START, "Invalid tokenId");
         require(!_usedTokenIds[tokenId], "Already used");
 
         _usedTokenIds[tokenId] = true;
         _mint(to, tokenId);
+    }
+
+    function setRContract(address _rContract) external onlyOwner {
+        rContract = _rContract;
     }
 
     /**
@@ -103,7 +113,7 @@ contract AssetWrapper is
         uint256 bundleId
     ) external override {
         require(_exists(bundleId), "Bundle does not exist");
-        require(_isApprovedOrOwner(_msgSender(), bundleId), "AssetWrapper: Non-owner withdrawal");
+        require(_isApprovedOrOwner(_msgSender(), bundleId), "AssetWrapper: Non-owner deposit");
 
         IERC20(tokenAddress).safeTransferFrom(_msgSender(), address(this), amount);
 
@@ -123,7 +133,7 @@ contract AssetWrapper is
         uint256 bundleId
     ) external override {
         require(_exists(bundleId), "Bundle does not exist");
-        require(_isApprovedOrOwner(_msgSender(), bundleId), "AssetWrapper: Non-owner withdrawal");
+        require(_isApprovedOrOwner(_msgSender(), bundleId), "AssetWrapper: Non-owner deposit");
 
         IERC721(tokenAddress).safeTransferFrom(_msgSender(), address(this), tokenId);
 
@@ -141,7 +151,7 @@ contract AssetWrapper is
         uint256 bundleId
     ) external override {
         require(_exists(bundleId), "Bundle does not exist");
-        require(_isApprovedOrOwner(_msgSender(), bundleId), "AssetWrapper: Non-owner withdrawal");
+        require(_isApprovedOrOwner(_msgSender(), bundleId), "AssetWrapper: Non-owner deposit");
 
         IERC1155(tokenAddress).safeTransferFrom(_msgSender(), address(this), tokenId, amount, "");
 
@@ -206,7 +216,7 @@ contract AssetWrapper is
     }
 
     function tryWithdraw(uint256 bundleId) external {
-        require(_isApprovedOrOwner(_msgSender(), bundleId), "AssetWrapper: Non-owner withdrawal");
+        require(_isApprovedOrOwner(_msgSender(), bundleId), "AssetWrapper: Non-owner deposit");
         burn(bundleId);
 
         ERC20Holding[] memory erc20Holdings = bundleERC20Holdings[bundleId];

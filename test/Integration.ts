@@ -117,7 +117,7 @@ describe("Integration", () => {
     };
 
     const createWnft = async (assetWrapper: AssetWrapper, user: SignerWithAddress) => {
-        const tx = await assetWrapper.initializeBundle(await user.getAddress());
+        const tx = await assetWrapper["initializeBundle(address)"](await user.getAddress());
         const receipt = await tx.wait();
         if (receipt && receipt.events && receipt.events.length === 1 && receipt.events[0].args) {
             return receipt.events[0].args.tokenId;

@@ -51,7 +51,7 @@ describe("AssetWrapper", () => {
      * Initialize a new bundle, returning the bundleId
      */
     const initializeBundle = async (assetWrapper: AssetWrapper, user: Signer): Promise<BigNumber> => {
-        const tx = await assetWrapper.connect(user).initializeBundle(await user.getAddress());
+        const tx = await assetWrapper.connect(user)["initializeBundle(address)"](await user.getAddress());
         const receipt = await tx.wait();
 
         if (receipt && receipt.events && receipt.events.length === 1 && receipt.events[0].args) {
@@ -994,7 +994,7 @@ describe("AssetWrapper", () => {
                     assetWrapper.permit(
                         await other.getAddress(),
                         await other.getAddress(),
-                        tokenId,
+                        bundleId,
                         maxDeadline,
                         v,
                         r,

@@ -386,4 +386,6 @@ contract FlashRollover is IFlashRollover, ReentrancyGuard {
 
         token.transfer(to, balance);
     }
+
+    receive() external payable {}
 }

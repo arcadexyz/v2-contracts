@@ -25,7 +25,7 @@ interface TestContext {
 }
 
 const initializeBundle = async (AssetWrapper: AssetWrapper, user: Signer): Promise<BigNumber> => {
-    const tx = await AssetWrapper.connect(user).initializeBundle(await user.getAddress());
+    const tx = await AssetWrapper.connect(user)["initializeBundle(address)"](await user.getAddress());
     const receipt = await tx.wait();
 
     if (receipt && receipt.events && receipt.events.length === 1 && receipt.events[0].args) {

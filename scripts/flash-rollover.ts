@@ -77,7 +77,7 @@ export async function main(): Promise<void> {
     const aw1 = await assetWrapper.connect(signer1);
 
     // Deposit 1 punk and 1000 usd for bundle 1
-    await aw1.initializeBundle(signer1.address);
+    await aw1["initializeBundle(address)"](signer1.address);
     const aw1Bundle1Id = await aw1.tokenOfOwnerByIndex(signer1.address, 0);
     const aw1Punk1Id = await punks.tokenOfOwnerByIndex(signer1.address, 0);
 
@@ -89,7 +89,7 @@ export async function main(): Promise<void> {
     console.log(`(Bundle 1) Signer ${signer1.address} created a bundle with 1 PawnFiPunk and 1000 PUSD`);
 
     // Deposit 1 punk and 2 beats edition 0 for bundle 2
-    await aw1.initializeBundle(signer1.address);
+    await aw1["initializeBundle(address)"](signer1.address);
     const aw1Bundle2Id = await aw1.tokenOfOwnerByIndex(signer1.address, 1);
     const aw1Punk2Id = await punks.tokenOfOwnerByIndex(signer1.address, 1);
 

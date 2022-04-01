@@ -161,7 +161,7 @@ export async function wrapAssetsAndMakeLoans(
     const aw1 = await assetWrapper.connect(signer1);
 
     // Deposit 1 punk and 1000 usd for bundle 1
-    await aw1.initializeBundle(signer1.address);
+    await aw1["initializeBundle(address)"](signer1.address);
     const aw1Bundle1Id = await aw1.tokenOfOwnerByIndex(signer1.address, 0);
     const aw1Punk1Id = await punks.tokenOfOwnerByIndex(signer1.address, 0);
 
@@ -173,7 +173,7 @@ export async function wrapAssetsAndMakeLoans(
     console.log(`(Bundle 1) Signer ${signer1.address} created a bundle with 1 PawnFiPunk and 1000 PUSD`);
 
     // Deposit 1 punk and 2 beats edition 0 for bundle 2
-    await aw1.initializeBundle(signer1.address);
+    await aw1["initializeBundle(address)"](signer1.address);
     const aw1Bundle2Id = await aw1.tokenOfOwnerByIndex(signer1.address, 1);
     const aw1Punk2Id = await punks.tokenOfOwnerByIndex(signer1.address, 1);
 
@@ -188,7 +188,7 @@ export async function wrapAssetsAndMakeLoans(
     const aw3 = await assetWrapper.connect(signer3);
 
     // Deposit 2 punks and 1 weth for bundle 1
-    await aw3.initializeBundle(signer3.address);
+    await aw3["initializeBundle(address)"](signer3.address);
     const aw3Bundle1Id = await aw3.tokenOfOwnerByIndex(signer3.address, 0);
     const aw3Punk1Id = await punks.tokenOfOwnerByIndex(signer3.address, 0);
     const aw3Punk2Id = await punks.tokenOfOwnerByIndex(signer3.address, 1);
@@ -203,7 +203,7 @@ export async function wrapAssetsAndMakeLoans(
     console.log(`(Bundle 3) Signer ${signer3.address} created a bundle with 2 PawnFiPunks and 1 WETH`);
 
     // Deposit 1 punk for bundle 2
-    await aw3.initializeBundle(signer3.address);
+    await aw3["initializeBundle(address)"](signer3.address);
     const aw3Bundle2Id = await aw3.tokenOfOwnerByIndex(signer3.address, 1);
     const aw3Punk3Id = await punks.tokenOfOwnerByIndex(signer3.address, 2);
 
@@ -212,7 +212,7 @@ export async function wrapAssetsAndMakeLoans(
     console.log(`(Bundle 4) Signer ${signer3.address} created a bundle with 1 PawnFiPunk`);
 
     // Deposit 1 art, 4 beats edition 0, and 2000 usd for bundle 3
-    await aw3.initializeBundle(signer3.address);
+    await aw3["initializeBundle(address)"](signer3.address);
     const aw3Bundle3Id = await aw3.tokenOfOwnerByIndex(signer3.address, 2);
     const aw3Art1Id = await art.tokenOfOwnerByIndex(signer3.address, 0);
 
@@ -232,7 +232,7 @@ export async function wrapAssetsAndMakeLoans(
     const aw4 = await assetWrapper.connect(signer4);
 
     // Deposit 3 arts and 1000 pawn for bundle 1
-    await aw4.initializeBundle(signer4.address);
+    await aw4["initializeBundle(address)"](signer4.address);
     const aw4Bundle1Id = await aw4.tokenOfOwnerByIndex(signer4.address, 0);
     const aw4Art1Id = await art.tokenOfOwnerByIndex(signer4.address, 0);
     const aw4Art2Id = await art.tokenOfOwnerByIndex(signer4.address, 1);
@@ -250,7 +250,7 @@ export async function wrapAssetsAndMakeLoans(
     console.log(`(Bundle 6) Signer ${signer4.address} created a bundle with 4 PawnArts and 1000 PAWN`);
 
     // Deposit 1 punk and 1 beats edition 1 for bundle 2
-    await aw4.initializeBundle(signer4.address);
+    await aw4["initializeBundle(address)"](signer4.address);
     const aw4Bundle2Id = await aw3.tokenOfOwnerByIndex(signer4.address, 1);
     const aw4Punk1Id = await punks.tokenOfOwnerByIndex(signer4.address, 0);
 

@@ -71,7 +71,7 @@ describe("PunkRouter", () => {
      * Initialize a new bundle, returning the bundleId
      */
     const initializeBundle = async (assetWrapper: AssetWrapper, user: Signer): Promise<BigNumber> => {
-        const tx = await assetWrapper.connect(user).initializeBundle(await user.getAddress());
+        const tx = await assetWrapper.connect(user)["initializeBundle(address)"](await user.getAddress());
         const receipt = await tx.wait();
 
         if (receipt && receipt.events && receipt.events.length === 1 && receipt.events[0].args) {
@@ -92,6 +92,8 @@ describe("PunkRouter", () => {
             await punks.offerPunkForSaleToAddress(punkIndex, 0, punkRouter.address);
 
             const bundleId = await initializeBundle(assetWrapper, user);
+            await assetWrapper.connect(user).approve(punkRouter.address, bundleId);
+
             await expect(punkRouter.depositPunk(punkIndex, bundleId))
                 .to.emit(wrappedPunks, "Transfer")
                 .withArgs(punkRouter.address, assetWrapper.address, punkIndex)
