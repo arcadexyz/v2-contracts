@@ -31,7 +31,7 @@ describe("AssetWrapper", () => {
      */
     const fixture = async (): Promise<TestContext> => {
         const signers: Signer[] = await hre.ethers.getSigners();
-        const assetWrapper = <AssetWrapper>await deploy("AssetWrapper", signers[0], ["AssetWrapper", "WRP"]);
+        const assetWrapper = <AssetWrapper>await deploy("AssetWrapper", signers[0], ["AssetWrapper", "WRP", 1]);
         const mockERC20 = <MockERC20>await deploy("MockERC20", signers[0], ["Mock ERC20", "MOCK"]);
         const mockERC721 = <MockERC721>await deploy("MockERC721", signers[0], ["Mock ERC721", "MOCK"]);
         const mockERC1155 = <MockERC1155>await deploy("MockERC1155", signers[0], []);

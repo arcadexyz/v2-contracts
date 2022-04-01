@@ -63,7 +63,7 @@ describe("FlashRollover", () => {
         const signers: SignerWithAddress[] = await hre.ethers.getSigners();
         const [borrower, lender, admin] = signers;
 
-        const assetWrapper = <AssetWrapper>await deploy("AssetWrapper", admin, ["AssetWrapper", "MA", 0]);
+        const assetWrapper = <AssetWrapper>await deploy("AssetWrapper", admin, ["AssetWrapper", "MA", 1]);
         const assetWrapper2 = <AssetWrapper>await deploy("AssetWrapper", admin, ["AssetWrapper", "MA", 300]);
         const feeController = <FeeController>await deploy("FeeController", admin, []);
         const mockERC20 = <MockERC20>await deploy("MockERC20", admin, ["Mock ERC20", "MOCK"]);
@@ -1055,7 +1055,7 @@ describe("FlashRollover", () => {
             const tx = await flashRollover.connect(borrower).rolloverLoan(contracts, loanId, loanTerms, v, r, s);
             const receipt = await tx.wait();
             const gasUsed = receipt.gasUsed;
-            expect(gasUsed.toString()).to.equal("1217642");
+            expect(gasUsed.toString()).to.equal("1319889");
         });
     });
 

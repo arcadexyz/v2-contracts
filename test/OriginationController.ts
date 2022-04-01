@@ -38,7 +38,7 @@ const initializeBundle = async (AssetWrapper: AssetWrapper, user: Signer): Promi
 const fixture = async (): Promise<TestContext> => {
     const signers: Signer[] = await hre.ethers.getSigners();
     const loanCore = <MockLoanCore>await deploy("MockLoanCore", signers[0], []);
-    const assetWrapper = <AssetWrapper>await deploy("AssetWrapper", signers[0], ["AssetWrapper", "WRP"]);
+    const assetWrapper = <AssetWrapper>await deploy("AssetWrapper", signers[0], ["AssetWrapper", "WRP", 1]);
     const mockERC20 = <MockERC20>await deploy("MockERC20", signers[0], ["Mock ERC20", "MOCK"]);
 
     const originationController = <OriginationController>(
@@ -89,7 +89,7 @@ describe("OriginationController", () => {
     describe("constructor", () => {
         it("Reverts if _loanCore address is not provided", async () => {
             const signers: Signer[] = await hre.ethers.getSigners();
-            const assetWrapper = <AssetWrapper>await deploy("AssetWrapper", signers[0], ["AssetWrapper", "WRP"]);
+            const assetWrapper = <AssetWrapper>await deploy("AssetWrapper", signers[0], ["AssetWrapper", "WRP", 1]);
             await expect(
                 deploy("OriginationController", signers[0], [ZERO_ADDRESS, assetWrapper.address]),
             ).to.be.revertedWith("Origination: loanCore not defined");
@@ -98,7 +98,7 @@ describe("OriginationController", () => {
         it("Instantiates the OriginationController", async () => {
             const signers: Signer[] = await hre.ethers.getSigners();
             const loanCore = <MockLoanCore>await deploy("MockLoanCore", signers[0], []);
-            const assetWrapper = <AssetWrapper>await deploy("AssetWrapper", signers[0], ["AssetWrapper", "WRP"]);
+            const assetWrapper = <AssetWrapper>await deploy("AssetWrapper", signers[0], ["AssetWrapper", "WRP", 1]);
             const originationController = await deploy("OriginationController", signers[0], [
                 loanCore.address,
                 assetWrapper.address,

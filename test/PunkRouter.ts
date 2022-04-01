@@ -34,7 +34,7 @@ describe("PunkRouter", () => {
         const signers: Signer[] = await hre.ethers.getSigners();
         const punks = <CryptoPunksMarket>await deploy("CryptoPunksMarket", signers[0], []);
         const wrappedPunks = <WrappedPunk>await deploy("WrappedPunk", signers[0], [punks.address]);
-        const assetWrapper = <AssetWrapper>await deploy("AssetWrapper", signers[0], ["AssetWrapper", "WRP"]);
+        const assetWrapper = <AssetWrapper>await deploy("AssetWrapper", signers[0], ["AssetWrapper", "WRP", 1]);
         const punkRouter = <PunkRouter>(
             await deploy("PunkRouter", signers[0], [assetWrapper.address, wrappedPunks.address, punks.address])
         );

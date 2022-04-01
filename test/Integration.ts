@@ -45,7 +45,7 @@ describe("Integration", () => {
         const signers: SignerWithAddress[] = await hre.ethers.getSigners();
         const [borrower, lender, admin] = signers;
 
-        const assetWrapper = <AssetWrapper>await deploy("AssetWrapper", admin, ["AssetWrapper", "MA"]);
+        const assetWrapper = <AssetWrapper>await deploy("AssetWrapper", admin, ["AssetWrapper", "MA", 1]);
         const feeController = <FeeController>await deploy("FeeController", admin, []);
         const loanCore = <LoanCore>await deploy("LoanCore", admin, [assetWrapper.address, feeController.address]);
 
