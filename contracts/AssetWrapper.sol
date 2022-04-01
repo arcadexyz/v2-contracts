@@ -10,6 +10,7 @@ import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@openzeppelin/contracts/utils/Context.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./interfaces/IAssetWrapper.sol";
 import "./ERC721Permit.sol";
@@ -36,6 +37,7 @@ contract AssetWrapper is
     using Counters for Counters.Counter;
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
+    using Address for address;
 
     Counters.Counter private _tokenIdTracker;
 
@@ -68,11 +70,9 @@ contract AssetWrapper is
     /**
      * @inheritdoc IAssetWrapper
      */
-    function initializeBundle(address to) external override returns (uint256) {
+    function initializeBundle(address to) external override {
         _mint(to, _tokenIdTracker.current());
         _tokenIdTracker.increment();
-
-        return _tokenIdTracker.current();
     }
 
     /**
@@ -84,6 +84,7 @@ contract AssetWrapper is
         uint256 bundleId
     ) external override {
         require(_exists(bundleId), "Bundle does not exist");
+        require(_isApprovedOrOwner(_msgSender(), bundleId), "AssetWrapper: Non-owner withdrawal");
 
         IERC20(tokenAddress).safeTransferFrom(_msgSender(), address(this), amount);
 
@@ -103,6 +104,7 @@ contract AssetWrapper is
         uint256 bundleId
     ) external override {
         require(_exists(bundleId), "Bundle does not exist");
+        require(_isApprovedOrOwner(_msgSender(), bundleId), "AssetWrapper: Non-owner withdrawal");
 
         IERC721(tokenAddress).safeTransferFrom(_msgSender(), address(this), tokenId);
 
@@ -120,6 +122,7 @@ contract AssetWrapper is
         uint256 bundleId
     ) external override {
         require(_exists(bundleId), "Bundle does not exist");
+        require(_isApprovedOrOwner(_msgSender(), bundleId), "AssetWrapper: Non-owner withdrawal");
 
         IERC1155(tokenAddress).safeTransferFrom(_msgSender(), address(this), tokenId, amount, "");
 
@@ -183,6 +186,54 @@ contract AssetWrapper is
         emit Withdraw(_msgSender(), bundleId);
     }
 
+
+    /**
+     * @inheritdoc IAssetWrapper
+     */
+    function tryWithdraw(uint256 bundleId) external {
+        require(_isApprovedOrOwner(_msgSender(), bundleId), "AssetWrapper: Non-owner withdrawal");
+        burn(bundleId);
+
+        ERC20Holding[] memory erc20Holdings = bundleERC20Holdings[bundleId];
+        for (uint256 i = 0; i < erc20Holdings.length; i++) {
+            IERC20 token = IERC20(erc20Holdings[i].tokenAddress);
+            _callOptionalReturnERC20(token, abi.encodeWithSelector(token.transfer.selector, to, value));
+
+            try IERC20(erc20Holdings[i].tokenAddress).transfer(_msgSender(), erc20Holdings[i].amount) {} catch {}
+        }
+        delete bundleERC20Holdings[bundleId];
+
+        ERC721Holding[] memory erc721Holdings = bundleERC721Holdings[bundleId];
+        for (uint256 i = 0; i < erc721Holdings.length; i++) {
+            try IERC721(erc721Holdings[i].tokenAddress).safeTransferFrom(
+                address(this),
+                _msgSender(),
+                erc721Holdings[i].tokenId
+            ) {} catch {}
+        }
+        delete bundleERC721Holdings[bundleId];
+
+        ERC1155Holding[] memory erc1155Holdings = bundleERC1155Holdings[bundleId];
+        for (uint256 i = 0; i < erc1155Holdings.length; i++) {
+            try IERC1155(erc1155Holdings[i].tokenAddress).safeTransferFrom(
+                address(this),
+                _msgSender(),
+                erc1155Holdings[i].tokenId,
+                erc1155Holdings[i].amount,
+                ""
+            ) {} catch {}
+        }
+        delete bundleERC1155Holdings[bundleId];
+
+        uint256 ethHoldings = bundleETHHoldings[bundleId];
+        // solhint-disable-next-line avoid-low-level-calls
+        (bool success, ) = _msgSender().call{ value: ethHoldings }("");
+        require(success, "Failed to withdraw ETH");
+        delete bundleETHHoldings[bundleId];
+
+        emit Withdraw(_msgSender(), bundleId);
+    }
+
     /**
      * @dev Hook that is called before any token transfer
      */
@@ -205,5 +256,18 @@ contract AssetWrapper is
         returns (bool)
     {
         return super.supportsInterface(interfaceId);
+    }
+
+    function _callOptionalReturnERC20(IERC20 token, bytes memory data) private {
+        // We need to perform a low level call here, to bypass Solidity's return data size checking mechanism, since
+        // we're implementing it ourselves. We use {Address.functionCall} to perform this call, which verifies that
+        // the target address contains contract code and also asserts for success in the low-level call.
+
+        try address(token).functionCall(data, "SafeERC20: low-level call failed") returns (bytes memory returndata) {
+            if (returndata.length > 0) {
+                // Return data is optional
+                require(abi.decode(returndata, (bool)), "SafeERC20: ERC20 operation did not succeed");
+            }
+        } catch {}
     }
 }
