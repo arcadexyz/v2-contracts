@@ -15,6 +15,8 @@ import "./interfaces/IRepaymentController.sol";
 import "./interfaces/IAssetWrapper.sol";
 import "./interfaces/IFeeController.sol";
 
+import "./AssetWrapper.sol";
+
 /**
  *
  * @dev FlashRollover allows a borrower to roll over
@@ -28,6 +30,22 @@ import "./interfaces/IFeeController.sol";
  */
 contract FlashRollover is IFlashRollover, ReentrancyGuard {
     using SafeERC20 for IERC20;
+
+    struct ERC20Holding {
+        address tokenAddress;
+        uint256 amount;
+    }
+
+    struct ERC721Holding {
+        address tokenAddress;
+        uint256 tokenId;
+    }
+
+    struct ERC1155Holding {
+        address tokenAddress;
+        uint256 tokenId;
+        uint256 amount;
+    }
 
     /* solhint-disable var-name-mixedcase */
     // AAVE Contracts
@@ -125,7 +143,24 @@ contract FlashRollover is IFlashRollover, ReentrancyGuard {
         }
 
         _repayLoan(opContracts, loanData, borrower);
-        uint256 newLoanId = _initializeNewLoan(opContracts, borrower, lender, loanData.terms.collateralTokenId, opData);
+
+        {
+            _recreateBundle(opContracts, loanData);
+
+            uint256 newLoanId = _initializeNewLoan(
+                opContracts,
+                borrower,
+                lender,
+                loanData.terms.collateralTokenId,
+                opData
+            );
+
+            emit Rollover(lender, borrower, loanData.terms.collateralTokenId, newLoanId);
+
+            if (address(opData.contracts.sourceLoanCore) != address(opData.contracts.targetLoanCore)) {
+                emit Migration(address(opContracts.loanCore), address(opContracts.targetLoanCore), newLoanId);
+            }
+        }
 
         if (leftoverPrincipal > 0) {
             asset.safeTransfer(borrower, leftoverPrincipal);
@@ -135,12 +170,6 @@ contract FlashRollover is IFlashRollover, ReentrancyGuard {
 
         // Approve all amounts for flash loan repayment
         asset.approve(address(LENDING_POOL), flashAmountDue);
-
-        emit Rollover(lender, borrower, loanData.terms.collateralTokenId, newLoanId);
-
-        if (address(opData.contracts.sourceLoanCore) != address(opData.contracts.targetLoanCore)) {
-            emit Migration(address(opContracts.loanCore), address(opContracts.targetLoanCore), newLoanId);
-        }
 
         return true;
     }
@@ -195,7 +224,7 @@ contract FlashRollover is IFlashRollover, ReentrancyGuard {
 
         // contract now has asset wrapper but has lost funds
         require(
-            contracts.assetWrapper.ownerOf(loanData.terms.collateralTokenId) == address(this),
+            contracts.sourceAssetWrapper.ownerOf(loanData.terms.collateralTokenId) == address(this),
             "collateral ownership"
         );
     }
@@ -208,7 +237,7 @@ contract FlashRollover is IFlashRollover, ReentrancyGuard {
         OperationData memory opData
     ) internal returns (uint256) {
         // approve originationController
-        contracts.assetWrapper.approve(address(contracts.originationController), collateralTokenId);
+        contracts.targetAssetWrapper.approve(address(contracts.originationController), collateralTokenId);
 
         // start new loan
         // stand in for borrower to meet OriginationController's requirements
@@ -227,6 +256,90 @@ contract FlashRollover is IFlashRollover, ReentrancyGuard {
         return newLoanId;
     }
 
+    function _recreateBundle(
+        OperationContracts memory contracts,
+        LoanLibrary.LoanData memory loanData
+    ) internal returns (uint256 bundleId) {
+        uint256 oldBundleId = loanData.terms.collateralTokenId;
+        AssetWrapper sourceAssetWrapper = AssetWrapper(address(contracts.sourceAssetWrapper));
+        AssetWrapper targetAssetWrapper = AssetWrapper(address(contracts.targetAssetWrapper));
+
+        ERC20Holding[] memory bundleERC20Holdings = new ERC20Holding[](sourceAssetWrapper.numERC20Holdings(bundleId));
+        ERC721Holding[] memory bundleERC721Holdings = new ERC721Holding[](sourceAssetWrapper.numERC721Holdings(bundleId));
+        ERC1155Holding[] memory bundleERC1155Holdings = new ERC1155Holding[](sourceAssetWrapper.numERC1155Holdings(bundleId));
+        uint256 ethHoldings = sourceAssetWrapper.bundleETHHoldings(oldBundleId);
+
+        for (uint256 i = 0; i < bundleERC20Holdings.length; i++) {
+            (address tokenAddr, uint256 amount) = sourceAssetWrapper.bundleERC20Holdings(oldBundleId, i);
+
+            if (tokenAddr == address(0)) {
+                break;
+            }
+
+            bundleERC20Holdings[i] = ERC20Holding(tokenAddr, amount);
+        }
+
+        for (uint256 i = 0; i < bundleERC721Holdings.length; i++) {
+            (address tokenAddr, uint256 tokenId) = sourceAssetWrapper.bundleERC721Holdings(oldBundleId, i);
+
+            if (tokenAddr == address(0)) {
+                break;
+            }
+
+            bundleERC721Holdings[i] = ERC721Holding(tokenAddr, tokenId);
+        }
+
+        for (uint256 i = 0; i < bundleERC1155Holdings.length; i++) {
+            (address tokenAddr, uint256 tokenId, uint256 amount) =
+                sourceAssetWrapper.bundleERC1155Holdings(oldBundleId, i);
+
+            if (tokenAddr == address(0)) {
+                break;
+            }
+
+            bundleERC1155Holdings[i] = ERC1155Holding(tokenAddr, tokenId, amount);
+        }
+
+        sourceAssetWrapper.withdraw(oldBundleId);
+
+        targetAssetWrapper.initializeBundle(address(this), oldBundleId);
+
+        for (uint256 i = 0; i < bundleERC20Holdings.length; i++) {
+           ERC20Holding memory h = bundleERC20Holdings[i];
+
+            if (h.tokenAddress == address(0)) {
+                break;
+            }
+
+            IERC20(h.tokenAddress).approve(address(targetAssetWrapper), h.amount);
+            targetAssetWrapper.depositERC20(h.tokenAddress, h.amount, oldBundleId);
+        }
+
+        for (uint256 i = 0; i < bundleERC721Holdings.length; i++) {
+            ERC721Holding memory h = bundleERC721Holdings[i];
+
+            if (h.tokenAddress == address(0)) {
+                break;
+            }
+
+            IERC721(h.tokenAddress).approve(address(targetAssetWrapper), h.tokenId);
+            targetAssetWrapper.depositERC721(h.tokenAddress, h.tokenId, oldBundleId);
+        }
+
+        for (uint256 i = 0; i < bundleERC1155Holdings.length; i++) {
+            ERC1155Holding memory h = bundleERC1155Holdings[i];
+
+            if (h.tokenAddress == address(0)) {
+                break;
+            }
+
+            IERC1155(h.tokenAddress).setApprovalForAll(address(targetAssetWrapper), true);
+            targetAssetWrapper.depositERC1155(h.tokenAddress, h.tokenId, h.amount, oldBundleId);
+        }
+
+        targetAssetWrapper.depositETH{ value: ethHoldings }(oldBundleId);
+    }
+
     function _getContracts(RolloverContractParams memory contracts) internal returns (OperationContracts memory) {
         return
             OperationContracts({
@@ -234,7 +347,8 @@ contract FlashRollover is IFlashRollover, ReentrancyGuard {
                 borrowerNote: contracts.sourceLoanCore.borrowerNote(),
                 lenderNote: contracts.sourceLoanCore.lenderNote(),
                 feeController: contracts.targetLoanCore.feeController(),
-                assetWrapper: contracts.sourceLoanCore.collateralToken(),
+                sourceAssetWrapper: contracts.sourceLoanCore.collateralToken(),
+                targetAssetWrapper: contracts.targetLoanCore.collateralToken(),
                 repaymentController: contracts.sourceRepaymentController,
                 originationController: contracts.targetOriginationController,
                 targetLoanCore: contracts.targetLoanCore,
@@ -254,11 +368,6 @@ contract FlashRollover is IFlashRollover, ReentrancyGuard {
         require(newLoanTerms.payableCurrency == sourceLoanTerms.payableCurrency, "currency mismatch");
 
         require(newLoanTerms.collateralTokenId == sourceLoanTerms.collateralTokenId, "collateral mismatch");
-
-        require(
-            address(sourceLoanCore.collateralToken()) == address(targetLoanCore.collateralToken()),
-            "non-compatible AssetWrapper"
-        );
     }
 
     function setOwner(address _owner) external override {

@@ -72,7 +72,8 @@ interface IFlashRollover is IFlashLoanReceiver {
         IERC721 borrowerNote;
         IERC721 lenderNote;
         IFeeController feeController;
-        IERC721 assetWrapper;
+        IERC721 sourceAssetWrapper;
+        IERC721 targetAssetWrapper;
         IRepaymentController repaymentController;
         IOriginationController originationController;
         ILoanCore targetLoanCore;

@@ -8,7 +8,6 @@ import "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@openzeppelin/contracts/utils/Context.sol";
-import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -34,12 +33,11 @@ contract AssetWrapper is
     ERC721Permit,
     IAssetWrapper
 {
-    using Counters for Counters.Counter;
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
     using Address for address;
 
-    Counters.Counter private _tokenIdTracker;
+    uint256 private _tokenIdTracker;
 
     struct ERC20Holding {
         address tokenAddress;
@@ -62,17 +60,38 @@ contract AssetWrapper is
 
     mapping(uint256 => uint256) public bundleETHHoldings;
 
+    mapping(uint256 => bool) private _usedTokenIds;
+    // Start at 300 to prevent collisions with previous asset wrapper
+    uint256 private constant TOKEN_ID_START = 300;
+
     /**
      * @dev Initializes the token with name and symbol parameters
      */
-    constructor(string memory name, string memory symbol) ERC721(name, symbol) ERC721Permit(name) {}
+    constructor(string memory name, string memory symbol) ERC721(name, symbol) ERC721Permit(name) {
+        _tokenIdTracker = TOKEN_ID_START;
+    }
 
     /**
      * @inheritdoc IAssetWrapper
      */
     function initializeBundle(address to) external override {
-        _mint(to, _tokenIdTracker.current());
-        _tokenIdTracker.increment();
+        require(!_usedTokenIds[_tokenIdTracker], "Already used");
+
+        _mint(to, _tokenIdTracker);
+
+        _usedTokenIds[_tokenIdTracker] = true;
+        _tokenIdTracker += 1;
+    }
+
+    /**
+     * @inheritdoc IAssetWrapper
+     */
+    function initializeBundle(address to, uint256 tokenId) external override {
+        require(tokenId < TOKEN_ID_START, "Invalid tokenId");
+        require(!_usedTokenIds[tokenId], "Already used");
+
+        _usedTokenIds[tokenId] = true;
+        _mint(to, tokenId);
     }
 
     /**
@@ -186,20 +205,16 @@ contract AssetWrapper is
         emit Withdraw(_msgSender(), bundleId);
     }
 
-
-    /**
-     * @inheritdoc IAssetWrapper
-     */
     function tryWithdraw(uint256 bundleId) external {
         require(_isApprovedOrOwner(_msgSender(), bundleId), "AssetWrapper: Non-owner withdrawal");
         burn(bundleId);
 
         ERC20Holding[] memory erc20Holdings = bundleERC20Holdings[bundleId];
         for (uint256 i = 0; i < erc20Holdings.length; i++) {
-            IERC20 token = IERC20(erc20Holdings[i].tokenAddress);
-            _callOptionalReturnERC20(token, abi.encodeWithSelector(token.transfer.selector, to, value));
-
-            try IERC20(erc20Holdings[i].tokenAddress).transfer(_msgSender(), erc20Holdings[i].amount) {} catch {}
+            try IERC20(erc20Holdings[i].tokenAddress).transfer(
+                _msgSender(),
+                erc20Holdings[i].amount
+            ) {} catch {}
         }
         delete bundleERC20Holdings[bundleId];
 
@@ -234,6 +249,18 @@ contract AssetWrapper is
         emit Withdraw(_msgSender(), bundleId);
     }
 
+    function numERC20Holdings(uint256 bundleId) external view returns (uint256) {
+        return bundleERC20Holdings[bundleId].length;
+    }
+
+    function numERC721Holdings(uint256 bundleId) external view returns (uint256) {
+        return bundleERC721Holdings[bundleId].length;
+    }
+
+    function numERC1155Holdings(uint256 bundleId) external view returns (uint256) {
+        return bundleERC1155Holdings[bundleId].length;
+    }
+
     /**
      * @dev Hook that is called before any token transfer
      */
@@ -256,18 +283,5 @@ contract AssetWrapper is
         returns (bool)
     {
         return super.supportsInterface(interfaceId);
-    }
-
-    function _callOptionalReturnERC20(IERC20 token, bytes memory data) private {
-        // We need to perform a low level call here, to bypass Solidity's return data size checking mechanism, since
-        // we're implementing it ourselves. We use {Address.functionCall} to perform this call, which verifies that
-        // the target address contains contract code and also asserts for success in the low-level call.
-
-        try address(token).functionCall(data, "SafeERC20: low-level call failed") returns (bytes memory returndata) {
-            if (returndata.length > 0) {
-                // Return data is optional
-                require(abi.decode(returndata, (bool)), "SafeERC20: ERC20 operation did not succeed");
-            }
-        } catch {}
     }
 }
