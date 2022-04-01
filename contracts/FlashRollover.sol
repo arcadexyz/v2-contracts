@@ -235,7 +235,7 @@ contract FlashRollover is IFlashRollover, ReentrancyGuard {
         address lender,
         uint256 collateralTokenId,
         OperationData memory opData
-    ) internal returns (uint256) {
+    ) internal virtual returns (uint256) {
         // approve originationController
         contracts.targetAssetWrapper.approve(address(contracts.originationController), collateralTokenId);
 
