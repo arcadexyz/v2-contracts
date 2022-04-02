@@ -266,8 +266,8 @@ contract FlashRollover is IFlashRollover, ReentrancyGuard, ERC721Holder, ERC1155
         AssetWrapper sourceAssetWrapper = AssetWrapper(address(contracts.sourceAssetWrapper));
         AssetWrapper targetAssetWrapper = AssetWrapper(address(contracts.targetAssetWrapper));
 
-        ERC721Holding[] memory bundleERC721Holdings = new ERC721Holding[](50);
-        ERC1155Holding[] memory bundleERC1155Holdings = new ERC1155Holding[](50);
+        ERC721Holding[] memory bundleERC721Holdings = new ERC721Holding[](20);
+        ERC1155Holding[] memory bundleERC1155Holdings = new ERC1155Holding[](20);
 
         for (uint256 i = 0; i < bundleERC721Holdings.length; i++) {
             try sourceAssetWrapper.bundleERC721Holdings(oldBundleId, i) returns (address tokenAddr, uint256 tokenId) {
@@ -279,6 +279,14 @@ contract FlashRollover is IFlashRollover, ReentrancyGuard, ERC721Holder, ERC1155
             try sourceAssetWrapper.bundleERC1155Holdings(oldBundleId, i) returns (address tokenAddr, uint256 tokenId, uint256 amount) {
                 bundleERC1155Holdings[i] = ERC1155Holding(tokenAddr, tokenId, amount);
             } catch { break; }
+            // (address tokenAddr, uint256 tokenId, uint256 amount) =
+            //     sourceAssetWrapper.bundleERC1155Holdings(oldBundleId, i);
+
+            // if (tokenAddr == address(0)) {
+            //     break;
+            // }
+
+            // bundleERC1155Holdings[i] = ERC1155Holding(tokenAddr, tokenId, amount);
         }
 
         sourceAssetWrapper.withdraw(oldBundleId);
@@ -332,7 +340,7 @@ contract FlashRollover is IFlashRollover, ReentrancyGuard, ERC721Holder, ERC1155
         LoanLibrary.LoanTerms memory sourceLoanTerms,
         LoanLibrary.LoanTerms calldata newLoanTerms,
         uint256 borrowerNoteId
-    ) internal {
+    ) internal virtual {
         require(sourceLoanCore.borrowerNote().ownerOf(borrowerNoteId) == msg.sender, "caller not borrower");
 
         require(newLoanTerms.payableCurrency == sourceLoanTerms.payableCurrency, "currency mismatch");

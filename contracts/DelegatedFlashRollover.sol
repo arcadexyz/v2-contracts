@@ -90,4 +90,18 @@ contract DelegatedFlashRollover is FlashRollover {
 
         return newLoanId;
     }
+
+    function _validateRollover(
+        ILoanCore sourceLoanCore,
+        ILoanCore targetLoanCore,
+        LoanLibrary.LoanTerms memory sourceLoanTerms,
+        LoanLibrary.LoanTerms calldata newLoanTerms,
+        uint256 borrowerNoteId
+    ) internal override {
+        require(sourceLoanCore.borrowerNote().ownerOf(borrowerNoteId) != address(0), "loan does not exist");
+
+        require(newLoanTerms.payableCurrency == sourceLoanTerms.payableCurrency, "currency mismatch");
+
+        require(newLoanTerms.collateralTokenId == sourceLoanTerms.collateralTokenId, "collateral mismatch");
+    }
 }
