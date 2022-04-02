@@ -31,28 +31,43 @@ export async function main(): Promise<void> {
 
     // const tokenId = 10372;
 
-    const erc1155Factory = await ethers.getContractFactory("ERC721");
-    const ll = await erc1155Factory.attach("0xb7F7F6C52F2e2fdb1963Eab30438024864c313F6");
-    const balance = await ll.ownerOf(9847);
+    const erc721 = await ethers.getContractFactory("ERC721");
+    const creation = await erc721.attach("0x7CcDC136619cdDf744122a938b4448eDA1590FE1");
+    const owner = await creation.ownerOf(185);
 
-    console.log('BALANCE', balance.toString());
+    console.log('owner', owner.toString());
 
-    const bundleId = 13;
+    const bundleId = 37;
 
     const AssetWrapperFactory = await ethers.getContractFactory("AssetWrapper");
     const assetWrapper = <AssetWrapper>await AssetWrapperFactory.attach("0x5CB803c31e8f4F895a3AB19d8218646dC63e9Dc2");
 
     const result = await assetWrapper.numERC721Holdings(bundleId);
     console.log('NUM HOLDINGS', result.toString());
+    const result2 = await assetWrapper['numERC1155Holdings(uint256)'](bundleId);
+    console.log('NUM HOLDINGS', result2.toString());
 
-    const result2 = await assetWrapper['bundleERC721Holdings(uint256,uint256)'](bundleId, 0);
-    console.log('NUM HOLDINGS', result2.tokenId.toString());
-    console.log('NUM HOLDINGS', result2.tokenAddress.toString());
+    for (let i = 0; i < Number(result.toString()); i++) {
+        const bundle = await assetWrapper['bundleERC721Holdings(uint256,uint256)'](bundleId, i);
+        console.log('BUNDLE ITEM', i, bundle.tokenId.toString());
+        console.log('BUNDLE ITEM', i, bundle.tokenAddress.toString());
+    }
+
+    for (let i = 0; i < Number(result2.toString()); i++) {
+        const bundle = await assetWrapper['bundleERC1155Holdings(uint256,uint256)'](bundleId, i);
+        console.log('BUNDLE ITEM', i, bundle.tokenId.toString());
+        console.log('BUNDLE ITEM', i, bundle.tokenAddress.toString());
+    }
+
+
+    // const result2 = await assetWrapper['bundleERC721Holdings(uint256,uint256)'](bundleId, 0);
+    // console.log('NUM HOLDINGS', result2.tokenId.toString());
+    // console.log('NUM HOLDINGS', result2.tokenAddress.toString());
 
     const LoanCoreFactory = await ethers.getContractFactory("LoanCore");
     const loanCore = <LoanCore>await LoanCoreFactory.attach("0x7691EE8feBD406968D46F9De96cB8CC18fC8b325");
 
-    const ld = await loanCore.getLoan(3);
+    const ld = await loanCore.getLoan(6);
     const tokenId = ld.terms.collateralTokenId;
 
     console.log("BUNDLE ID", tokenId.toString());
@@ -61,8 +76,8 @@ export async function main(): Promise<void> {
     const bn = await promissoryNoteFactory.attach("0xc3231258D6Ed397Dce7a52a27f816c8f41d22151")
     const ln = await promissoryNoteFactory.attach("0xe1eF2656D965ac9E3Fe151312f19F3D4C5f0EfA3")
 
-    console.log(await bn.ownerOf(3));
-    console.log(await ln.ownerOf(3));
+    console.log(await bn.ownerOf(6));
+    console.log(await ln.ownerOf(6));
 
     // console.log(ld)
 

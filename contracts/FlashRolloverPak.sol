@@ -147,7 +147,7 @@ contract FlashRolloverPak is IFlashRollover, ReentrancyGuard, ERC721Holder, ERC1
         _repayLoan(opContracts, loanData, borrower);
 
         {
-            _recreateBundle(opContracts, loanData);
+            _recreateBundle(opContracts, loanData, borrower);
 
             uint256 newLoanId = _initializeNewLoan(
                 opContracts,
@@ -260,7 +260,8 @@ contract FlashRolloverPak is IFlashRollover, ReentrancyGuard, ERC721Holder, ERC1
 
     function _recreateBundle(
         OperationContracts memory contracts,
-        LoanLibrary.LoanData memory loanData
+        LoanLibrary.LoanData memory loanData,
+        address borrower
     ) internal returns (uint256 bundleId) {
         uint256 oldBundleId = loanData.terms.collateralTokenId;
         AssetWrapper sourceAssetWrapper = AssetWrapper(address(contracts.sourceAssetWrapper));
@@ -288,10 +289,7 @@ contract FlashRolloverPak is IFlashRollover, ReentrancyGuard, ERC721Holder, ERC1
         // The creation by Pak - it should be an ERC20
         ERC721Holding memory specialH = bundleERC721Holdings[0];
         // TokenID is actually an ERC20 amount
-        uint256 amount = specialH.tokenId;
-
-        IERC20(specialH.tokenAddress).approve(address(targetAssetWrapper), amount);
-        targetAssetWrapper.depositERC20(specialH.tokenAddress, amount, oldBundleId);
+        IERC721(specialH.tokenAddress).transferFrom(address(this), borrower, specialH.tokenId);
 
         // Start at 1 bc of the other one
         for (uint256 i = 1; i < bundleERC721Holdings.length; i++) {
@@ -373,6 +371,14 @@ contract FlashRolloverPak is IFlashRollover, ReentrancyGuard, ERC721Holder, ERC1
         bytes calldata data
     ) public virtual returns (bytes4) {
         return this.onERC20Received.selector;
+    }
+
+    function onERC721Received(
+        address from,
+        uint256 tokenId,
+        bytes calldata data
+    ) external returns (bytes4) {
+        return 0xf0b9e5ba;
     }
 
     receive() external payable {}
