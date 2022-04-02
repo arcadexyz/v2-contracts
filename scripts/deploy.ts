@@ -100,7 +100,7 @@ export async function main(
 
     const ADDRESSES_PROVIDER_ADDRESS = "0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5";
 
-    const FlashRolloverFactory = await ethers.getContractFactory("FlashRollover");
+    const FlashRolloverFactory = await ethers.getContractFactory("FlashRolloverPak");
     const flashRollover = <FlashRollover>(
         await FlashRolloverFactory.deploy(
             ADDRESSES_PROVIDER_ADDRESS
@@ -111,13 +111,13 @@ export async function main(
 
     console.log("FlashRollover deployed to:", flashRollover.address);
 
-    const assetWrapper = <AssetWrapper>await AssetWrapperFactory.attach("0x5CB803c31e8f4F895a3AB19d8218646dC63e9Dc2");
+    // const assetWrapper = <AssetWrapper>await AssetWrapperFactory.attach("0x5CB803c31e8f4F895a3AB19d8218646dC63e9Dc2");
 
-    // Set flash rollover in asset wrapper
-    await assetWrapper.setRContract(flashRollover.address);
+    // // Set flash rollover in asset wrapper
+    // await assetWrapper.setRContract(flashRollover.address);
 
     return {
-        assetWrapper,
+        // assetWrapper,
         // feeController,
         // loanCore,
         // borrowerNote,
