@@ -237,7 +237,7 @@ contract FlashRollover is IFlashRollover, ReentrancyGuard, ERC721Holder, ERC1155
         address lender,
         uint256 collateralTokenId,
         OperationData memory opData
-    ) internal returns (uint256) {
+    ) internal virtual returns (uint256) {
         // approve originationController
         contracts.targetAssetWrapper.approve(address(contracts.originationController), collateralTokenId);
 
@@ -279,6 +279,14 @@ contract FlashRollover is IFlashRollover, ReentrancyGuard, ERC721Holder, ERC1155
             try sourceAssetWrapper.bundleERC1155Holdings(oldBundleId, i) returns (address tokenAddr, uint256 tokenId, uint256 amount) {
                 bundleERC1155Holdings[i] = ERC1155Holding(tokenAddr, tokenId, amount);
             } catch { break; }
+            // (address tokenAddr, uint256 tokenId, uint256 amount) =
+            //     sourceAssetWrapper.bundleERC1155Holdings(oldBundleId, i);
+
+            // if (tokenAddr == address(0)) {
+            //     break;
+            // }
+
+            // bundleERC1155Holdings[i] = ERC1155Holding(tokenAddr, tokenId, amount);
         }
 
         sourceAssetWrapper.withdraw(oldBundleId);
@@ -332,7 +340,7 @@ contract FlashRollover is IFlashRollover, ReentrancyGuard, ERC721Holder, ERC1155
         LoanLibrary.LoanTerms memory sourceLoanTerms,
         LoanLibrary.LoanTerms calldata newLoanTerms,
         uint256 borrowerNoteId
-    ) internal {
+    ) internal virtual {
         require(sourceLoanCore.borrowerNote().ownerOf(borrowerNoteId) == msg.sender, "caller not borrower");
 
         require(newLoanTerms.payableCurrency == sourceLoanTerms.payableCurrency, "currency mismatch");
