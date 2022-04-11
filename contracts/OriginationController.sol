@@ -110,6 +110,7 @@ contract OriginationController is ArcadeSignatureVerifier, Context, IOrigination
         );
 
         // Make sure one from each side approves
+        // TODO: Take a second look at this - is there a way to get around it?
         if (isSelfOrApproved(lender, externalSigner)) {
             require(externalSigner != _msgSender() && externalSigner != lender, "Origination: approved own loan");
         } else if (isSelfOrApproved(borrower, externalSigner)) {

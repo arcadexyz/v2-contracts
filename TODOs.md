@@ -1,15 +1,23 @@
 ## TODOs
 
-Origination Controller:
-- InitializeLoan with two signatures
-- InitializeLoan on behalf (signature from third-party)
+Evan:
+- Write installments tests
+- Review Origination PR
 
-- DONE: Flexible signature verifier
-- DONE: Rename collateralTokenId to bundleId
-- DONE: allow for dual signatures
-- Installments
+Mouzayan:
 - Upgradeability and dependency architecture
+    - Decide - which contracts should be upgradeable? What upgradebility pattern should they use?
+    - Decide - which dependencies need to get passed in constructors for each contract?
+    - Decide - of those dependencies, which should be changeable by an admin? Which should be immutable and/or only changeable by upgrade?
+- Review Installments PR and Origination PR
+
+Kevin:
+- Write Origination tests
+- Review installments PR
+
+Leftover:
+- Native rollovers
 - Custom errors
 - Move compiler to 0.8.11
-- Re-do natspec - move to impl, not interfaces
+- Re-do natspec - move to implementation, not interfaces
 - Testing with full coverage

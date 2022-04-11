@@ -14,6 +14,8 @@ import "../interfaces/IAssetVault.sol";
 import "../interfaces/ISignatureVerifier.sol";
 import "./LoanLibrary.sol";
 
+// TODO: Re-define new struct for LoanTermsWithItems
+
 /**
  * @title ArcadeSignatureVerifier
  * @author Non-Fungible Technologies, Inc.
