@@ -3,6 +3,7 @@
 Evan:
 - Write installments tests
   - Update LoanTerms struct.
+    - Change from `collateralTokenId` to `bundleId`.
   - Implement interest rate functionality into RepaymentController.sol.
     - Change comments for LoanTerms interest.
     - Internal calc function.
