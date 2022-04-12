@@ -1,18 +1,19 @@
-pragma solidity ^0.8.0;
-pragma experimental ABIEncoderV2;
+// SPDX-License-Identifier: MIT
+
+pragma solidity ^0.8.11;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
-import "./external/interfaces/ILendingPool.sol";
+import "../external/interfaces/ILendingPool.sol";
 
-import "./interfaces/IFlashRollover.sol";
-import "./interfaces/ILoanCore.sol";
-import "./interfaces/IOriginationController.sol";
-import "./interfaces/IRepaymentController.sol";
-import "./interfaces/IFeeController.sol";
+import "../interfaces/IFlashRollover.sol";
+import "../interfaces/ILoanCore.sol";
+import "../interfaces/IOriginationController.sol";
+import "../interfaces/IRepaymentController.sol";
+import "../interfaces/IFeeController.sol";
 
 /**
  *
@@ -124,7 +125,7 @@ contract FlashRollover is IFlashRollover, ReentrancyGuard {
         }
 
         _repayLoan(opContracts, loanData, borrower);
-        uint256 newLoanId = _initializeNewLoan(opContracts, borrower, lender, loanData.terms.collateralTokenId, opData);
+        uint256 newLoanId = _initializeNewLoan(opContracts, borrower, lender, loanData.terms.bundleId, opData);
 
         if (leftoverPrincipal > 0) {
             asset.safeTransfer(borrower, leftoverPrincipal);
@@ -135,7 +136,7 @@ contract FlashRollover is IFlashRollover, ReentrancyGuard {
         // Approve all amounts for flash loan repayment
         asset.approve(address(LENDING_POOL), flashAmountDue);
 
-        emit Rollover(lender, borrower, loanData.terms.collateralTokenId, newLoanId);
+        emit Rollover(lender, borrower, loanData.terms.bundleId, newLoanId);
 
         if (address(opData.contracts.sourceLoanCore) != address(opData.contracts.targetLoanCore)) {
             emit Migration(address(opContracts.loanCore), address(opContracts.targetLoanCore), newLoanId);
@@ -194,7 +195,7 @@ contract FlashRollover is IFlashRollover, ReentrancyGuard {
 
         // contract now has asset wrapper but has lost funds
         require(
-            contracts.assetWrapper.ownerOf(loanData.terms.collateralTokenId) == address(this),
+            contracts.assetWrapper.ownerOf(loanData.terms.bundleId) == address(this),
             "collateral ownership"
         );
     }
@@ -252,7 +253,7 @@ contract FlashRollover is IFlashRollover, ReentrancyGuard {
 
         require(newLoanTerms.payableCurrency == sourceLoanTerms.payableCurrency, "currency mismatch");
 
-        require(newLoanTerms.collateralTokenId == sourceLoanTerms.collateralTokenId, "collateral mismatch");
+        require(newLoanTerms.bundleId == sourceLoanTerms.bundleId, "collateral mismatch");
 
         require(
             address(sourceLoanCore.collateralToken()) == address(targetLoanCore.collateralToken()),

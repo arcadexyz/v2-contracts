@@ -27,7 +27,7 @@ interface IOriginationController {
         uint8 v,
         bytes32 r,
         bytes32 s,
-        bytes calldata collateralItems
+        LoanLibrary.Predicate[] calldata itemPredicates
     ) external returns (uint256 loanId);
 
     function initializeLoanWithCollateralPermit(
@@ -54,7 +54,7 @@ interface IOriginationController {
         bytes32 collateralR,
         bytes32 collateralS,
         uint256 permitDeadline,
-        bytes calldata collateralItems
+        LoanLibrary.Predicate[] calldata itemPredicates
     ) external returns (uint256 loanId);
 
     // ================ Permission Management =================
@@ -64,4 +64,21 @@ interface IOriginationController {
     function isApproved(address owner, address signer) external returns (bool);
 
     function isSelfOrApproved(address target, address signer) external returns (bool);
+
+    // ============== Signature Verification ==============
+
+    function recoverBundleSignature(
+        LoanLibrary.LoanTerms calldata loanTerms,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external view returns (address signer);
+
+    function recoverItemsSignature(
+        LoanLibrary.LoanTerms calldata loanTerms,
+        uint8 v,
+        bytes32 r,
+        bytes32 s,
+        bytes calldata items
+    ) external view returns (address signer);
 }

@@ -1,4 +1,6 @@
-pragma solidity ^0.8.0;
+// SPDX-License-Identifier: MIT
+
+pragma solidity ^0.8.11;
 
 library LoanLibrary {
     /**
@@ -21,15 +23,6 @@ library LoanLibrary {
     }
 
     /**
-     * @dev Enum describing the collateral type of a signature item
-     */
-    enum CollateralType {
-        ERC_721,
-        ERC_1155,
-        ERC_20
-    }
-
-    /**
      * @dev The raw terms of a loan
      */
     struct LoanTerms {
@@ -45,16 +38,14 @@ library LoanLibrary {
         address payableCurrency;
     }
 
-    struct SignatureItem {
-        // The type of collateral - which interface does it implement
-        CollateralType cType;
-        // The address of the collateral contract
-        address asset;
-        // The token ID of the collateral (only applicable to 721 and 1155)
-        // int256 because a negative value serves as wildcard
-        int256 tokenId;
-        // The minimum amount of collateral (only applicable for 20 and 1155)
-        uint256 amount;
+    /**
+     * @dev Predicate for item-based verifications
+     */
+    struct Predicate {
+        // The encoded predicate, to decoded and parsed by the verifier contract
+        bytes data;
+        // The verifier contract
+        address verifier;
     }
 
     /**

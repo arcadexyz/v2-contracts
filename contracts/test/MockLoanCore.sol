@@ -44,7 +44,7 @@ contract MockLoanCore is ILoanCore {
             terms.durationSecs,
             terms.principal,
             terms.interest,
-            terms.collateralTokenId,
+            terms.bundleId,
             terms.payableCurrency
         );
 

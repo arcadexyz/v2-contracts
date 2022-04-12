@@ -8,17 +8,21 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
-import "./libraries/SignatureVerifier.sol";
-
 import "./interfaces/IOriginationController.sol";
 import "./interfaces/ILoanCore.sol";
 import "./interfaces/IERC721Permit.sol";
 import "./interfaces/IAssetVault.sol";
 import "./interfaces/IVaultFactory.sol";
+import "./interfaces/ISignatureVerifier.sol";
 
-// TODO: Flexible asset vaults, defined per loan.
-// TODO: Add signing nonce
+// THIS PR:
 // TODO: add nonReentrant
+
+// NEXT PR:
+// TODO: Flexible asset vaults, defined per loan.
+// TODO: Look at EIP-2712 signatures, possiby replace approvals
+// TODO: Add signing nonce
+// TODO: Consider non-wrapped collateral
 
 /**
  * @title OriginationController
@@ -31,10 +35,26 @@ import "./interfaces/IVaultFactory.sol";
  * takes place in this contract. To originate a loan, the controller
  * also takes custody of both the collateral and loan principal.
  */
-contract OriginationController is ArcadeSignatureVerifier, Context, IOriginationController {
+contract OriginationController is Context, IOriginationController, EIP712 {
     using SafeERC20 for IERC20;
 
     // ============================================ STATE ==============================================
+
+    // =================== Constants =====================
+
+    /// @notice EIP712 type hash for bundle-based signatures.
+    bytes32 private constant _BUNDLE_TYPEHASH =
+        keccak256(
+            // solhint-disable-next-line max-line-length
+            "LoanTerms(uint256 durationSecs,uint256 principal,uint256 interest,uint256 bundleId,address payableCurrency)"
+        );
+
+    /// @notice EIP712 type hash for item-based signatures.
+    bytes32 private constant _ITEMS_TYPEHASH =
+        keccak256(
+            // solhint-disable-next-line max-line-length
+            "LoanTerms(uint256 durationSecs,uint256 principal,uint256 interest,bytes items,address payableCurrency)"
+        );
 
     // ============= Global Immutable State ==============
 
@@ -58,7 +78,7 @@ contract OriginationController is ArcadeSignatureVerifier, Context, IOrigination
      * @param _loanCore                     The address of the loan core logic of the protocol.
      * @param _vaultFactory                 The address of the factory for the asset vaults used by the protocol.
      */
-    constructor(address _loanCore, address _vaultFactory) ArcadeSignatureVerifier("OriginationController", "2") {
+    constructor(address _loanCore, address _vaultFactory) EIP712("OriginationController", "2") {
         require(_loanCore != address(0), "Origination: loanCore not defined");
         loanCore = _loanCore;
         vaultFactory = _vaultFactory;
@@ -144,7 +164,7 @@ contract OriginationController is ArcadeSignatureVerifier, Context, IOrigination
      * @param v                             Part of the loan terms signature.
      * @param r                             Part of the loan terms signature.
      * @param s                             Part of the loan terms signature.
-     * @param collateralItems               The items required to be present in the bundle.
+     * @param itemPredicates                The predicate rules for the items in the bundle.
      *
      * @return loanId                       The unique ID of the new loan.
      */
@@ -155,7 +175,7 @@ contract OriginationController is ArcadeSignatureVerifier, Context, IOrigination
         uint8 v,
         bytes32 r,
         bytes32 s,
-        bytes calldata collateralItems
+        LoanLibrary.Predicate[] calldata itemPredicates
     ) public override returns (uint256 loanId) {
         require(_msgSender() == lender || _msgSender() == borrower, "Origination: sender not participant");
 
@@ -174,7 +194,7 @@ contract OriginationController is ArcadeSignatureVerifier, Context, IOrigination
             v,
             r,
             s,
-            collateralItems
+            abi.encode(itemPredicates)
         );
 
         require(
@@ -184,8 +204,13 @@ contract OriginationController is ArcadeSignatureVerifier, Context, IOrigination
 
         require(externalSigner != _msgSender(), "Origination: approved own loan");
 
-        // Verify items are held in the wrapper
-        require(verifyItems(collateralItems, vault), "Origination: missing required items");
+        for (uint256 i = 0; i < itemPredicates.length; i++) {
+            // Verify items are held in the wrapper
+            require(
+                IArcadeSignatureVerifier(itemPredicates[i].verifier).verifyPredicates(itemPredicates[i].data, vault),
+                "Predicate failed"
+            );
+        }
 
         IERC20(loanTerms.payableCurrency).safeTransferFrom(lender, address(this), loanTerms.principal);
         IERC20(loanTerms.payableCurrency).approve(loanCore, loanTerms.principal);
@@ -259,7 +284,7 @@ contract OriginationController is ArcadeSignatureVerifier, Context, IOrigination
      * @param collateralR                   Part of the collateral permit signature.
      * @param collateralS                   Part of the collateral permit signature.
      * @param permitDeadline                The last timestamp for which the signature is valid.
-     * @param collateralItems               The items required to be present in the bundle.
+     * @param itemPredicates                The predicate rules for the items in the bundle.
      *
      * @return loanId                       The unique ID of the new loan.
      */
@@ -274,7 +299,7 @@ contract OriginationController is ArcadeSignatureVerifier, Context, IOrigination
         bytes32 collateralR,
         bytes32 collateralS,
         uint256 permitDeadline,
-        bytes calldata collateralItems
+        LoanLibrary.Predicate[] calldata itemPredicates
     ) external override returns (uint256 loanId) {
         IERC721Permit(vaultFactory).permit(
             borrower,
@@ -286,7 +311,7 @@ contract OriginationController is ArcadeSignatureVerifier, Context, IOrigination
             collateralS
         );
 
-        loanId = initializeLoanWithItems(loanTerms, borrower, lender, v, r, s, collateralItems);
+        loanId = initializeLoanWithItems(loanTerms, borrower, lender, v, r, s, itemPredicates);
     }
 
     // ==================================== PERMISSION MANAGEMENT =======================================
@@ -329,4 +354,73 @@ contract OriginationController is ArcadeSignatureVerifier, Context, IOrigination
     function isSelfOrApproved(address target, address signer) public view override returns (bool) {
         return target == signer || isApproved(target, signer);
     }
+
+    // ==================================== SIGNATURE VERIFICATION ======================================
+
+    /**
+     * @notice Determine the external signer for a signature specifying only a bundle ID.
+     *
+     * @param loanTerms                     The terms of the loan.
+     * @param v                             Part of the signature.
+     * @param r                             Part of the signature.
+     * @param s                             Part of the signature.
+     *
+     * @return signer                       The address of the recovered signer.
+     */
+    function recoverBundleSignature(
+        LoanLibrary.LoanTerms calldata loanTerms,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) public view override returns (address signer) {
+        bytes32 loanHash = keccak256(
+            abi.encode(
+                _BUNDLE_TYPEHASH,
+                loanTerms.durationSecs,
+                loanTerms.principal,
+                loanTerms.interest,
+                loanTerms.bundleId,
+                loanTerms.payableCurrency
+            )
+        );
+
+        bytes32 typedLoanHash = _hashTypedDataV4(loanHash);
+        signer = ECDSA.recover(typedLoanHash, v, r, s);
+    }
+
+    /**
+     * @notice Determine the external signer for a signature specifying specific items.
+     * @dev    Bundle ID should _not_ be included in this signature, because the loan
+     *         can be initiated with any arbitrary bundle - as long as the bundle contains the items.
+     *
+     * @param loanTerms                     The terms of the loan.
+     * @param v                             Part of the signature.
+     * @param r                             Part of the signature.
+     * @param s                             Part of the signature.
+     * @param items                         The required items in the specified bundle.
+     *
+     * @return signer                       The address of the recovered signer.
+     */
+    function recoverItemsSignature(
+        LoanLibrary.LoanTerms calldata loanTerms,
+        uint8 v,
+        bytes32 r,
+        bytes32 s,
+        bytes memory items
+    ) public view override returns (address signer) {
+        bytes32 loanHash = keccak256(
+            abi.encode(
+                _ITEMS_TYPEHASH,
+                loanTerms.durationSecs,
+                loanTerms.principal,
+                loanTerms.interest,
+                items,
+                loanTerms.payableCurrency
+            )
+        );
+
+        bytes32 typedLoanHash = _hashTypedDataV4(loanHash);
+        signer = ECDSA.recover(typedLoanHash, v, r, s);
+    }
+
 }
