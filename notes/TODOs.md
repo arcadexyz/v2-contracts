@@ -9,9 +9,14 @@ Mouzayan:
  Done   - Decide - which contracts should be upgradeable? What upgradebility pattern should they use?\
  Done   - Decide - which dependencies need to get passed in constructors for each contract?\
  Done   - Decide - of those dependencies, which should be changeable by an admin? Which should be immutable and/or only changeable by upgrade?
+ - Outline the path to UUPS + ways to avoid storage clashes
 
- - Diagramming Protocol: What May Need to Change in the Future Scenarios
- - Looking into plugin to track what smart contracts have been used
+ - Future Scenarios List: What May Need to Change in the Future Scenarios
+ - For each scenario, how would we make it possible? admin function or upgradeability etc...
+
+ - Look into [OZ upgrades plugin](https://docs.openzeppelin.com/upgrades-plugins/1.x/) for checks for conflicts, adds a deployment history you can check into git, wrapped "upgrade" functions for deploy scripts + other features
+ - Compare with [Slither](https://github.com/crytic/slither/wiki/Upgradeability-Checks) plugin
+
 
 - Review Installments PR and Origination PR
 
