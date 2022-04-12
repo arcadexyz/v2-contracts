@@ -91,6 +91,12 @@ Does this get implemented automatically: [```_init_unchained``` for Multiple Inh
     2. __IFeeController_init()
 - IERC721 to be immutable, IFeeController to be upgradeable
 
+### RepaymentController.sol
+- dependencies to be passed in initializer function:
+    1. __ILoanCore_init()
+    2. __IPromissoryNote_init()
+- ILoanCore to be upgradeable, IPromissoryNote to be immutable
+
 
 # References on Upgradeability
 1. [OpenZeppelin docs](https://docs.openzeppelin.com/learn/upgrading-smart-contracts)
