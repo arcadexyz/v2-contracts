@@ -91,11 +91,11 @@ Does this get implemented automatically: [```_init_unchained``` for Multiple Inh
     2. __IFeeController_init()
 - IERC721 to be immutable, IFeeController to be upgradeable
 
-### RepaymentController.sol
+### PromissoryNote.sol
 - dependencies to be passed in initializer function:
-    1. __ILoanCore_init()
-    2. __IPromissoryNote_init()
-- ILoanCore to be upgradeable, IPromissoryNote to be immutable
+    1. __ERC721_init('NftName', 'SYM')
+    2. __ERC721Permit_init('')
+- ERC721 to be immutable, ERC721Permit to also be immutable
 
 
 # References on Upgradeability
