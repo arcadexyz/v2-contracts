@@ -92,7 +92,7 @@ Does this get implemented automatically: [```_init_unchained``` for Multiple Inh
 [OpenZeppelin tutorial](https://forum.openzeppelin.com/t/uups-proxies-tutorial-solidity-javascript/7786)
 
 
-# TODO:
+### TODO:
 - Look at current architecture
 - Decide - which contracts should be upgradeable?
 - Decide - which dependencies need to get passed in constructors for each contract?
