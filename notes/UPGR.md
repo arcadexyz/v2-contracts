@@ -1,6 +1,6 @@
 # Upgradability, why?
 Modify contract code while preserving the contract address, state and balance.
-Helpful as a safeguard for implementing a fix in the event of a vulnerability, or as a means to iteratively develop a system by progressively adding new features.
+Helpful as a safeguard for implementing a fix in the event of a vulnerability, or as a means to progressively add new features.
 
 # How does it work?
 The user interacts with the implementation contract via a proxy contract.
@@ -22,6 +22,14 @@ Most Proxy patterns use the **Transaprent Proxy** and **UUPS** (universal upgrad
 - cheaper deployment: smaller in size and requires one less read from storage with every call
 - if the proxy is upgraded to an implementation that fails to implement the upgradeable functions, it becomes permanently locked into that implementation
 - proxy storage clash issues have been resolved with the **unstructured storage pattern** which adds a level of complexity to the proxy implementation
+
+### UUPS Storage Layout Compatibility - SPECIAL CARE NEEDED:
+Solidity maps variables to a contract's storage based on the order in which the variables are declared. Reordering variables, inserting new ones, changing their types or even changing the inheritance chain of a contract can break storgage.
+To ensure storage remains compatible across upgrades, best practice is to use **append-only** storage contracts by declaring storage in a separate contract which is only modified to append new variables and never delete. The implemenation contract would extend from this storage contract.
+All contracts in the inheritance chain must follow this pattern to prevent mixups including contracts from external libraries.
+We can reserve space for future state variables in the base contract by declaring dummy variables.\
+OR\
+Use the eternal storage pattern where the implementation contract never declares any variables of its own, but stores them in a mapping, causing Solidity to save them in arbitrary positions of storage based on their assigned names.
 
 # Surface Level How To
 Whenever you deploy a new contract using OpenZeppelin's ```deployProxy```, that contract instance can be upgraded at a later date. By default, only the address that originally deployed the contract has the ability to upgrade it.\
