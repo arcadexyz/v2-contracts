@@ -42,14 +42,12 @@ Whenever you deploy a new contract using OpenZeppelin's ```deployProxy```, that 
 1. configure Hardhat to use ```@openzeppelin/hardhat-upgrades```
 2. inherit the initializable contract\
 ```contract MyContract is initializable {}```
-
-    for UUPS:\
-```contract MyContract is initializable, UUPSUpgradable {}```
 3. replace the constructor with initialize ```function initialize() public initializer {}```
-4. change all OpenZeppelin contract libraries to their upgradable versions\
+4. avoid intial values in field declarations, place these values in the initializer function (it is ok to define constant state variables because the compiler does not reserve storage slots for these)
+5. use the upgradeable OpenZeppelin contract libraries\
     example: ```Ownable``` becomes ```OwnableUpgradeable```
 
-5. call the ```_init``` functions of the upgradable contracts in the initialize function\
+6. call the ```_init``` functions of the upgradable contracts in the initialize function\
     example:
     ```
     function initialize() initializer public {
@@ -58,9 +56,9 @@ Whenever you deploy a new contract using OpenZeppelin's ```deployProxy```, that 
         __UUPSUpgradeable_init();
         }
     ```
-6. replace ```msg.sender``` with ```_msgSender()``` to work with users' wallet addresses instead of with proxy addresses
+7. replace ```msg.sender``` with ```_msgSender()``` to work with users' wallet addresses instead of with proxy addresses
 
-7. create a script to deploy the contract as an upgardeable contract using ```deployProxy```\
+8. create a script to deploy the contract as an upgardeable contract using ```deployProxy```\
     example:
     ```
     async function main() {
@@ -95,9 +93,10 @@ Does this get implemented automatically: [```_init_unchained``` for Multiple Inh
 
 
 # References on Upgradeability
-[OpenZeppelin docs](https://docs.openzeppelin.com/learn/upgrading-smart-contracts)\
-[The State of Smart Contract Upgrades](https://blog.openzeppelin.com/the-state-of-smart-contract-upgrades/)\
-[OpenZeppelin tutorial](https://forum.openzeppelin.com/t/uups-proxies-tutorial-solidity-javascript/7786)
+1. [OpenZeppelin docs](https://docs.openzeppelin.com/learn/upgrading-smart-contracts)
+2. [The State of Smart Contract Upgrades](https://blog.openzeppelin.com/the-state-of-smart-contract-upgrades/)
+3. [Writing Upgradeable Contracts](https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable)
+4. [OpenZeppelin tutorial](https://forum.openzeppelin.com/t/openzeppelin-upgrades-step-by-step-tutorial-for-hardhat/3580)
 
 
 ### TODO:
