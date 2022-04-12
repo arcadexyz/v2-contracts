@@ -28,6 +28,10 @@ contract LoanCore is ILoanCore, AccessControl, Pausable, ICallDelegator {
     bytes32 public constant REPAYER_ROLE = keccak256("REPAYER_ROLE");
     bytes32 public constant FEE_CLAIMER_ROLE = keccak256("FEE_CLAIMER_ROLE");
 
+    // Interest rate parameters
+    uint256 public constant INTEREST_DENOMINATOR = 1 * 10**18;
+    uint256 public constant BASIS_POINTS_DENOMINATOR = 10000;
+
     Counters.Counter private loanIdTracker;
     mapping(uint256 => LoanLibrary.LoanData) private loans;
     mapping(uint256 => bool) private collateralInUse;
@@ -36,8 +40,7 @@ contract LoanCore is ILoanCore, AccessControl, Pausable, ICallDelegator {
     IERC721 public immutable override collateralToken;
     IFeeController public override feeController;
 
-    // 10k bps per whole
-    uint256 private constant BPS_DENOMINATOR = 10_000;
+    uint256 private constant BPS_DENOMINATOR = 10_000; // 10k bps per whole
 
     constructor(IERC721 _collateralToken, IFeeController _feeController) {
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
@@ -55,6 +58,8 @@ contract LoanCore is ILoanCore, AccessControl, Pausable, ICallDelegator {
         loanIdTracker.increment();
     }
 
+    // ============================= V1 FUNCTIONALITY ==================================
+
     /**
      * @inheritdoc ILoanCore
      */
@@ -65,62 +70,79 @@ contract LoanCore is ILoanCore, AccessControl, Pausable, ICallDelegator {
     /**
      * @inheritdoc ILoanCore
      */
-    function createLoan(LoanLibrary.LoanTerms calldata terms)
-        external
-        override
-        whenNotPaused
-        onlyRole(ORIGINATOR_ROLE)
-        returns (uint256 loanId)
-    {
-        require(terms.durationSecs > 0, "LoanCore::create: Loan is already expired");
-        require(!collateralInUse[terms.collateralTokenId], "LoanCore::create: Collateral token already in use");
+     function createLoan(LoanLibrary.LoanTerms calldata terms)
+         external
+         override
+         whenNotPaused
+         onlyRole(ORIGINATOR_ROLE)
+         returns (uint256 loanId)
+     {
+         require(terms.durationSecs > 0, "LoanCore::create: Loan is already expired");
+         require(!collateralInUse[terms.collateralTokenId], "LoanCore::create: Collateral token already in use");
 
-        loanId = loanIdTracker.current();
-        loanIdTracker.increment();
+         // interest rate must be entered as 10**18
+         require(terms.interest / 10**18 >= 1, "LoanCore::create: Interest must be greater than 0.01%");
 
-        loans[loanId] = LoanLibrary.LoanData(
-            0,
-            0,
-            terms,
-            LoanLibrary.LoanState.Created,
-            block.timestamp + terms.durationSecs
-        );
-        collateralInUse[terms.collateralTokenId] = true;
-        emit LoanCreated(terms, loanId);
-    }
+         // number of installments must be an even number
+         require(terms.numInstallments % 2 == 0, "LoanCore::create: Number of installments must be an even number");
+
+         loanId = loanIdTracker.current();
+         loanIdTracker.increment();
+
+         loans[loanId] = LoanLibrary.LoanData(
+             0,
+             0,
+             terms,
+             LoanLibrary.LoanState.Created,
+             block.timestamp + terms.durationSecs,
+             terms.principal,
+             0,
+             0,
+             0,
+             0
+         );
+         collateralInUse[terms.collateralTokenId] = true;
+         emit LoanCreated(terms, loanId);
+     }
 
     /**
      * @inheritdoc ILoanCore
      */
-    function startLoan(
-        address lender,
-        address borrower,
-        uint256 loanId
-    ) external override whenNotPaused onlyRole(ORIGINATOR_ROLE) {
-        LoanLibrary.LoanData memory data = loans[loanId];
-        // Ensure valid initial loan state
-        require(data.state == LoanLibrary.LoanState.Created, "LoanCore::start: Invalid loan state");
-        // Pull collateral token and principal
-        collateralToken.transferFrom(_msgSender(), address(this), data.terms.collateralTokenId);
+     function startLoan(
+         address lender,
+         address borrower,
+         uint256 loanId
+     ) external override whenNotPaused onlyRole(ORIGINATOR_ROLE) {
+         LoanLibrary.LoanData memory data = loans[loanId];
+         // Ensure valid initial loan state
+         require(data.state == LoanLibrary.LoanState.Created, "LoanCore::start: Invalid loan state");
+         // Pull collateral token and principal
+         collateralToken.transferFrom(_msgSender(), address(this), data.terms.collateralTokenId);
 
-        IERC20(data.terms.payableCurrency).safeTransferFrom(_msgSender(), address(this), data.terms.principal);
+         // _msgSender() is the OriginationController. The temporary holder of the collateral token
+         IERC20(data.terms.payableCurrency).safeTransferFrom(_msgSender(), address(this), data.terms.principal);
 
-        // Distribute notes and principal
-        loans[loanId].state = LoanLibrary.LoanState.Active;
-        uint256 borrowerNoteId = borrowerNote.mint(borrower, loanId);
-        uint256 lenderNoteId = lenderNote.mint(lender, loanId);
+         // Distribute notes and principal
+         loans[loanId].state = LoanLibrary.LoanState.Active;
+         uint256 borrowerNoteId = borrowerNote.mint(borrower, loanId);
+         uint256 lenderNoteId = lenderNote.mint(lender, loanId);
 
-        loans[loanId] = LoanLibrary.LoanData(
-            borrowerNoteId,
-            lenderNoteId,
-            data.terms,
-            LoanLibrary.LoanState.Active,
-            data.dueDate
-        );
+         loans[loanId] = LoanLibrary.LoanData(
+             borrowerNoteId,
+             lenderNoteId,
+             data.terms,
+             LoanLibrary.LoanState.Active,
+             data.dueDate,
+             data.balance,
+             data.balancePaid,
+             data.lateFeesAccrued,
+             data.numMissedPayments,
+             data.numInstallmentsPaid
+         );
 
-        IERC20(data.terms.payableCurrency).safeTransfer(borrower, getPrincipalLessFees(data.terms.principal));
-        emit LoanStarted(loanId, lender, borrower);
-    }
+         IERC20(data.terms.payableCurrency).safeTransfer(borrower, getPrincipalLessFees(data.terms.principal));
+         emit LoanStarted(loanId, lender, borrower);
+     }
 
     /**
      * @inheritdoc ILoanCore
@@ -184,7 +206,89 @@ contract LoanCore is ILoanCore, AccessControl, Pausable, ICallDelegator {
         return principal.sub(principal.mul(feeController.getOriginationFee()).div(BPS_DENOMINATOR));
     }
 
-    // ADMIN FUNCTIONS
+    // ======================== INSTALLMENT SPECIFIC OPERATIONS =============================
+
+    /**
+     * @dev Called from RepaymentController when paying back installment loan.
+     * Function takes in the loanId and amount repaid to RepaymentController.
+     * This amount is then transferred to the lender and loan data is updated accordingly.
+     */
+    function repayPart(
+        uint256 _loanId,
+        uint256 _repaidAmount, // amount paid to principal
+        uint256 _numMissedPayments, // number of missed payments (number of payments since the last payment)
+        uint256 _lateFeesAccrued // any minimum payments to interest and or late fees
+    ) external override {
+        LoanLibrary.LoanData storage data = loans[_loanId];
+        // Ensure valid initial loan state
+        require(data.state == LoanLibrary.LoanState.Active, "LoanCore::repay: Invalid loan state");
+        // transfer funds to LoanCore
+        uint256 paymentTotal = _repaidAmount + _lateFeesAccrued;
+        //console.log("TOTAL PAID FROM BORROWER: ", paymentTotal);
+        IERC20(data.terms.payableCurrency).safeTransferFrom(_msgSender(), address(this), paymentTotal);
+
+        // update LoanData
+        address lender = lenderNote.ownerOf(data.lenderNoteId);
+        address borrower = borrowerNote.ownerOf(data.borrowerNoteId);
+        // if last payment and extra sent
+        if(_repaidAmount > data.balance) {
+            // set the loan state to repaid
+            // NOTE: these must be performed before assets are released to prevent reentrance
+            data.state = LoanLibrary.LoanState.Repaid;
+            collateralInUse[data.terms.collateralTokenId] = false;
+            // return the difference to borrower
+            uint256 diffAmount = _repaidAmount - data.balance;
+            IERC20(data.terms.payableCurrency).safeTransfer(borrower, diffAmount);
+            // state changes and cleanup
+            lenderNote.burn(data.lenderNoteId);
+            borrowerNote.burn(data.borrowerNoteId);
+            // Loan is fully repaid, redistribute asset and collateral.
+            IERC20(data.terms.payableCurrency).safeTransfer(lender, paymentTotal);
+            collateralToken.transferFrom(address(this), borrower, data.terms.collateralTokenId);
+            // update state
+            data.balance = 0;
+            data.balancePaid = data.balancePaid + paymentTotal;
+            data.numMissedPayments = data.numMissedPayments + _numMissedPayments;
+            data.lateFeesAccrued = data.lateFeesAccrued + _lateFeesAccrued;
+            data.numInstallmentsPaid = data.numInstallmentsPaid + _numMissedPayments + 1;
+
+            emit LoanRepaid(_loanId);
+        }
+        // if last payment and exact amount sent
+        else if(_repaidAmount == data.balance) {
+            // set the loan state to repaid
+            // NOTE: these must be performed before assets are released to prevent reentrance
+            data.state = LoanLibrary.LoanState.Repaid;
+            collateralInUse[data.terms.collateralTokenId] = false;
+            // state changes and cleanup
+            lenderNote.burn(data.lenderNoteId);
+            borrowerNote.burn(data.borrowerNoteId);
+            // Loan is fully repaid, redistribute asset and collateral.
+            IERC20(data.terms.payableCurrency).safeTransfer(lender, paymentTotal);
+            collateralToken.transferFrom(address(this), borrower, data.terms.collateralTokenId);
+
+            // update state
+            data.balance = 0;
+            data.balancePaid = data.balancePaid + paymentTotal;
+            data.numMissedPayments = data.numMissedPayments + _numMissedPayments;
+            data.lateFeesAccrued = data.lateFeesAccrued + _lateFeesAccrued;
+            data.numInstallmentsPaid = data.numInstallmentsPaid + _numMissedPayments + 1;
+
+            emit LoanRepaid(_loanId);
+        }
+        // else, (mid loan payment)
+        else {
+            // update state
+            data.balance = data.balance - _repaidAmount;
+            data.balancePaid = data.balancePaid + paymentTotal;
+            data.numMissedPayments = data.numMissedPayments + _numMissedPayments;
+            data.lateFeesAccrued = data.lateFeesAccrued + _lateFeesAccrued;
+            data.numInstallmentsPaid = data.numInstallmentsPaid + _numMissedPayments + 1;
+        }
+    }
+
+
+    // ============================= ADMIN FUNCTIONS ==================================
 
     /**
      * @dev Set the fee controller to a new value

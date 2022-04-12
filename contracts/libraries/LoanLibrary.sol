@@ -25,7 +25,7 @@ library LoanLibrary {
      */
     struct LoanTerms {
         // The number of seconds representing relative due date of the loan
-        // *** TEST/ DISCUSSION: A loan of 0 duration has no due date - it is only governed by when the borrower repays? 
+        // *** TEST/ DISCUSSION: A loan of 0 duration has no due date - it is only governed by when the borrower repays?
         uint256 durationSecs;
         // The amount of principal in terms of the payableCurrency
         uint256 principal;

@@ -2,18 +2,23 @@
 
 Evan:
 - Write installments tests
-  - Update LoanTerms struct.
+  - (PARTIAL) Update LoanTerms struct.
     - Change from `collateralTokenId` to `bundleId`.
   - Implement interest rate functionality into RepaymentController.sol.
-    - Change comments for LoanTerms interest.
-    - Internal calc function.
+    - (DONE) Change comments for LoanTerms interest.
+    - (DONE) Internal calc function.
     - Fix existing tests.
-  - Port over (5) RepaymentController functions and (1) LoanCore function.
-    - Rewrite comments in natspec
+  - (DONE) Port over (5) RepaymentController functions and (1) LoanCore function.
+    - (DONE) Rewrite comments in natspec
+  - Port over repayPart function to LoanCore.sol
+    - Update other functions to jive with LoanTerms.
   - Two new test scripts `Installments.ts` and `InstallmentsRepay.ts`.
-
     🔑 For Installment tests, run `npx hardhat test test/Installments.ts` or `npx hardhat test test/InstallmentsRepay.ts`.
+
 - Review Origination PR
+  - Functionality has been added, but the LoanTerms seem unfinished.
+    - I am going to port over my functions the way they are and possibly have to go back later to make them work with changes in the LoanTerms for the `predicate calldata`, `bundleId`, `vaultAddress`, etc..
+  - Would a lender sign a bunch of predicate calldata? which a borrower could accept in the set terms by the lender?
 
 Mouzayan:
 - Upgradeability and dependency architecture

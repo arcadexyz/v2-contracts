@@ -39,32 +39,40 @@ contract MockLoanCore is ILoanCore {
     /**
      * @dev Create store a loan object with some given terms
      */
-    function createLoan(LoanLibrary.LoanTerms calldata terms) external override returns (uint256 loanId) {
-        LoanLibrary.LoanTerms memory _loanTerms = LoanLibrary.LoanTerms(
-            terms.durationSecs,
-            terms.principal,
-            terms.interest,
-            terms.collateralTokenId,
-            terms.payableCurrency
-        );
+     // WRONG!! NOT THE CORRECT FUNCTIONALITY!
+     function createLoan(LoanLibrary.LoanTerms calldata terms) external override returns (uint256 loanId) {
+         LoanLibrary.LoanTerms memory _loanTerms = LoanLibrary.LoanTerms(
+             terms.durationSecs,
+             terms.principal,
+             terms.interest,
+             terms.collateralTokenId,
+             terms.payableCurrency,
+             terms.startDate,
+             terms.numInstallments
+         );
 
-        LoanLibrary.LoanData memory _loanData = LoanLibrary.LoanData(
-            0,
-            0,
-            _loanTerms,
-            LoanLibrary.LoanState.Created,
-            terms.durationSecs
-        );
+         LoanLibrary.LoanData memory _loanData = LoanLibrary.LoanData(
+             0,
+             0,
+             _loanTerms,
+             LoanLibrary.LoanState.Created,
+             terms.durationSecs,
+             terms.principal,
+             0,
+             0,
+             0,
+             0
+         );
 
-        loanId = loanIdTracker.current();
-        loanIdTracker.increment();
+         loanId = loanIdTracker.current();
+         loanIdTracker.increment();
 
-        loans[loanId] = _loanData;
+         loans[loanId] = _loanData;
 
-        emit LoanCreated(terms, loanId);
+         emit LoanCreated(terms, loanId);
 
-        return loanId;
-    }
+         return loanId;
+     }
 
     /**
      * @dev Start a loan with the given borrower and lender
@@ -74,25 +82,31 @@ contract MockLoanCore is ILoanCore {
      *  - This function can only be called by a whitelisted OriginationController
      *  - The proper principal and collateral must have been sent to this contract before calling.
      */
-    function startLoan(
-        address lender,
-        address borrower,
-        uint256 loanId
-    ) public override {
-        uint256 borrowerNoteId = borrowerNote.mint(borrower, loanId);
-        uint256 lenderNoteId = lenderNote.mint(lender, loanId);
+     // WRONG!! NOT THE CORRECT FUNCTIONALITY!
+     function startLoan(
+         address lender,
+         address borrower,
+         uint256 loanId
+     ) public override {
+         uint256 borrowerNoteId = borrowerNote.mint(borrower, loanId);
+         uint256 lenderNoteId = lenderNote.mint(lender, loanId);
 
-        LoanLibrary.LoanData memory data = loans[loanId];
-        loans[loanId] = LoanLibrary.LoanData(
-            borrowerNoteId,
-            lenderNoteId,
-            data.terms,
-            LoanLibrary.LoanState.Active,
-            data.dueDate
-        );
+         LoanLibrary.LoanData memory data = loans[loanId];
+         loans[loanId] = LoanLibrary.LoanData(
+             borrowerNoteId,
+             lenderNoteId,
+             data.terms,
+             LoanLibrary.LoanState.Active,
+             data.dueDate,
+             data.balance,
+             data.balancePaid,
+             data.lateFeesAccrued,
+             data.numMissedPayments,
+             data.numInstallmentsPaid
+         );
 
-        emit LoanStarted(loanId, lender, borrower);
-    }
+         emit LoanStarted(loanId, lender, borrower);
+     }
 
     /**
      * @dev Repay the given loan
@@ -105,6 +119,21 @@ contract MockLoanCore is ILoanCore {
     function repay(uint256 loanId) public override {
         loans[loanId].state = LoanLibrary.LoanState.Repaid;
         emit LoanRepaid(loanId);
+    }
+
+    // WRONG!! NOT THE CORRECT FUNCTIONALITY!
+    function repayPart(
+        uint256 _loanId,
+        uint256 _repaidAmount,
+        uint256 _numMissedPayments,
+        uint256 _lateFeesAccrued
+    ) external override {
+        LoanLibrary.LoanData memory data = loans[_loanId];
+        // Ensure valid initial loan state
+        require(data.state == LoanLibrary.LoanState.Active, "LoanCore::repay: Invalid loan state");
+        data.state = LoanLibrary.LoanState.Repaid;
+
+        emit LoanRepaid(_loanId);
     }
 
     /**

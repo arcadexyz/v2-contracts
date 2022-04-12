@@ -74,6 +74,21 @@ interface ILoanCore {
     function repay(uint256 loanId) external;
 
     /**
+     * @dev Repay the given loan
+     *
+     * Requirements:
+     *  - The caller must be a holder of the borrowerNote
+     *  - The caller must send in at least minimum payment amount
+     *  - The loan must be in state Active and have number of Installments greater than 0
+     */
+    function repayPart(
+        uint256 _loanId,
+        uint256 _repaidAmount,
+        uint256 _numMissedPayments,
+        uint256 _lateFeesAccrued
+    ) external;
+
+    /**
      * @dev Claim the collateral of the given delinquent loan
      *
      * Requirements:
