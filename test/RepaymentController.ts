@@ -71,6 +71,8 @@ describe("RepaymentController", () => {
             interest: utils.parseEther(TEST_LOAN_INTEREST.toString()),
             collateralTokenId,
             payableCurrency: mockERC20.address,
+            numInstallments: 0,
+            startDate: 0
         };
 
         const createLoanTx = await mockLoanCore.createLoan(terms);

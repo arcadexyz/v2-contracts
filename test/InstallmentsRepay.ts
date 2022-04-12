@@ -5,13 +5,15 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-wit
 import { BigNumber } from "ethers";
 
 import {
-    AssetWrapper,
-    FeeController,
     OriginationController,
     PromissoryNote,
     RepaymentController,
     LoanCore,
     MockERC20,
+    AssetVault,
+    CallWhitelist,
+    VaultFactory,
+    FeeController,
 } from "../typechain";
 import { BlockchainTime } from "./utils/time";
 import { deploy } from "./utils/contracts";
@@ -33,7 +35,7 @@ interface TestContext {
     mockERC20: MockERC20;
     borrowerNote: PromissoryNote;
     lenderNote: PromissoryNote;
-    assetWrapper: AssetWrapper;
+    assetWrapper: VaultFactory;
     repaymentController: RepaymentController;
     originationController: OriginationController;
     borrower: SignerWithAddress;
@@ -46,64 +48,87 @@ describe("Implementation", () => {
     const blockchainTime = new BlockchainTime();
 
     /**
+     * Sets up a test asset vault for the user passed as an arg
+     */
+    const initializeBundle = async (assetWrapper: VaultFactory, user: SignerWithAddress): Promise<BigNumber> => {
+        const tx = await assetWrapper.connect(user).initializeBundle(await user.getAddress());
+        const receipt = await tx.wait();
+
+        if (receipt && receipt.events) {
+            for (const event of receipt.events) {
+                if (event.event && event.event === "VaultCreated" && event.args && event.args.vault) {
+                    return event.args.vault;
+                }
+            }
+            throw new Error("Unable to initialize bundle");
+        } else {
+            throw new Error("Unable to initialize bundle");
+        }
+    };
+
+    /**
      * Sets up a test context, deploying new contracts and returning them for use in a test
      */
-    const fixture = async (): Promise<TestContext> => {
-        const currentTimestamp = await blockchainTime.secondsFromNow(0);
+     const fixture = async (): Promise<TestContext> => {
+         const currentTimestamp = await blockchainTime.secondsFromNow(0);
 
-        const signers: SignerWithAddress[] = await hre.ethers.getSigners();
-        const [borrower, lender, admin] = signers;
+         const signers: SignerWithAddress[] = await hre.ethers.getSigners();
+         const [borrower, lender, admin] = signers;
 
-        const assetWrapper = <AssetWrapper>await deploy("AssetWrapper", admin, ["AssetWrapper", "MA"]);
-        const feeController = <FeeController>await deploy("FeeController", admin, []);
-        const loanCore = <LoanCore>await deploy("LoanCore", admin, [assetWrapper.address, feeController.address]);
+         const feeController = <FeeController>await deploy("FeeController", admin, []);
+         const whitelist = <CallWhitelist>await deploy("CallWhitelist", admin, []);
+         const vaultTemplate = <AssetVault>await deploy("AssetVault", admin, []);
+         const assetWrapper = <VaultFactory>(
+             await deploy("VaultFactory", signers[0], [vaultTemplate.address, whitelist.address])
+         );
+         const loanCore = <LoanCore>await deploy("LoanCore", admin, [assetWrapper.address, feeController.address]);
+         const mockERC20 = <MockERC20>await deploy("MockERC20", signers[0], ["Mock ERC20", "MOCK"]);
 
-        const borrowerNoteAddress = await loanCore.borrowerNote();
-        const borrowerNote = <PromissoryNote>(
-            (await ethers.getContractFactory("PromissoryNote")).attach(borrowerNoteAddress)
-        );
+         const originationController = <OriginationController>(
+             await deploy("OriginationController", signers[0], [loanCore.address, assetWrapper.address])
+         );
+         await originationController.deployed();
 
-        const lenderNoteAddress = await loanCore.lenderNote();
-        const lenderNote = <PromissoryNote>(
-            (await ethers.getContractFactory("PromissoryNote")).attach(lenderNoteAddress)
-        );
+         const borrowerNoteAddress = await loanCore.borrowerNote();
+         const borrowerNote = <PromissoryNote>(
+             (await ethers.getContractFactory("PromissoryNote")).attach(borrowerNoteAddress)
+         );
 
-        const mockERC20 = <MockERC20>await deploy("MockERC20", admin, ["Mock ERC20", "MOCK"]);
+         const lenderNoteAddress = await loanCore.lenderNote();
+         const lenderNote = <PromissoryNote>(
+             (await ethers.getContractFactory("PromissoryNote")).attach(lenderNoteAddress)
+         );
 
-        const repaymentController = <RepaymentController>(
-            await deploy("RepaymentController", admin, [loanCore.address, borrowerNoteAddress, lenderNoteAddress])
-        );
-        await repaymentController.deployed();
-        const updateRepaymentControllerPermissions = await loanCore.grantRole(
-            REPAYER_ROLE,
-            repaymentController.address,
-        );
-        await updateRepaymentControllerPermissions.wait();
+         const repaymentController = <RepaymentController>(
+             await deploy("RepaymentController", admin, [loanCore.address, borrowerNoteAddress, lenderNoteAddress])
+         );
+         await repaymentController.deployed();
+         const updateRepaymentControllerPermissions = await loanCore.grantRole(
+             REPAYER_ROLE,
+             repaymentController.address,
+         );
+         await updateRepaymentControllerPermissions.wait();
 
-        const originationController = <OriginationController>(
-            await deploy("OriginationController", admin, [loanCore.address, assetWrapper.address])
-        );
-        await originationController.deployed();
-        const updateOriginationControllerPermissions = await loanCore.grantRole(
-            ORIGINATOR_ROLE,
-            originationController.address,
-        );
-        await updateOriginationControllerPermissions.wait();
+         const updateOriginationControllerPermissions = await loanCore.grantRole(
+             ORIGINATOR_ROLE,
+             originationController.address,
+         );
+         await updateOriginationControllerPermissions.wait();
 
-        return {
-            loanCore,
-            borrowerNote,
-            lenderNote,
-            assetWrapper,
-            repaymentController,
-            originationController,
-            mockERC20,
-            borrower,
-            lender,
-            admin,
-            currentTimestamp
-        };
-    };
+         return {
+             loanCore,
+             borrowerNote,
+             lenderNote,
+             assetWrapper,
+             repaymentController,
+             originationController,
+             mockERC20,
+             borrower,
+             lender,
+             admin,
+             currentTimestamp
+         };
+     };
 
     /**
      * Create a NON-INSTALLMENT LoanTerms object using the given parameters, or defaults
@@ -155,112 +180,101 @@ describe("Implementation", () => {
         };
     };
 
-    const createWnft = async (assetWrapper: AssetWrapper, user: SignerWithAddress) => {
-        const tx = await assetWrapper.initializeBundle(await user.getAddress());
-        const receipt = await tx.wait();
-        if (receipt && receipt.events && receipt.events.length === 1 && receipt.events[0].args) {
-            return receipt.events[0].args.tokenId;
-        } else {
-            throw new Error("Unable to initialize bundle");
-        }
-    };
-
     interface LoanDef {
         loanId: string;
-        bundleId: string;
+        bundleId: BigNumber;
         loanTerms: LoanTerms;
         loanData: LoanData;
     }
 
     const initializeLoan = async (context: TestContext, terms?: Partial<LoanTerms>): Promise<LoanDef> => {
-        const { originationController, mockERC20, assetWrapper, loanCore, lender, borrower } = context;
-        const bundleId = terms?.collateralTokenId ?? (await createWnft(assetWrapper, borrower));
-        const loanTerms = createLoanTerms(mockERC20.address, { collateralTokenId: bundleId });
-        if (terms) Object.assign(loanTerms, terms);
+      const { originationController, mockERC20, assetWrapper, loanCore, lender, borrower } = context;
+      const bundleId = await initializeBundle(assetWrapper, borrower);
+      const loanTerms = createLoanTerms(mockERC20.address, { collateralTokenId: bundleId });
+      await mint(mockERC20, lender, loanTerms.principal);
 
-        await mint(mockERC20, lender, ethers.utils.parseEther("10000"));
+      const { v, r, s } = await createLoanTermsSignature(
+          originationController.address,
+          "OriginationController",
+          loanTerms,
+          borrower,
+      );
 
-        const { v, r, s } = await createLoanTermsSignature(
-            originationController.address,
-            "OriginationController",
-            loanTerms,
-            borrower,
-        );
+      await approve(mockERC20, lender, originationController.address, loanTerms.principal);
+      await assetWrapper.connect(borrower).approve(originationController.address, bundleId);
+      const tx = await originationController
+              .connect(lender)
+              .initializeLoan(loanTerms, await borrower.getAddress(), await lender.getAddress(), v, r, s);
+      const receipt = await tx.wait();
 
-        await approve(mockERC20, lender, originationController.address, loanTerms.principal);
-        await assetWrapper.connect(borrower).approve(originationController.address, bundleId);
-        const tx = await originationController
-            .connect(lender)
-            .initializeLoan(loanTerms, await borrower.getAddress(), await lender.getAddress(), v, r, s);
-        const receipt = await tx.wait();
+      let loanId;
 
-        let loanId;
+      if (receipt && receipt.events && receipt.events.length == 15) {
+          const LoanCreatedLog = new hre.ethers.utils.Interface([
+              "event LoanStarted(uint256 loanId, address lender, address borrower)",
+          ]);
+          const log = LoanCreatedLog.parseLog(receipt.events[14]);
+          loanId = log.args.loanId;
+      } else {
+          throw new Error("Unable to initialize loan");
+      }
 
-        if (receipt && receipt.events && receipt.events.length == 15) {
-            const LoanCreatedLog = new hre.ethers.utils.Interface([
-                "event LoanStarted(uint256 loanId, address lender, address borrower)",
-            ]);
-            const log = LoanCreatedLog.parseLog(receipt.events[14]);
-            loanId = log.args.loanId;
-        } else {
-            throw new Error("Unable to initialize loan");
-        }
-
-        return {
-            loanId,
-            bundleId,
-            loanTerms,
-            loanData: await loanCore.getLoan(loanId),
-        };
+      return {
+          loanId,
+          bundleId,
+          loanTerms,
+          loanData: await loanCore.getLoan(loanId),
+      };
     };
 
     const initializeInstallmentLoan = async (context: TestContext, payableCurrency: string, durationSecs: number, principal:BigNumber, interest:BigNumber, startDate:number, numInstallments:number, terms?: Partial<LoanTerms>): Promise<LoanDef> => {
-        const { originationController, mockERC20, assetWrapper, loanCore, lender, borrower } = context;
-        const bundleId = terms?.collateralTokenId ?? (await createWnft(assetWrapper, borrower));
-        const loanTerms = createInstallmentLoanTerms(
-            payableCurrency,
-            durationSecs,
-            principal,
-            interest,
-            startDate,
-            numInstallments,
-            { collateralTokenId: bundleId }
-        );
-        if (terms) Object.assign(loanTerms, terms);
-        await mint(mockERC20, lender, loanTerms.principal);
-        await mint(mockERC20, borrower, ethers.utils.parseEther("10000")); // for when they need additional liquidity ( lot of payments missed)
+      const { originationController, mockERC20, assetWrapper, loanCore, lender, borrower } = context;
+      const bundleId = await initializeBundle(assetWrapper, borrower);
+      const loanTerms = createInstallmentLoanTerms(
+          payableCurrency,
+          durationSecs,
+          principal,
+          interest,
+          startDate,
+          numInstallments,
+          { collateralTokenId: bundleId }
+      );
+      if (terms) Object.assign(loanTerms, terms);
+      await mint(mockERC20, lender, loanTerms.principal);
+      await mint(mockERC20, borrower, ethers.utils.parseEther("10000")); // for when they need additional liquidity ( lot of payments missed)
 
-        const { v, r, s } = await createLoanTermsSignature(
-            originationController.address,
-            "OriginationController",
-            loanTerms,
-            borrower,
-        );
+      const { v, r, s } = await createLoanTermsSignature(
+          originationController.address,
+          "OriginationController",
+          loanTerms,
+          borrower,
+      );
 
-        await approve(mockERC20, lender, originationController.address, loanTerms.principal);
-        await assetWrapper.connect(borrower).approve(originationController.address, bundleId);
-        const tx = await originationController
-            .connect(lender)
-            .initializeLoan(loanTerms, await borrower.getAddress(), await lender.getAddress(), v, r, s);
-        const receipt = await tx.wait();
+      await approve(mockERC20, lender, originationController.address, loanTerms.principal);
+      await assetWrapper.connect(borrower).approve(originationController.address, bundleId);
+      const tx = await originationController
+              .connect(lender)
+              .initializeLoan(loanTerms, await borrower.getAddress(), await lender.getAddress(), v, r, s);
+      const receipt = await tx.wait();
 
-        let loanId;
-        if (receipt && receipt.events && receipt.events.length == 15) {
-            const LoanCreatedLog = new hre.ethers.utils.Interface([
-                "event LoanStarted(uint256 loanId, address lender, address borrower)",
-            ]);
-            const log = LoanCreatedLog.parseLog(receipt.events[14]);
-            loanId = log.args.loanId;
-        } else {
-            throw new Error("Unable to initialize loan");
-        }
+      let loanId;
 
-        return {
-            loanId,
-            bundleId,
-            loanTerms,
-            loanData: await loanCore.getLoan(loanId),
-        };
+      if (receipt && receipt.events && receipt.events.length == 15) {
+          const LoanCreatedLog = new hre.ethers.utils.Interface([
+              "event LoanStarted(uint256 loanId, address lender, address borrower)",
+          ]);
+          const log = LoanCreatedLog.parseLog(receipt.events[14]);
+          loanId = log.args.loanId;
+      } else {
+          throw new Error("Unable to initialize loan");
+      }
+
+      return {
+          loanId,
+          bundleId,
+          loanTerms,
+          loanData: await loanCore.getLoan(loanId),
+      };
     };
 
     // *********************** INSTALLMENT TESTS *******************************
