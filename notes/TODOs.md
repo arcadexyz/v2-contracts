@@ -4,7 +4,7 @@ Evan:
 - Write installments tests
   - (PARTIAL) Update LoanTerms struct.
     - Change from `collateralTokenId` to `bundleId`.
-  - Implement interest rate functionality into RepaymentController.sol.
+  - (DONE) Implement interest rate functionality into RepaymentController.sol.
     - (DONE) Change comments for LoanTerms interest.
     - (DONE) Internal calc function.
   - (DONE) Port over (5) RepaymentController functions and (1) LoanCore function.
@@ -12,10 +12,11 @@ Evan:
   - (DONE) Port over repayPart function to LoanCore.sol
     - (DONE) Update other functions to jive with LoanTerms.
   - (DONE) port over two new test scripts `Installments.ts` and `InstallmentsRepay.ts`.
-    - Convert AssetWrapper in the tests to new AssetVault implementation.
+    - (DONE) Convert AssetWrapper in the tests to new AssetVault implementation.
     🔑 For Installment tests, run `npx hardhat test test/Installments.ts` or `npx hardhat test test/InstallmentsRepay.ts`.
 
 - Review Origination PR
+  - loan terms review, then integrate with my functions.
 
 Mouzayan:
 - Upgradeability and dependency architecture
