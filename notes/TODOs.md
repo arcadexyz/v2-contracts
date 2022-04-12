@@ -8,7 +8,7 @@ Mouzayan:
 - Upgradeability and dependency architecture\
  Done   - Decide - which contracts should be upgradeable? What upgradebility pattern should they use?\
  Done   - Decide - which dependencies need to get passed in constructors for each contract?\
- Done   - Decide - of those dependencies, which should be changeable by an admin? Which should be immutable and/or only changeable by upgrade?\
+ Done   - Decide - of those dependencies, which should be changeable by an admin? Which should be immutable and/or only changeable by upgrade?
 
  - Diagramming Protocol: What May Need to Change in the Future Scenarios
  - Looking into plugin to track what smart contracts have been used
