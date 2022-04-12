@@ -1,5 +1,6 @@
 # Upgradability, why?
 Modify contract code while preserving the contract address, state and balance.
+Helpful as a safeguard for implementing a fix in the event of a vulnerability, or as a means to iteratively develop a system by progressively adding new features.
 
 # How does it work?
 The user interacts with the implementation contract via a proxy contract.
@@ -10,14 +11,17 @@ Most Proxy patterns use the **Transaprent Proxy** and **UUPS** (universal upgrad
 
 # Transparent vs. UUPS Proxy
 ## Transparent Proxy Pattern:
-- upgrade handled by proxy contract
-- deployment more expensive
-- easy to maintain
+- all logic related to upgrades is contained in the proxy and the implementation contract does not need any special logic to act as a delegation target
+- subject to vulnerability caused by function selector clashes (implementation contract can have a function that has the same 4-byte identifier as the proxy’s upgrade function)
+- expensive deployment: each call requires an additional read from storage to load the admin address and the contract itself is expensive to deploy at over 700k gas
 
 ## UUPS Proxy Pattern:
-- upgrade handled by the implementation contract
-- deployment is cheaper
-- more challenging maintenance
+- upgrade logic is placed in the implementation contract
+- all implementation contracts to extend from a base **proxiable** contract
+- since all functions are defined in the implementation contract, the Solidity compiler checks for function selector clashes
+- cheaper deployment: smaller in size and requires one less read from storage with every call
+- if the proxy is upgraded to an implementation that fails to implement the upgradeable functions, it becomes permanently locked into that implementation
+- proxy storage clash issues have been resolved with the **unstructured storage pattern** which adds a level of complexity to the proxy implementation
 
 # Surface Level How To
 Whenever you deploy a new contract using OpenZeppelin's ```deployProxy```, that contract instance can be upgraded at a later date. By default, only the address that originally deployed the contract has the ability to upgrade it.\
@@ -62,10 +66,7 @@ Whenever you deploy a new contract using OpenZeppelin's ```deployProxy```, that 
     main();
     ```
 
-# Storage Collision Warning
-Any new variables that need to be added to the upgraded version of the implementation contract need to be added in the code, below the other variables (not on top or between), to avoid storage collision.
-
-# Contracts to be Made Upgradable
+# v2 Contracts to be Made Upgradable
 Does this get implemented automatically: [```_init_unchained``` for Multiple Inheritance](https://docs.openzeppelin.com/contracts/4.x/upgradeable#multiple-inheritance) ?
 ### AssetWrapper.sol
 - dependencies to be passed in initializer function:
@@ -87,7 +88,7 @@ Does this get implemented automatically: [```_init_unchained``` for Multiple Inh
 
 # References on Upgradeability
 [OpenZeppelin docs](https://docs.openzeppelin.com/learn/upgrading-smart-contracts)\
-[OpenZeppelin blog](https://blog.openzeppelin.com/the-state-of-smart-contract-upgrades/)\
+[The State of Smart Contract Upgrades](https://blog.openzeppelin.com/the-state-of-smart-contract-upgrades/)\
 [OpenZeppelin tutorial](https://forum.openzeppelin.com/t/uups-proxies-tutorial-solidity-javascript/7786)
 
 
