@@ -32,8 +32,11 @@ library LoanLibrary {
         uint256 principal;
         // The amount of interest in terms of the payableCurrency
         uint256 interest;
-        // The tokenID of the collateral bundle
-        uint256 bundleId;
+        // The tokenID of the address holding the collateral
+        // Can be an AssetVault, or the borrower for unbundled collateral
+        address collateralAddress;
+        // The tokenID of the collateral
+        uint256 collateralId;
         // The payable currency for the loan principal and interest
         address payableCurrency;
     }

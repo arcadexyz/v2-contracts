@@ -5,6 +5,15 @@ pragma solidity ^0.8.11;
 import "../libraries/LoanLibrary.sol";
 
 interface IOriginationController {
+
+    // ================ Data Types =============
+
+    struct Signature {
+        uint8 v;
+        bytes32 r;
+        bytes32 s;
+    }
+
     // ================ Events =================
 
     event Approval(address indexed owner, address indexed signer);
@@ -15,18 +24,14 @@ interface IOriginationController {
         LoanLibrary.LoanTerms calldata loanTerms,
         address borrower,
         address lender,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
+        Signature calldata sig
     ) external returns (uint256 loanId);
 
     function initializeLoanWithItems(
         LoanLibrary.LoanTerms calldata loanTerms,
         address borrower,
         address lender,
-        uint8 v,
-        bytes32 r,
-        bytes32 s,
+        Signature calldata sig,
         LoanLibrary.Predicate[] calldata itemPredicates
     ) external returns (uint256 loanId);
 
@@ -34,12 +39,8 @@ interface IOriginationController {
         LoanLibrary.LoanTerms calldata loanTerms,
         address borrower,
         address lender,
-        uint8 v,
-        bytes32 r,
-        bytes32 s,
-        uint8 collateralV,
-        bytes32 collateralR,
-        bytes32 collateralS,
+        Signature calldata sig,
+        Signature calldata collateralSig,
         uint256 permitDeadline
     ) external returns (uint256 loanId);
 
@@ -47,12 +48,8 @@ interface IOriginationController {
         LoanLibrary.LoanTerms calldata loanTerms,
         address borrower,
         address lender,
-        uint8 v,
-        bytes32 r,
-        bytes32 s,
-        uint8 collateralV,
-        bytes32 collateralR,
-        bytes32 collateralS,
+        Signature calldata sig,
+        Signature calldata collateralSig,
         uint256 permitDeadline,
         LoanLibrary.Predicate[] calldata itemPredicates
     ) external returns (uint256 loanId);
@@ -67,18 +64,14 @@ interface IOriginationController {
 
     // ============== Signature Verification ==============
 
-    function recoverBundleSignature(
+    function recoverTokenSignature(
         LoanLibrary.LoanTerms calldata loanTerms,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
+        Signature calldata sig
     ) external view returns (address signer);
 
     function recoverItemsSignature(
         LoanLibrary.LoanTerms calldata loanTerms,
-        uint8 v,
-        bytes32 r,
-        bytes32 s,
+        Signature calldata sig,
         bytes calldata items
     ) external view returns (address signer);
 }

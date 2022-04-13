@@ -19,10 +19,8 @@ import "./interfaces/ISignatureVerifier.sol";
 // TODO: add nonReentrant
 
 // NEXT PR:
-// TODO: Flexible asset vaults, defined per loan.
 // TODO: Look at EIP-2712 signatures, possiby replace approvals
 // TODO: Add signing nonce
-// TODO: Consider non-wrapped collateral
 
 /**
  * @title OriginationController
@@ -42,24 +40,24 @@ contract OriginationController is Context, IOriginationController, EIP712 {
 
     // =================== Constants =====================
 
+    // TODO: Fix typehashes
     /// @notice EIP712 type hash for bundle-based signatures.
-    bytes32 private constant _BUNDLE_TYPEHASH =
+    bytes32 private constant _TOKEN_ID_TYPEHASH =
         keccak256(
             // solhint-disable-next-line max-line-length
-            "LoanTerms(uint256 durationSecs,uint256 principal,uint256 interest,uint256 bundleId,address payableCurrency)"
+            "LoanTerms(uint256 durationSecs,uint256 principal,uint256 interest,address collateralAddress, uint256 collateralId,address payableCurrency)"
         );
 
     /// @notice EIP712 type hash for item-based signatures.
     bytes32 private constant _ITEMS_TYPEHASH =
         keccak256(
             // solhint-disable-next-line max-line-length
-            "LoanTerms(uint256 durationSecs,uint256 principal,uint256 interest,bytes items,address payableCurrency)"
+            "LoanTerms(uint256 durationSecs,uint256 principal,uint256 interest,address collateralAddress, bytes items,address payableCurrency)"
         );
 
     // ============= Global Immutable State ==============
 
     address public immutable loanCore;
-    address public immutable vaultFactory;
 
     // ================= Approval State ==================
 
@@ -76,18 +74,18 @@ contract OriginationController is Context, IOriginationController, EIP712 {
      *      in loan core after deployment.
      *
      * @param _loanCore                     The address of the loan core logic of the protocol.
-     * @param _vaultFactory                 The address of the factory for the asset vaults used by the protocol.
      */
-    constructor(address _loanCore, address _vaultFactory) EIP712("OriginationController", "2") {
+    constructor(address _loanCore) EIP712("OriginationController", "2") {
         require(_loanCore != address(0), "Origination: loanCore not defined");
         loanCore = _loanCore;
-        vaultFactory = _vaultFactory;
     }
 
     // ==================================== ORIGINATION OPERATIONS ======================================
 
     /**
      * @notice Initializes a loan with Loan Core.
+     * @notice Works with either wrapped bundles with an ID, or specific ERC721 unwrapped NFTs.
+     *         In that case, collateralAddress should be the token contract.
      *
      * @dev The caller must be a borrower or lender, or approved by a borrower or lender.
      * @dev The external signer must be a borrower or lender, or approved by a borrower or lender.
@@ -96,9 +94,7 @@ contract OriginationController is Context, IOriginationController, EIP712 {
      * @param loanTerms                     The terms agreed by the lender and borrower.
      * @param borrower                      Address of the borrower.
      * @param lender                        Address of the lender.
-     * @param v                             Part of the loan terms signature.
-     * @param r                             Part of the loan terms signature.
-     * @param s                             Part of the loan terms signature.
+     * @param sig                           The loan terms signature, with v, r, s fields.
      *
      * @return loanId                       The unique ID of the new loan.
      */
@@ -106,28 +102,14 @@ contract OriginationController is Context, IOriginationController, EIP712 {
         LoanLibrary.LoanTerms calldata loanTerms,
         address borrower,
         address lender,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
+        Signature calldata sig
     ) public override returns (uint256 loanId) {
         require(
             isSelfOrApproved(lender, msg.sender) || isSelfOrApproved(borrower, msg.sender),
             "Origination: signer not participant"
         );
 
-        // vault must be in withdraw-disabled state,
-        // otherwise its unsafe as assets could have been withdrawn to frontrun this call
-        require(
-            !IAssetVault(IVaultFactory(vaultFactory).instanceAt(loanTerms.bundleId)).withdrawEnabled(),
-            "Origination: withdraws enabled"
-        );
-
-        address externalSigner = recoverBundleSignature(
-            loanTerms,
-            v,
-            r,
-            s
-        );
+        address externalSigner = recoverTokenSignature(loanTerms, sig);
 
         // Make sure one from each side approves
         // TODO: Take a second look at this - is there a way to get around it?
@@ -142,8 +124,8 @@ contract OriginationController is Context, IOriginationController, EIP712 {
         // Take custody of funds
         IERC20(loanTerms.payableCurrency).safeTransferFrom(lender, address(this), loanTerms.principal);
         IERC20(loanTerms.payableCurrency).approve(loanCore, loanTerms.principal);
-        IERC721(vaultFactory).transferFrom(borrower, address(this), loanTerms.bundleId);
-        IERC721(vaultFactory).approve(loanCore, loanTerms.bundleId);
+        IERC721(loanTerms.collateralAddress).transferFrom(borrower, address(this), loanTerms.collateralId);
+        IERC721(loanTerms.collateralAddress).approve(loanCore, loanTerms.collateralId);
 
         // Start loan
         loanId = ILoanCore(loanCore).createLoan(loanTerms);
@@ -153,6 +135,7 @@ contract OriginationController is Context, IOriginationController, EIP712 {
     /**
      * @notice Initializes a loan with Loan Core.
      * @notice Compared to initializeLoan, this verifies the specific items in a bundle.
+     * @notice Only works with bundles implementing the IVaultFactory interface.
      *
      * @dev The caller must be a borrower or lender, or approved by a borrower or lender.
      * @dev The external signer must be a borrower or lender, or approved by a borrower or lender.
@@ -161,9 +144,7 @@ contract OriginationController is Context, IOriginationController, EIP712 {
      * @param loanTerms                     The terms agreed by the lender and borrower.
      * @param borrower                      Address of the borrower.
      * @param lender                        Address of the lender.
-     * @param v                             Part of the loan terms signature.
-     * @param r                             Part of the loan terms signature.
-     * @param s                             Part of the loan terms signature.
+     * @param sig                           The loan terms signature, with v, r, s fields.
      * @param itemPredicates                The predicate rules for the items in the bundle.
      *
      * @return loanId                       The unique ID of the new loan.
@@ -172,30 +153,14 @@ contract OriginationController is Context, IOriginationController, EIP712 {
         LoanLibrary.LoanTerms calldata loanTerms,
         address borrower,
         address lender,
-        uint8 v,
-        bytes32 r,
-        bytes32 s,
+        Signature calldata sig,
         LoanLibrary.Predicate[] calldata itemPredicates
     ) public override returns (uint256 loanId) {
         require(_msgSender() == lender || _msgSender() == borrower, "Origination: sender not participant");
 
-        address vault = IVaultFactory(vaultFactory).instanceAt(loanTerms.bundleId);
+        address vault = IVaultFactory(loanTerms.collateralAddress).instanceAt(loanTerms.collateralId);
 
-        // vault must be in withdraw-disabled state,
-        // otherwise its unsafe as assets could have been withdrawn to frontrun this call
-        // TODO: Can we delete this with an items signature?
-        require(
-            !IAssetVault(vault).withdrawEnabled(),
-            "Origination: withdraws enabled"
-        );
-
-        address externalSigner = recoverItemsSignature(
-            loanTerms,
-            v,
-            r,
-            s,
-            abi.encode(itemPredicates)
-        );
+        address externalSigner = recoverItemsSignature(loanTerms, sig, abi.encode(itemPredicates));
 
         require(
             isSelfOrApproved(lender, externalSigner) || isSelfOrApproved(borrower, externalSigner),
@@ -214,8 +179,8 @@ contract OriginationController is Context, IOriginationController, EIP712 {
 
         IERC20(loanTerms.payableCurrency).safeTransferFrom(lender, address(this), loanTerms.principal);
         IERC20(loanTerms.payableCurrency).approve(loanCore, loanTerms.principal);
-        IERC721(vaultFactory).transferFrom(borrower, address(this), loanTerms.bundleId);
-        IERC721(vaultFactory).approve(loanCore, loanTerms.bundleId);
+        IERC721(loanTerms.collateralAddress).transferFrom(borrower, address(this), loanTerms.collateralId);
+        IERC721(loanTerms.collateralAddress).approve(loanCore, loanTerms.collateralId);
 
         loanId = ILoanCore(loanCore).createLoan(loanTerms);
         ILoanCore(loanCore).startLoan(lender, borrower, loanId);
@@ -231,12 +196,8 @@ contract OriginationController is Context, IOriginationController, EIP712 {
      * @param loanTerms                     The terms agreed by the lender and borrower.
      * @param borrower                      Address of the borrower.
      * @param lender                        Address of the lender.
-     * @param v                             Part of the loan terms signature.
-     * @param r                             Part of the loan terms signature.
-     * @param s                             Part of the loan terms signature.
-     * @param collateralV                   Part of the collateral permit signature.
-     * @param collateralR                   Part of the collateral permit signature.
-     * @param collateralS                   Part of the collateral permit signature.
+     * @param sig                           The loan terms signature, with v, r, s fields.
+     * @param collateralSig                 The collateral permit signature, with v, r, s fields.
      * @param permitDeadline                The last timestamp for which the signature is valid.
      *
      * @return loanId                       The unique ID of the new loan.
@@ -245,25 +206,21 @@ contract OriginationController is Context, IOriginationController, EIP712 {
         LoanLibrary.LoanTerms calldata loanTerms,
         address borrower,
         address lender,
-        uint8 v,
-        bytes32 r,
-        bytes32 s,
-        uint8 collateralV,
-        bytes32 collateralR,
-        bytes32 collateralS,
+        Signature calldata sig,
+        Signature calldata collateralSig,
         uint256 permitDeadline
     ) external override returns (uint256 loanId) {
-        IERC721Permit(vaultFactory).permit(
+        IERC721Permit(loanTerms.collateralAddress).permit(
             borrower,
             address(this),
-            loanTerms.bundleId,
+            loanTerms.collateralId,
             permitDeadline,
-            collateralV,
-            collateralR,
-            collateralS
+            collateralSig.v,
+            collateralSig.r,
+            collateralSig.s
         );
 
-        loanId = initializeLoan(loanTerms, borrower, lender, v, r, s);
+        loanId = initializeLoan(loanTerms, borrower, lender, sig);
     }
 
     /**
@@ -277,12 +234,8 @@ contract OriginationController is Context, IOriginationController, EIP712 {
      * @param loanTerms                     The terms agreed by the lender and borrower.
      * @param borrower                      Address of the borrower.
      * @param lender                        Address of the lender.
-     * @param v                             Part of the loan terms signature.
-     * @param r                             Part of the loan terms signature.
-     * @param s                             Part of the loan terms signature.
-     * @param collateralV                   Part of the collateral permit signature.
-     * @param collateralR                   Part of the collateral permit signature.
-     * @param collateralS                   Part of the collateral permit signature.
+     * @param sig                           The loan terms signature, with v, r, s fields.
+     * @param collateralSig                 The collateral permit signature, with v, r, s fields.
      * @param permitDeadline                The last timestamp for which the signature is valid.
      * @param itemPredicates                The predicate rules for the items in the bundle.
      *
@@ -292,26 +245,22 @@ contract OriginationController is Context, IOriginationController, EIP712 {
         LoanLibrary.LoanTerms calldata loanTerms,
         address borrower,
         address lender,
-        uint8 v,
-        bytes32 r,
-        bytes32 s,
-        uint8 collateralV,
-        bytes32 collateralR,
-        bytes32 collateralS,
+        Signature calldata sig,
+        Signature calldata collateralSig,
         uint256 permitDeadline,
         LoanLibrary.Predicate[] calldata itemPredicates
     ) external override returns (uint256 loanId) {
-        IERC721Permit(vaultFactory).permit(
+        IERC721Permit(loanTerms.collateralAddress).permit(
             borrower,
             address(this),
-            loanTerms.bundleId,
+            loanTerms.collateralId,
             permitDeadline,
-            collateralV,
-            collateralR,
-            collateralS
+            collateralSig.v,
+            collateralSig.r,
+            collateralSig.s
         );
 
-        loanId = initializeLoanWithItems(loanTerms, borrower, lender, v, r, s, itemPredicates);
+        loanId = initializeLoanWithItems(loanTerms, borrower, lender, sig, itemPredicates);
     }
 
     // ==================================== PERMISSION MANAGEMENT =======================================
@@ -358,34 +307,31 @@ contract OriginationController is Context, IOriginationController, EIP712 {
     // ==================================== SIGNATURE VERIFICATION ======================================
 
     /**
-     * @notice Determine the external signer for a signature specifying only a bundle ID.
+     * @notice Determine the external signer for a signature specifying only a collateral address and ID.
      *
      * @param loanTerms                     The terms of the loan.
-     * @param v                             Part of the signature.
-     * @param r                             Part of the signature.
-     * @param s                             Part of the signature.
+     * @param sig                           The signature, with v, r, s fields.
      *
      * @return signer                       The address of the recovered signer.
      */
-    function recoverBundleSignature(
+    function recoverTokenSignature(
         LoanLibrary.LoanTerms calldata loanTerms,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
+        Signature calldata sig
     ) public view override returns (address signer) {
         bytes32 loanHash = keccak256(
             abi.encode(
-                _BUNDLE_TYPEHASH,
+                _TOKEN_ID_TYPEHASH,
                 loanTerms.durationSecs,
                 loanTerms.principal,
                 loanTerms.interest,
-                loanTerms.bundleId,
+                loanTerms.collateralAddress,
+                loanTerms.collateralId,
                 loanTerms.payableCurrency
             )
         );
 
         bytes32 typedLoanHash = _hashTypedDataV4(loanHash);
-        signer = ECDSA.recover(typedLoanHash, v, r, s);
+        signer = ECDSA.recover(typedLoanHash, sig.v, sig.r, sig.s);
     }
 
     /**
@@ -394,18 +340,14 @@ contract OriginationController is Context, IOriginationController, EIP712 {
      *         can be initiated with any arbitrary bundle - as long as the bundle contains the items.
      *
      * @param loanTerms                     The terms of the loan.
-     * @param v                             Part of the signature.
-     * @param r                             Part of the signature.
-     * @param s                             Part of the signature.
+     * @param sig                           The loan terms signature, with v, r, s fields.
      * @param items                         The required items in the specified bundle.
      *
      * @return signer                       The address of the recovered signer.
      */
     function recoverItemsSignature(
         LoanLibrary.LoanTerms calldata loanTerms,
-        uint8 v,
-        bytes32 r,
-        bytes32 s,
+        Signature calldata sig,
         bytes memory items
     ) public view override returns (address signer) {
         bytes32 loanHash = keccak256(
@@ -414,13 +356,14 @@ contract OriginationController is Context, IOriginationController, EIP712 {
                 loanTerms.durationSecs,
                 loanTerms.principal,
                 loanTerms.interest,
+                loanTerms.collateralAddress,
                 items,
                 loanTerms.payableCurrency
             )
         );
 
         bytes32 typedLoanHash = _hashTypedDataV4(loanHash);
-        signer = ECDSA.recover(typedLoanHash, v, r, s);
+        signer = ECDSA.recover(typedLoanHash, sig.v, sig.r, sig.s);
     }
 
 }

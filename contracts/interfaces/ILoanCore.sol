@@ -91,7 +91,5 @@ interface ILoanCore {
 
     function lenderNote() external returns (IPromissoryNote);
 
-    function collateralToken() external returns (IERC721);
-
     function feeController() external returns (IFeeController);
 }

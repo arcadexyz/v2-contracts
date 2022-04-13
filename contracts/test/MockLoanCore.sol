@@ -16,7 +16,7 @@ contract MockLoanCore is ILoanCore {
 
     IPromissoryNote public override borrowerNote;
     IPromissoryNote public override lenderNote;
-    IERC721 public override collateralToken;
+    IERC721 public collateralToken;
     IFeeController public override feeController;
 
     mapping(uint256 => LoanLibrary.LoanData) public loans;
@@ -44,7 +44,8 @@ contract MockLoanCore is ILoanCore {
             terms.durationSecs,
             terms.principal,
             terms.interest,
-            terms.bundleId,
+            terms.collateralAddress,
+            terms.collateralId,
             terms.payableCurrency
         );
 
