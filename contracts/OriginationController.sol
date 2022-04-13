@@ -18,6 +18,7 @@ import "./interfaces/ISignatureVerifier.sol";
 
 // NEXT PR:
 // TODO: Look at EIP-2712 signatures, possibly replace approvals
+// TODO: Split verifiers up into separate contracts
 // TODO: Add signing nonce
 
 /**
@@ -38,7 +39,6 @@ contract OriginationController is Context, IOriginationController, EIP712, Reent
 
     // =================== Constants =====================
 
-    // TODO: Fix typehashes
     /// @notice EIP712 type hash for bundle-based signatures.
     bytes32 private constant _TOKEN_ID_TYPEHASH =
         keccak256(
@@ -50,7 +50,7 @@ contract OriginationController is Context, IOriginationController, EIP712, Reent
     bytes32 private constant _ITEMS_TYPEHASH =
         keccak256(
             // solhint-disable-next-line max-line-length
-            "LoanTerms(uint256 durationSecs,uint256 principal,uint256 interest,address collateralAddress, bytes items,address payableCurrency)"
+            "LoanTermsWithItems(uint256 durationSecs,uint256 principal,uint256 interest,address collateralAddress, bytes items,address payableCurrency)"
         );
 
     // ============= Global Immutable State ==============
