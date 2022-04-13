@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 import "./interfaces/IOriginationController.sol";
 import "./interfaces/ILoanCore.sol";
@@ -15,11 +16,8 @@ import "./interfaces/IAssetVault.sol";
 import "./interfaces/IVaultFactory.sol";
 import "./interfaces/ISignatureVerifier.sol";
 
-// THIS PR:
-// TODO: add nonReentrant
-
 // NEXT PR:
-// TODO: Look at EIP-2712 signatures, possiby replace approvals
+// TODO: Look at EIP-2712 signatures, possibly replace approvals
 // TODO: Add signing nonce
 
 /**
@@ -33,7 +31,7 @@ import "./interfaces/ISignatureVerifier.sol";
  * takes place in this contract. To originate a loan, the controller
  * also takes custody of both the collateral and loan principal.
  */
-contract OriginationController is Context, IOriginationController, EIP712 {
+contract OriginationController is Context, IOriginationController, EIP712, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     // ============================================ STATE ==============================================
@@ -104,32 +102,11 @@ contract OriginationController is Context, IOriginationController, EIP712 {
         address lender,
         Signature calldata sig
     ) public override returns (uint256 loanId) {
-        require(
-            isSelfOrApproved(lender, msg.sender) || isSelfOrApproved(borrower, msg.sender),
-            "Origination: signer not participant"
-        );
-
         address externalSigner = recoverTokenSignature(loanTerms, sig);
 
-        // Make sure one from each side approves
-        // TODO: Take a second look at this - is there a way to get around it?
-        if (isSelfOrApproved(lender, externalSigner)) {
-            require(externalSigner != _msgSender() && externalSigner != lender, "Origination: approved own loan");
-        } else if (isSelfOrApproved(borrower, externalSigner)) {
-            require(externalSigner != _msgSender() && externalSigner != borrower, "Origination: approved own loan");
-        } else {
-            revert("Origination: signer not participant");
-        }
+        _validateCounterparties(borrower, lender, msg.sender, externalSigner);
 
-        // Take custody of funds
-        IERC20(loanTerms.payableCurrency).safeTransferFrom(lender, address(this), loanTerms.principal);
-        IERC20(loanTerms.payableCurrency).approve(loanCore, loanTerms.principal);
-        IERC721(loanTerms.collateralAddress).transferFrom(borrower, address(this), loanTerms.collateralId);
-        IERC721(loanTerms.collateralAddress).approve(loanCore, loanTerms.collateralId);
-
-        // Start loan
-        loanId = ILoanCore(loanCore).createLoan(loanTerms);
-        ILoanCore(loanCore).startLoan(lender, borrower, loanId);
+        loanId = _initialize(loanTerms, borrower, lender);
     }
 
     /**
@@ -139,7 +116,7 @@ contract OriginationController is Context, IOriginationController, EIP712 {
      *
      * @dev The caller must be a borrower or lender, or approved by a borrower or lender.
      * @dev The external signer must be a borrower or lender, or approved by a borrower or lender.
-     * @dev The external signer must come from the oppoite side of the loan as the caller.
+     * @dev The external signer must come from the opposite side of the loan as the caller.
      *
      * @param loanTerms                     The terms agreed by the lender and borrower.
      * @param borrower                      Address of the borrower.
@@ -156,18 +133,10 @@ contract OriginationController is Context, IOriginationController, EIP712 {
         Signature calldata sig,
         LoanLibrary.Predicate[] calldata itemPredicates
     ) public override returns (uint256 loanId) {
-        require(_msgSender() == lender || _msgSender() == borrower, "Origination: sender not participant");
-
         address vault = IVaultFactory(loanTerms.collateralAddress).instanceAt(loanTerms.collateralId);
-
         address externalSigner = recoverItemsSignature(loanTerms, sig, abi.encode(itemPredicates));
 
-        require(
-            isSelfOrApproved(lender, externalSigner) || isSelfOrApproved(borrower, externalSigner),
-            "Origination: signer not participant"
-        );
-
-        require(externalSigner != _msgSender(), "Origination: approved own loan");
+        _validateCounterparties(borrower, lender, msg.sender, externalSigner);
 
         for (uint256 i = 0; i < itemPredicates.length; i++) {
             // Verify items are held in the wrapper
@@ -177,13 +146,7 @@ contract OriginationController is Context, IOriginationController, EIP712 {
             );
         }
 
-        IERC20(loanTerms.payableCurrency).safeTransferFrom(lender, address(this), loanTerms.principal);
-        IERC20(loanTerms.payableCurrency).approve(loanCore, loanTerms.principal);
-        IERC721(loanTerms.collateralAddress).transferFrom(borrower, address(this), loanTerms.collateralId);
-        IERC721(loanTerms.collateralAddress).approve(loanCore, loanTerms.collateralId);
-
-        loanId = ILoanCore(loanCore).createLoan(loanTerms);
-        ILoanCore(loanCore).startLoan(lender, borrower, loanId);
+        loanId = _initialize(loanTerms, borrower, lender);
     }
 
     /**
@@ -364,6 +327,60 @@ contract OriginationController is Context, IOriginationController, EIP712 {
 
         bytes32 typedLoanHash = _hashTypedDataV4(loanHash);
         signer = ECDSA.recover(typedLoanHash, sig.v, sig.r, sig.s);
+    }
+
+    // =========================================== HELPERS ==============================================
+
+    /**
+     * @dev Ensure that one counterparty has signed the loan terms, and the other
+     *      has initiated the transaction.
+     *
+     * @param borrower                  The specified borrower for the loan.
+     * @param lender                    The specified lender for the loan.
+     * @param caller                    The address initiating the transaction.
+     * @param signer                    The address recovered from the loan terms signature.
+     */
+    function _validateCounterparties(
+        address borrower,
+        address lender,
+        address caller,
+        address signer
+    ) internal view {
+        // Make sure one from each side approves
+        if (isSelfOrApproved(lender, caller)) {
+            require(isSelfOrApproved(borrower, signer), "Origination: no counterparty signature");
+        } else if (isSelfOrApproved(borrower, caller)) {
+            require(isSelfOrApproved(lender, signer), "Origination: no counterparty signature");
+        } else {
+            revert("Origination: caller not participant");
+        }
+    }
+
+    /**
+     * @dev Perform loan initialization. Take custody of both principal and
+     *      collateral, and tell LoanCore to create and start a loan.
+     *
+     * @param loanTerms                     The terms agreed by the lender and borrower.
+     * @param borrower                      Address of the borrower.
+     * @param lender                        Address of the lender.
+     *
+     * @return loanId                       The unique ID of the new loan.
+     */
+    function _initialize(
+        LoanLibrary.LoanTerms calldata loanTerms,
+        address borrower,
+        address lender
+    ) internal nonReentrant returns (uint256 loanId) {
+        // Take custody of funds
+        IERC20(loanTerms.payableCurrency).safeTransferFrom(lender, address(this), loanTerms.principal);
+        IERC20(loanTerms.payableCurrency).approve(loanCore, loanTerms.principal);
+
+        IERC721(loanTerms.collateralAddress).transferFrom(borrower, address(this), loanTerms.collateralId);
+        IERC721(loanTerms.collateralAddress).approve(loanCore, loanTerms.collateralId);
+
+        // Start loan
+        loanId = ILoanCore(loanCore).createLoan(loanTerms);
+        ILoanCore(loanCore).startLoan(lender, borrower, loanId);
     }
 
 }
