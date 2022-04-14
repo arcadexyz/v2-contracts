@@ -63,6 +63,8 @@ Whenever you deploy a new contract using OpenZeppelin's ```deployProxy```, that 
 - deploy txn of the ```ProxyAdmin``` contract which is the admin of the proxy
 - deploy txn of the proxy contract and running the initializer functions
 
+A ```ProxyAdmin``` is a contract that acts as the owner of all your proxies. Only one per network gets deployed. When you start your project, the ```ProxyAdmin``` is owned by the deployer address, but you can transfer ownership of it by calling ```transferOwnership```.
+
 ## Basic implementation:
 1. configure Hardhat to use ```@openzeppelin/hardhat-upgrades```
 2. inherit the initializable contract\
