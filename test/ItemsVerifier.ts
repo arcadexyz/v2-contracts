@@ -11,7 +11,7 @@ import {
     VaultFactory,
     MockERC20,
     MockERC721,
-    MockERC1155
+    MockERC1155,
 } from "../typechain";
 import { deploy } from "./utils/contracts";
 
@@ -20,7 +20,6 @@ import { mint as mint20 } from "./utils/erc20";
 import { mint as mint721 } from "./utils/erc721";
 import { mint as mint1155 } from "./utils/erc1155";
 import { encodeSignatureItems, initializeBundle } from "./utils/loans";
-
 
 type Signer = SignerWithAddress;
 
@@ -82,12 +81,14 @@ describe("ItemsVerifier", () => {
             await mockERC721.connect(user).transferFrom(user.address, bundleAddress, tokenId);
 
             // Create predicate for a single ID
-            const signatureItems: SignatureItem[] = [{
-                cType: 4 as 0, // 4 is an invalid collateral type
-                asset: mockERC721.address,
-                tokenId,
-                amount: 0 // not used for 721
-            }];
+            const signatureItems: SignatureItem[] = [
+                {
+                    cType: 4 as 0, // 4 is an invalid collateral type
+                    asset: mockERC721.address,
+                    tokenId,
+                    amount: 0, // not used for 721
+                },
+            ];
 
             // Will revert because 4 can't be parsed as an enum
             await expect(verifier.verifyPredicates(encodeSignatureItems(signatureItems), bundleAddress)).to.be.reverted;
@@ -110,12 +111,14 @@ describe("ItemsVerifier", () => {
             await mockERC721.connect(user).transferFrom(user.address, bundleAddress2, tokenId2);
 
             // Create predicate for a single ID
-            const signatureItems: SignatureItem[] = [{
-                cType: 0,
-                asset: mockERC721.address,
-                tokenId,
-                amount: 0 // not used for 721
-            }];
+            const signatureItems: SignatureItem[] = [
+                {
+                    cType: 0,
+                    asset: mockERC721.address,
+                    tokenId,
+                    amount: 0, // not used for 721
+                },
+            ];
 
             // First bundle should have item
             expect(await verifier.verifyPredicates(encodeSignatureItems(signatureItems), bundleAddress)).to.be.true;
@@ -142,12 +145,14 @@ describe("ItemsVerifier", () => {
             await mockERC721.connect(user).transferFrom(user.address, bundleAddress2, tokenId2);
 
             // Create predicate for a wildcard ID
-            const signatureItems: SignatureItem[] = [{
-                cType: 0,
-                asset: mockERC721.address,
-                tokenId: -1,
-                amount: 0 // not used for 721
-            }];
+            const signatureItems: SignatureItem[] = [
+                {
+                    cType: 0,
+                    asset: mockERC721.address,
+                    tokenId: -1,
+                    amount: 0, // not used for 721
+                },
+            ];
 
             // First and bundle should have item
             expect(await verifier.verifyPredicates(encodeSignatureItems(signatureItems), bundleAddress)).to.be.true;
@@ -176,15 +181,19 @@ describe("ItemsVerifier", () => {
 
             await mockERC1155.connect(user).safeTransferFrom(user.address, bundleAddress, tokenId, 7, Buffer.from(""));
             await mockERC1155.connect(user).safeTransferFrom(user.address, bundleAddress2, tokenId, 3, Buffer.from(""));
-            await mockERC1155.connect(user).safeTransferFrom(user.address, bundleAddress3, tokenId2, 10, Buffer.from(""));
+            await mockERC1155
+                .connect(user)
+                .safeTransferFrom(user.address, bundleAddress3, tokenId2, 10, Buffer.from(""));
 
             // Create predicate for a single ID
-            const signatureItems: SignatureItem[] = [{
-                cType: 1,
-                asset: mockERC1155.address,
-                tokenId,
-                amount: 5
-            }];
+            const signatureItems: SignatureItem[] = [
+                {
+                    cType: 1,
+                    asset: mockERC1155.address,
+                    tokenId,
+                    amount: 5,
+                },
+            ];
 
             // First bundle should have item
             expect(await verifier.verifyPredicates(encodeSignatureItems(signatureItems), bundleAddress)).to.be.true;
@@ -210,12 +219,14 @@ describe("ItemsVerifier", () => {
             await mockERC20.connect(user).transfer(bundleAddress, 1000);
 
             // Create predicate for a single ID
-            const signatureItems: SignatureItem[] = [{
-                cType: 2,
-                asset: mockERC20.address,
-                tokenId: 0, // Ignored for 20
-                amount: 500
-            }];
+            const signatureItems: SignatureItem[] = [
+                {
+                    cType: 2,
+                    asset: mockERC20.address,
+                    tokenId: 0, // Ignored for 20
+                    amount: 500,
+                },
+            ];
 
             // First bundle should have item
             expect(await verifier.verifyPredicates(encodeSignatureItems(signatureItems), bundleAddress)).to.be.true;
@@ -255,9 +266,15 @@ describe("ItemsVerifier", () => {
             await mockERC721.connect(user).transferFrom(user.address, bundleAddress, token721Id2);
             await mockERC721_2.connect(user).transferFrom(user.address, bundleAddress, token721_2Id);
 
-            await mockERC1155.connect(user).safeTransferFrom(user.address, bundleAddress, token1155Id, 10, Buffer.from(""));
-            await mockERC1155.connect(user).safeTransferFrom(user.address, bundleAddress, token1155Id2, 15, Buffer.from(""));
-            await mockERC1155_2.connect(user).safeTransferFrom(user.address, bundleAddress, token1155_2Id, 50, Buffer.from(""));
+            await mockERC1155
+                .connect(user)
+                .safeTransferFrom(user.address, bundleAddress, token1155Id, 10, Buffer.from(""));
+            await mockERC1155
+                .connect(user)
+                .safeTransferFrom(user.address, bundleAddress, token1155Id2, 15, Buffer.from(""));
+            await mockERC1155_2
+                .connect(user)
+                .safeTransferFrom(user.address, bundleAddress, token1155_2Id, 50, Buffer.from(""));
 
             // Require:
             // 1000 of ERC20 token 1
@@ -273,50 +290,50 @@ describe("ItemsVerifier", () => {
                     cType: 2,
                     asset: mockERC20.address,
                     tokenId: 0,
-                    amount: 1000
+                    amount: 1000,
                 },
                 {
                     cType: 2,
                     asset: mockERC20_2.address,
                     tokenId: 0,
-                    amount: 500
+                    amount: 500,
                 },
                 {
                     cType: 0,
                     asset: mockERC721.address,
                     tokenId: token721Id,
-                    amount: 0
+                    amount: 0,
                 },
                 {
                     cType: 0,
                     asset: mockERC721.address,
                     tokenId: token721Id2,
-                    amount: 0
+                    amount: 0,
                 },
                 {
                     cType: 0,
                     asset: mockERC721_2.address,
                     tokenId: -1,
-                    amount: 0
+                    amount: 0,
                 },
                 {
                     cType: 1,
                     asset: mockERC1155.address,
                     tokenId: token1155Id,
-                    amount: 10
+                    amount: 10,
                 },
                 {
                     cType: 1,
                     asset: mockERC1155.address,
                     tokenId: token1155Id2,
-                    amount: 15
+                    amount: 15,
                 },
                 {
                     cType: 1,
                     asset: mockERC1155_2.address,
                     tokenId: token1155_2Id,
-                    amount: 50
-                }
+                    amount: 50,
+                },
             ];
 
             expect(await verifier.verifyPredicates(encodeSignatureItems(signatureItems), bundleAddress)).to.be.true;

@@ -78,12 +78,9 @@ contract ArcadeItemsVerifier is IArcadeSignatureVerifier {
      * @return verified                     Whether the bundle contains the specified items.
      */
     // solhint-disable-next-line code-complexity
-    function verifyPredicates(
-        bytes calldata predicates,
-        address vault
-    ) external view override returns (bool) {
+    function verifyPredicates(bytes calldata predicates, address vault) external view override returns (bool) {
         // Unpack items
-        (SignatureItem[] memory items) = abi.decode(predicates, (SignatureItem[]));
+        SignatureItem[] memory items = abi.decode(predicates, (SignatureItem[]));
 
         for (uint256 i = 0; i < items.length; i++) {
             SignatureItem memory item = items[i];
@@ -100,7 +97,6 @@ contract ArcadeItemsVerifier is IArcadeSignatureVerifier {
 
                 // Does not own specifically specified asset
                 if (id >= 0 && asset.ownerOf(id.toUint256()) != vault) return false;
-
             } else if (item.cType == CollateralType.ERC_1155) {
                 IERC1155 asset = IERC1155(item.asset);
 
@@ -115,7 +111,6 @@ contract ArcadeItemsVerifier is IArcadeSignatureVerifier {
 
                 // Does not own specifically specified asset
                 if (asset.balanceOf(vault, id.toUint256()) < amt) return false;
-
             } else if (item.cType == CollateralType.ERC_20) {
                 IERC20 asset = IERC20(item.asset);
 
@@ -126,7 +121,6 @@ contract ArcadeItemsVerifier is IArcadeSignatureVerifier {
 
                 // Does not own specifically specified asset
                 if (asset.balanceOf(vault) < amt) return false;
-
             } else {
                 // Interface could not be parsed - fail
                 revert("item format: invalid cType");

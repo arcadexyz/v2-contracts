@@ -5,7 +5,6 @@ pragma solidity ^0.8.11;
 import "../libraries/LoanLibrary.sol";
 
 interface IOriginationController {
-
     // ================ Data Types =============
 
     struct Signature {
@@ -64,10 +63,10 @@ interface IOriginationController {
 
     // ============== Signature Verification ==============
 
-    function recoverTokenSignature(
-        LoanLibrary.LoanTerms calldata loanTerms,
-        Signature calldata sig
-    ) external view returns (address signer);
+    function recoverTokenSignature(LoanLibrary.LoanTerms calldata loanTerms, Signature calldata sig)
+        external
+        view
+        returns (address signer);
 
     function recoverItemsSignature(
         LoanLibrary.LoanTerms calldata loanTerms,

@@ -76,7 +76,10 @@ contract LoanCore is ILoanCore, AccessControl, Pausable, ICallDelegator {
         returns (uint256 loanId)
     {
         require(terms.durationSecs > 0, "LoanCore::create: Loan is already expired");
-        require(!collateralInUse[terms.collateralAddress][terms.collateralId], "LoanCore::create: Collateral token already in use");
+        require(
+            !collateralInUse[terms.collateralAddress][terms.collateralId],
+            "LoanCore::create: Collateral token already in use"
+        );
 
         loanId = loanIdTracker.current();
         loanIdTracker.increment();

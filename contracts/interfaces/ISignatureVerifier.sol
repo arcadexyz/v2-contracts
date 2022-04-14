@@ -7,8 +7,5 @@ import "../libraries/LoanLibrary.sol";
 interface IArcadeSignatureVerifier {
     // ============== Collateral Verification ==============
 
-    function verifyPredicates(
-        bytes calldata predicates,
-        address vault
-    ) external view returns (bool);
+    function verifyPredicates(bytes calldata predicates, address vault) external view returns (bool);
 }

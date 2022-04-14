@@ -33,4 +33,4 @@ export const encodePredicates = (predicates: ItemsPredicate[]): string => {
 
     const coded = ethers.utils.defaultAbiCoder.encode(types, [values]);
     return ethers.utils.keccak256(coded);
-}
+};

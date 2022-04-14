@@ -87,7 +87,7 @@ export async function createLoanTermsSignature(
     name: string,
     terms: LoanTerms,
     signer: SignerWithAddress,
-    version = "1"
+    version = "1",
 ): Promise<ECDSASignature> {
     const data = buildData(verifyingContract, name, version, terms, typedLoanTermsData);
     const signature = await signer._signTypedData(data.domain, data.types, data.message);
@@ -108,7 +108,7 @@ export async function createLoanItemsSignature(
     terms: LoanTerms,
     itemsHash: string,
     signer: SignerWithAddress,
-    version = "1"
+    version = "1",
 ): Promise<ECDSASignature> {
     const message: ItemsPayload = {
         durationSecs: terms.durationSecs,
@@ -116,7 +116,7 @@ export async function createLoanItemsSignature(
         interest: terms.interest,
         collateralAddress: terms.collateralAddress,
         itemsHash,
-        payableCurrency: terms.payableCurrency
+        payableCurrency: terms.payableCurrency,
     };
 
     const data = buildData(verifyingContract, name, version, message, typedLoanItemsData);

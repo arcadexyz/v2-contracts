@@ -282,10 +282,12 @@ contract OriginationController is Context, IOriginationController, EIP712, Reent
      *
      * @return signer                       The address of the recovered signer.
      */
-    function recoverTokenSignature(
-        LoanLibrary.LoanTerms calldata loanTerms,
-        Signature calldata sig
-    ) public view override returns (address signer) {
+    function recoverTokenSignature(LoanLibrary.LoanTerms calldata loanTerms, Signature calldata sig)
+        public
+        view
+        override
+        returns (address signer)
+    {
         bytes32 loanHash = keccak256(
             abi.encode(
                 _TOKEN_ID_TYPEHASH,
@@ -387,5 +389,4 @@ contract OriginationController is Context, IOriginationController, EIP712, Reent
         loanId = ILoanCore(loanCore).createLoan(loanTerms);
         ILoanCore(loanCore).startLoan(lender, borrower, loanId);
     }
-
 }
