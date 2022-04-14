@@ -23,20 +23,6 @@ Most Proxy patterns use the **Transaprent Proxy** and **UUPS** (universal upgrad
 - if the proxy is upgraded to an implementation that fails to implement the upgradeable functions, it becomes permanently locked into that implementation
 - proxy storage clash issues have been resolved with the **unstructured storage pattern** which adds a level of complexity to the proxy implementation
 
-# Diamond Pattern
-This pattern allows for fine very grained upgrades and their deployments.
-The pattern stores within it a mapping of function selectors to contract addresses.
-Rather than upgrade and deploy a full contract, for example, a singular function can be upgraded and deployed independently.  Its selector would replace that of its older version in the mapping and it would be called by the contract as it had been before.
-This would save lots of deployment eth.
-The main issue with this pattern is that it’s not supported in ‘hardhat-upgrades’.
-For other upgradeability patterns, ‘hardhat-upgrades’ builds the proxy and implementation system for the upgrade during deployment.
-This is not available for the Diamond pattern and would need to be custom built.
-## Issues:
-Mark Toda categorically against using the Diamond: "Generally think diamond pattern makes it really hard to reason about the logic of your contracts, and really easy to mess up an upgrade. Here's a pretty good [article](https://blog.trailofbits.com/2020/10/30/good-idea-bad-design-how-the-diamond-standard-falls-short/) by trail of bits on it."
-### Diamond Pattern References:
-[Diamond EIP](https://eips.ethereum.org/EIPS/eip-2535)
-[Solidity developer](https://soliditydeveloper.com/eip-2535)
-
 
 ### UUPS Storage Layout Compatibility - SPECIAL CARE NEEDED:
 Solidity maps variables to a contract's storage based on the order in which the variables are declared. Reordering variables, inserting new ones, changing their types or even changing the inheritance chain of a contract can break storgage.
@@ -51,6 +37,21 @@ Use the eternal storage pattern where the implementation contract never declares
 - The upgrade-safe fork of OpenZeppelin Contracts uses a pattern where they “reserve” space for future space variables in the base contract by declaring dummy variables.
 - There is a pattern called Eternal Storage Pattern where all implementation contract variables are not declared, instead they are stored in mappings which causes Solidity to save them in arbitrary positions of storage, so the risk of collision is very minimal.
 Polymath uses this pattern for their (protocol)[https://github.com/PolymathNetwork/polymath-core/blob/v3.0.0/contracts/datastore/DataStoreStorage.sol#L1].
+
+# Diamond Pattern
+This pattern allows for fine very grained upgrades and their deployments.
+The pattern stores within it a mapping of function selectors to contract addresses.
+Rather than upgrade and deploy a full contract, for example, a singular function can be upgraded and deployed independently.  Its selector would replace that of its older version in the mapping and it would be called by the contract as it had been before.
+This would save lots of deployment eth.
+The main issue with this pattern is that it’s not supported in ‘hardhat-upgrades’.
+For other upgradeability patterns, ‘hardhat-upgrades’ builds the proxy and implementation system for the upgrade during deployment.
+This is not available for the Diamond pattern and would need to be custom built.
+## Issues:
+Mark Toda categorically against using the Diamond: "Generally think diamond pattern makes it really hard to reason about the logic of your contracts, and really easy to mess up an upgrade. Here's a pretty good [article](https://blog.trailofbits.com/2020/10/30/good-idea-bad-design-how-the-diamond-standard-falls-short/) by trail of bits on it."
+## Diamond Pattern References:
+[Solidity developer](https://soliditydeveloper.com/eip-2535)
+
+[Diamond EIP](https://eips.ethereum.org/EIPS/eip-2535)
 
 # Surface Level How To
 Whenever you deploy a new contract using OpenZeppelin's ```deployProxy```, that contract instance can be upgraded at a later date. By default, only the address that originally deployed the contract has the ability to upgrade it.\
@@ -147,7 +148,7 @@ Sample [list of vulnerabilities](https://github.com/crytic/slither/blob/master/t
 - Generates info such as contract inheritance graph, the control flow graph (CFG) and the list of expressions in the contract
 -  Translates the contract code into SlithIR (Slither internal representation language)
 - Runs set of pre-defined analyses that provide enhanced info to other modules
-### Of note:
+### Note:
 - It requires Python and solc
 - Can be [integrated](https://github.com/marketplace/actions/slither-action) with GitHub action
 
