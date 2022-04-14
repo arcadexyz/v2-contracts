@@ -65,6 +65,10 @@ Whenever you deploy a new contract using OpenZeppelin's ```deployProxy```, that 
 
 A ```ProxyAdmin``` is a contract that acts as the owner of all your proxies. Only one per network gets deployed. When you start your project, the ```ProxyAdmin``` is owned by the deployer address, but you can transfer ownership of it by calling ```transferOwnership```.
 
+If you call ```deployProxy``` several times for the same implementation contract, several proxies will be deployed, but only one implementation contract will be used.
+
+A ```proxy``` contract that delegates all of its calls to the ```implementation``` contract. All state and funds are held in the proxy, but the code that is executed comes from the ```implementation```. A ```proxy``` can be upgraded by its admin to use a different ```implementation``` contract.
+
 ## Basic implementation:
 1. configure Hardhat to use ```@openzeppelin/hardhat-upgrades```
 2. inherit the initializable contract\
