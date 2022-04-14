@@ -160,7 +160,8 @@ Plugin to deploy and manage upgradeable contracts.
 - Proxy admin rights management
 - Ease of use in tests
 
-###
+### Note:
+While this plugin keeps track of all the implementation contracts we deploy per network, in order to reuse them and validate storage compatibilities, it does not keep track of the proxies deployed. This means that we will need to manually keep track of each deployment address, to supply those to the upgrade function when needed.
 
 ### OZ Upgrades Plugin References:
 [Tutorial for hardhat](https://forum.openzeppelin.com/t/openzeppelin-upgrades-step-by-step-tutorial-for-hardhat/3580)
