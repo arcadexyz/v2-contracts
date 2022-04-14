@@ -14,6 +14,8 @@ import "../interfaces/IAssetVault.sol";
 import "../interfaces/ISignatureVerifier.sol";
 import "../libraries/LoanLibrary.sol";
 
+import "hardhat/console.sol";
+
 /**
  * @title ArcadeItemsVerifier
  * @author Non-Fungible Technologies, Inc.
@@ -41,7 +43,7 @@ import "../libraries/LoanLibrary.sol";
  * - All multi-item signatures assume AND - any optional expressed by OR
  *      can be implemented by simply signing multiple separate signatures.
  */
-library ArcadeItemsVerifier {
+contract ArcadeItemsVerifier is IArcadeSignatureVerifier {
     using SafeCast for int256;
 
     /// @dev Enum describing the collateral type of a signature item
@@ -79,7 +81,7 @@ library ArcadeItemsVerifier {
     function verifyPredicates(
         bytes calldata predicates,
         address vault
-    ) public view returns (bool) {
+    ) external view override returns (bool) {
         // Unpack items
         (SignatureItem[] memory items) = abi.decode(predicates, (SignatureItem[]));
 

@@ -34,7 +34,7 @@ export interface ItemsPayload {
     principal: BigNumber;
     interest: BigNumber;
     collateralAddress: string;
-    items: string;
+    itemsHash: string;
     payableCurrency: string;
 }
 

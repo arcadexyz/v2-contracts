@@ -16,7 +16,7 @@ import "./interfaces/IAssetVault.sol";
 import "./interfaces/IVaultFactory.sol";
 import "./interfaces/ISignatureVerifier.sol";
 
-import "hardhat/console.sol";
+import "./verifiers/ItemsVerifier.sol";
 
 // NEXT PR:
 // TODO: Look at EIP-2712 signatures, possibly replace approvals
@@ -53,8 +53,9 @@ contract OriginationController is Context, IOriginationController, EIP712, Reent
     /// @notice EIP712 type hash for item-based signatures.
     bytes32 private constant _ITEMS_TYPEHASH =
         keccak256(
-            // solhint-disable-next-line max-line-length
-            "LoanTermsWithItems(uint256 durationSecs,uint256 principal,uint256 interest,address collateralAddress, bytes items,address payableCurrency)"
+            // solhint-disable max-line-length
+            "LoanTermsWithItems(uint256 durationSecs,uint256 principal,uint256 interest,address collateralAddress,bytes32 itemsHash,address payableCurrency)"
+            // "LoanTermsWithItems(uint256 durationSecs,uint256 principal,uint256 interest,address collateralAddress,address payableCurrency)"
         );
 
     // ============= Global Immutable State ==============
@@ -138,7 +139,7 @@ contract OriginationController is Context, IOriginationController, EIP712, Reent
         LoanLibrary.Predicate[] calldata itemPredicates
     ) public override returns (uint256 loanId) {
         address vault = IVaultFactory(loanTerms.collateralAddress).instanceAt(loanTerms.collateralId);
-        address externalSigner = recoverItemsSignature(loanTerms, sig, abi.encode(itemPredicates));
+        address externalSigner = recoverItemsSignature(loanTerms, sig, keccak256(abi.encode(itemPredicates)));
 
         _validateCounterparties(borrower, lender, msg.sender, externalSigner);
 
@@ -146,7 +147,7 @@ contract OriginationController is Context, IOriginationController, EIP712, Reent
             // Verify items are held in the wrapper
             require(
                 IArcadeSignatureVerifier(itemPredicates[i].verifier).verifyPredicates(itemPredicates[i].data, vault),
-                "Predicate failed"
+                "predicate failed"
             );
         }
 
@@ -308,14 +309,14 @@ contract OriginationController is Context, IOriginationController, EIP712, Reent
      *
      * @param loanTerms                     The terms of the loan.
      * @param sig                           The loan terms signature, with v, r, s fields.
-     * @param items                         The required items in the specified bundle.
+     * @param itemsHash                         The required items in the specified bundle.
      *
      * @return signer                       The address of the recovered signer.
      */
     function recoverItemsSignature(
         LoanLibrary.LoanTerms calldata loanTerms,
         Signature calldata sig,
-        bytes memory items
+        bytes32 itemsHash
     ) public view override returns (address signer) {
         bytes32 loanHash = keccak256(
             abi.encode(
@@ -324,7 +325,7 @@ contract OriginationController is Context, IOriginationController, EIP712, Reent
                 loanTerms.principal,
                 loanTerms.interest,
                 loanTerms.collateralAddress,
-                items,
+                itemsHash,
                 loanTerms.payableCurrency
             )
         );
@@ -350,12 +351,6 @@ contract OriginationController is Context, IOriginationController, EIP712, Reent
         address caller,
         address signer
     ) internal view {
-        console.log("Counterparties:");
-        console.log(borrower);
-        console.log(lender);
-        console.log(caller);
-        console.log(signer);
-
         // Make sure one from each side approves
         if (isSelfOrApproved(lender, caller)) {
             require(isSelfOrApproved(borrower, signer), "Origination: no counterparty signature");

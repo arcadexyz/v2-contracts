@@ -72,6 +72,6 @@ interface IOriginationController {
     function recoverItemsSignature(
         LoanLibrary.LoanTerms calldata loanTerms,
         Signature calldata sig,
-        bytes calldata items
+        bytes32 itemsHash
     ) external view returns (address signer);
 }
