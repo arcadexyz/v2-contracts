@@ -15,7 +15,7 @@ import "../interfaces/ISignatureVerifier.sol";
 import "../libraries/LoanLibrary.sol";
 
 /**
- * @title ArcadeSignatureVerifier
+ * @title ArcadeItemsVerifier
  * @author Non-Fungible Technologies, Inc.
  *
  * This contract can be used for verifying complex signature-encoded
@@ -41,7 +41,7 @@ import "../libraries/LoanLibrary.sol";
  * - All multi-item signatures assume AND - any optional expressed by OR
  *      can be implemented by simply signing multiple separate signatures.
  */
-library ArcadeSignatureVerifier {
+library ArcadeItemsVerifier {
     using SafeCast for int256;
 
     /// @dev Enum describing the collateral type of a signature item

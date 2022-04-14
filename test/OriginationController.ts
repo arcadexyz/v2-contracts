@@ -12,17 +12,20 @@ import {
     OriginationController,
     CallWhitelist,
     MockERC20,
+    MockERC721,
     VaultFactory,
     AssetVault,
     PromissoryNote,
     MockLoanCore,
+    ArcadeItemsVerifier,
 } from "../typechain";
 import { approve, mint, ZERO_ADDRESS } from "./utils/erc20";
-import { LoanTerms } from "./utils/types";
-import { createLoanTermsSignature, createPermitSignature } from "./utils/eip712";
+import { mint as mint721 } from "./utils/erc721";
+import { ItemsPredicate, LoanTerms, SignatureItem } from "./utils/types";
+import { createLoanTermsSignature, createLoanItemsSignature, createPermitSignature } from "./utils/eip712";
+import { encodePredicates, encodeSignatureItems, initializeBundle } from "./utils/loans";
 
 // TODO:
-// Fix existing tests
 // Add tests for rest of OC
 // Do verifier tests
 
@@ -31,6 +34,7 @@ type Signer = SignerWithAddress;
 interface TestContext {
     originationController: OriginationController;
     mockERC20: MockERC20;
+    mockERC721: MockERC721;
     vaultFactory: VaultFactory;
     lenderPromissoryNote: PromissoryNote;
     borrowerPromissoryNote: PromissoryNote;
@@ -39,22 +43,6 @@ interface TestContext {
     other: Signer;
     signers: Signer[];
 }
-
-const initializeBundle = async (vaultFactory: VaultFactory, user: Signer): Promise<BigNumber> => {
-    const tx = await vaultFactory.connect(user).initializeBundle(await user.getAddress());
-    const receipt = await tx.wait();
-
-    if (receipt && receipt.events) {
-        for (const event of receipt.events) {
-            if (event.event && event.event === "VaultCreated" && event.args && event.args.vault) {
-                return event.args.vault;
-            }
-        }
-        throw new Error("Unable to initialize bundle");
-    } else {
-        throw new Error("Unable to initialize bundle");
-    }
-};
 
 const fixture = async (): Promise<TestContext> => {
     const signers: Signer[] = await hre.ethers.getSigners();
@@ -67,6 +55,7 @@ const fixture = async (): Promise<TestContext> => {
         await deploy("VaultFactory", deployer, [vaultTemplate.address, whitelist.address])
     );
     const mockERC20 = <MockERC20>await deploy("MockERC20", deployer, ["Mock ERC20", "MOCK"]);
+    const mockERC721 = <MockERC721>await deploy("MockERC721", deployer, ["Mock ERC721", "MOCK"]);
 
     const originationController = <OriginationController>(
         await deploy("OriginationController", deployer, [loanCore.address])
@@ -82,6 +71,7 @@ const fixture = async (): Promise<TestContext> => {
     return {
         originationController,
         mockERC20,
+        mockERC721,
         vaultFactory,
         lenderPromissoryNote,
         borrowerPromissoryNote,
@@ -140,6 +130,12 @@ describe("OriginationController", () => {
     });
 
     describe("initializeLoan", () => {
+        let ctx: TestContext;
+
+        beforeEach(async () => {
+            ctx = await loadFixture(fixture);
+        });
+
         it("Reverts if msg.sender is not either lender or borrower", async () => {
             const {
                 originationController,
@@ -148,7 +144,7 @@ describe("OriginationController", () => {
                 user: lender,
                 other: borrower,
                 signers,
-            } = await loadFixture(fixture);
+            } = ctx;
 
             const bundleId = await initializeBundle(vaultFactory, borrower);
 
@@ -181,7 +177,7 @@ describe("OriginationController", () => {
                 vaultFactory,
                 user: lender,
                 other: borrower,
-            } = await loadFixture(fixture);
+            } = ctx;
 
             const bundleId = await initializeBundle(vaultFactory, borrower);
             const loanTerms = createLoanTerms(mockERC20.address, vaultFactory.address, { collateralId: bundleId });
@@ -211,7 +207,7 @@ describe("OriginationController", () => {
                 vaultFactory,
                 user: lender,
                 other: borrower,
-            } = await loadFixture(fixture);
+            } = ctx;
 
             const bundleId = await initializeBundle(vaultFactory, borrower);
             const loanTerms = createLoanTerms(mockERC20.address, vaultFactory.address, { collateralId: bundleId });
@@ -241,7 +237,7 @@ describe("OriginationController", () => {
                 vaultFactory,
                 user: lender,
                 other: borrower,
-            } = await loadFixture(fixture);
+            } = ctx;
 
             const bundleId = await initializeBundle(vaultFactory, borrower);
             const loanTerms = createLoanTerms(mockERC20.address, vaultFactory.address, { collateralId: bundleId });
@@ -273,7 +269,7 @@ describe("OriginationController", () => {
                 user: lender,
                 other: borrower,
                 signers,
-            } = await loadFixture(fixture);
+            } = ctx;
 
             const bundleId = await initializeBundle(vaultFactory, borrower);
             const loanTerms = createLoanTerms(mockERC20.address, vaultFactory.address, { collateralId: bundleId });
@@ -304,7 +300,7 @@ describe("OriginationController", () => {
                 vaultFactory,
                 user: lender,
                 other: borrower,
-            } = await loadFixture(fixture);
+            } = ctx;
 
             const bundleId = await initializeBundle(vaultFactory, borrower);
             const loanTerms = createLoanTerms(mockERC20.address, vaultFactory.address, { collateralId: bundleId });
@@ -336,7 +332,7 @@ describe("OriginationController", () => {
                 vaultFactory,
                 user: lender,
                 other: borrower,
-            } = await loadFixture(fixture);
+            } = ctx;
 
             const bundleId = await initializeBundle(vaultFactory, borrower);
             const loanTerms = createLoanTerms(mockERC20.address, vaultFactory.address, { collateralId: bundleId });
@@ -361,6 +357,39 @@ describe("OriginationController", () => {
                 .withArgs(await lender.getAddress(), originationController.address, loanTerms.principal);
         });
 
+        it("Initializes a loan with unbundled collateral", async () => {
+            const {
+                originationController,
+                mockERC20,
+                mockERC721,
+                user: lender,
+                other: borrower,
+            } = ctx;
+
+            const tokenId = await mint721(mockERC721, borrower);
+            const loanTerms = createLoanTerms(mockERC20.address, mockERC721.address, { collateralId: tokenId });
+
+            await mint(mockERC20, lender, loanTerms.principal);
+
+            const sig = await createLoanTermsSignature(
+                originationController.address,
+                "OriginationController",
+                loanTerms,
+                borrower,
+                "2"
+            );
+
+            await approve(mockERC20, lender, originationController.address, loanTerms.principal);
+            await mockERC721.connect(borrower).approve(originationController.address, tokenId);
+            await expect(
+                originationController
+                    .connect(lender)
+                    .initializeLoan(loanTerms, await borrower.getAddress(), await lender.getAddress(), sig),
+            )
+                .to.emit(mockERC20, "Transfer")
+                .withArgs(await lender.getAddress(), originationController.address, loanTerms.principal);
+        });
+
         describe("initializeLoanWithCollateralPermit", () => {
             it("Reverts if vaultFactory.permit is invalid", async () => {
                 const {
@@ -371,7 +400,7 @@ describe("OriginationController", () => {
                     mockERC20,
                     lenderPromissoryNote,
                     borrowerPromissoryNote,
-                } = await loadFixture(fixture);
+                } = ctx;
 
                 const bundleId = await initializeBundle(vaultFactory, user);
                 const loanTerms = createLoanTerms(mockERC20.address, vaultFactory.address, { collateralId: bundleId });
@@ -416,7 +445,7 @@ describe("OriginationController", () => {
                     vaultFactory,
                     user: lender,
                     other: borrower,
-                } = await loadFixture(fixture);
+                } = ctx;
 
                 const bundleId = await initializeBundle(vaultFactory, borrower);
                 const loanTerms = createLoanTerms(mockERC20.address, vaultFactory.address, { collateralId: bundleId });
@@ -456,5 +485,70 @@ describe("OriginationController", () => {
                     .withArgs(await lender.getAddress(), originationController.address, loanTerms.principal);
             });
         });
+    });
+
+    describe.only("initializeLoanWithItems", () => {
+        let ctx: TestContext;
+        let verifier: ArcadeItemsVerifier;
+
+        beforeEach(async () => {
+            ctx = await loadFixture(fixture);
+            verifier = await deploy("ArcadeItemsVerifier", ctx.signers[0], []);
+        });
+
+        it("Reverts if the collateralAddress does not fit the vault factory interface");
+
+        it("Reverts if the required predicates fail");
+        it("Initalizes a loan with a signature from the lender", async () => {
+            const {
+                originationController,
+                mockERC20,
+                mockERC721,
+                vaultFactory,
+                user: lender,
+                other: borrower,
+            } = await loadFixture(fixture);
+
+            const bundleId = await initializeBundle(vaultFactory, borrower);
+            const bundleAddress = await vaultFactory.instanceAt(0);
+            const tokenId = await mint721(mockERC721, borrower);
+            await mockERC721.connect(borrower).transferFrom(borrower.address, bundleAddress, tokenId);
+
+            const loanTerms = createLoanTerms(mockERC20.address, vaultFactory.address, { collateralId: bundleId });
+            const signatureItems: SignatureItem[] = [{
+                cType: 0,
+                asset: mockERC721.address,
+                tokenId,
+                amount: 0 // not used for 721
+            }];
+
+            const predicates: ItemsPredicate[] = [{
+                verifier: verifier.address,
+                data: encodeSignatureItems(signatureItems)
+            }];
+
+            await mint(mockERC20, lender, loanTerms.principal);
+
+            const sig = await createLoanItemsSignature(
+                originationController.address,
+                "OriginationController",
+                loanTerms,
+                encodePredicates(predicates),
+                lender,
+                "2"
+            );
+
+            await approve(mockERC20, lender, originationController.address, loanTerms.principal);
+            await vaultFactory.connect(borrower).approve(originationController.address, bundleId);
+            await expect(
+                originationController
+                    .connect(lender)
+                    .initializeLoan(loanTerms, await borrower.getAddress(), await lender.getAddress(), sig),
+            )
+                .to.emit(mockERC20, "Transfer")
+                .withArgs(await lender.getAddress(), originationController.address, loanTerms.principal);
+        });
+        it("Initalizes a loan with a signature from the borrower");
+
     });
 });

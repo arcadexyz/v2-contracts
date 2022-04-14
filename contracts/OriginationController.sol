@@ -350,6 +350,12 @@ contract OriginationController is Context, IOriginationController, EIP712, Reent
         address caller,
         address signer
     ) internal view {
+        console.log("Counterparties:");
+        console.log(borrower);
+        console.log(lender);
+        console.log(caller);
+        console.log(signer);
+
         // Make sure one from each side approves
         if (isSelfOrApproved(lender, caller)) {
             require(isSelfOrApproved(borrower, signer), "Origination: no counterparty signature");
