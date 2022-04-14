@@ -55,7 +55,7 @@ Mark Toda categorically against using the Diamond: "Generally think diamond patt
 
 # Surface Level How To
 Whenever you deploy a new contract using OpenZeppelin's ```deployProxy```, that contract instance can be upgraded at a later date. By default, only the address that originally deployed the contract has the ability to upgrade it.\
-```deployProxy``` generates these transactions:
+```deployProxy``` deploys the implementation contract, a ProxyAdmin to be the admin for project proxies and the proxy, along with calling any initialization. 3 transactions are generated:
 - deploy txn of the implementation contract
 - deploy txn of the ```ProxyAdmin``` contract which is the admin of the proxy
 - deploy txn of the proxy contract and running the initializer functions
@@ -93,6 +93,11 @@ Whenever you deploy a new contract using OpenZeppelin's ```deployProxy```, that 
 
     main();
     ```
+Note: This is where we take note of the deployed proxy address for later use.\
+Only the owner of the ProxyAdmin can upgarde the proxy.
+
+## Technical Limitations of Upgrading:
+
 
 # v2 Contracts to be Made Upgradable
 Does this get implemented automatically: [```_init_unchained``` for Multiple Inheritance](https://docs.openzeppelin.com/contracts/4.x/upgradeable#multiple-inheritance) ?
@@ -164,4 +169,4 @@ Plugin to deploy and manage upgradeable contracts.
 While this plugin keeps track of all the implementation contracts we deploy per network, in order to reuse them and validate storage compatibilities, it does not keep track of the proxies deployed. This means that we will need to manually keep track of each deployment address, to supply those to the upgrade function when needed.
 
 ### OZ Upgrades Plugin References:
-[Tutorial for hardhat](https://forum.openzeppelin.com/t/openzeppelin-upgrades-step-by-step-tutorial-for-hardhat/3580)
+[Step by step tutorial for upgrade using OZ Upgrades Plugin and Hardhat](https://forum.openzeppelin.com/t/openzeppelin-upgrades-step-by-step-tutorial-for-hardhat/3580)

@@ -1,0 +1,3 @@
+- create MultiSig for performing actual upgrade
+- ```prepare_upgrade.js``` script needed to specify the Proxy Address
+-
