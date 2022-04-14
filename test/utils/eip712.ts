@@ -38,7 +38,8 @@ const typedLoanTermsData: TypeData = {
             { name: "durationSecs", type: "uint256" },
             { name: "principal", type: "uint256" },
             { name: "interest", type: "uint256" },
-            { name: "collateralTokenId", type: "uint256" },
+            { name: "collateralAddress", type: "address" },
+            { name: "collateralId", type: "uint256" },
             { name: "payableCurrency", type: "address" },
         ],
     },
@@ -72,8 +73,9 @@ export async function createLoanTermsSignature(
     name: string,
     terms: LoanTerms,
     signer: SignerWithAddress,
+    version = "1"
 ): Promise<ECDSASignature> {
-    const data = buildData(verifyingContract, name, "1", terms, typedLoanTermsData);
+    const data = buildData(verifyingContract, name, version, terms, typedLoanTermsData);
 
     const signature = await signer._signTypedData(data.domain, data.types, data.message);
     return fromRpcSig(signature);

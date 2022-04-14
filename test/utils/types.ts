@@ -12,7 +12,8 @@ export interface LoanTerms {
     durationSecs: BigNumberish;
     principal: BigNumber;
     interest: BigNumber;
-    collateralTokenId: BigNumber;
+    collateralAddress: string;
+    collateralId: BigNumber;
     payableCurrency: string;
 }
 

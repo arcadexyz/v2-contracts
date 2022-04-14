@@ -26,7 +26,7 @@
         "dotenv": "^8.2.0",
         "eslint": "^7.11.0",
         "eslint-config-prettier": "^6.12.0",
-        "ethereum-waffle": "^3.4.0",
+        "ethereum-waffle": "^3.4.4",
         "ethereumjs-util": "^7.0.10",
         "ethers": "^5.0.32",
         "fs-extra": "^9.0.1",

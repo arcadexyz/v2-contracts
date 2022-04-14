@@ -16,10 +16,14 @@ import "./interfaces/IAssetVault.sol";
 import "./interfaces/IVaultFactory.sol";
 import "./interfaces/ISignatureVerifier.sol";
 
+import "hardhat/console.sol";
+
 // NEXT PR:
 // TODO: Look at EIP-2712 signatures, possibly replace approvals
+// TODO: Tests for either EIP-2712 or approvals
 // TODO: Split verifiers up into separate contracts
 // TODO: Add signing nonce
+// TODO: Custom errors
 
 /**
  * @title OriginationController
@@ -43,7 +47,7 @@ contract OriginationController is Context, IOriginationController, EIP712, Reent
     bytes32 private constant _TOKEN_ID_TYPEHASH =
         keccak256(
             // solhint-disable-next-line max-line-length
-            "LoanTerms(uint256 durationSecs,uint256 principal,uint256 interest,address collateralAddress, uint256 collateralId,address payableCurrency)"
+            "LoanTerms(uint256 durationSecs,uint256 principal,uint256 interest,address collateralAddress,uint256 collateralId,address payableCurrency)"
         );
 
     /// @notice EIP712 type hash for item-based signatures.
