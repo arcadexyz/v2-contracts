@@ -5,7 +5,7 @@ Helpful as a safeguard for implementing a fix in the event of a vulnerability, o
 # How does it work?
 The user interacts with the implementation contract via a proxy contract.
 The proxy contract is able to store the address of the implementation contract.
-An upgrade is incorporated by deploying a new version of the implementation contract and updating that contract's info in the proxy contract.
+An upgrade is incorporated by deploying a new version of the implementation contract and updating that contract's info in the proxy contract. In [detail](https://docs.openzeppelin.com/upgrades-plugins/1.x/proxies?utm_source=zos&utm_medium=blog&utm_campaign=proxy-pattern#summary).
 
 Most Proxy patterns use the **Transaprent Proxy** and **UUPS** (universal upgradeable proxy standard) patterns.
 
@@ -15,7 +15,7 @@ Most Proxy patterns use the **Transaprent Proxy** and **UUPS** (universal upgrad
 - subject to vulnerability caused by function selector clashes (implementation contract can have a function that has the same 4-byte identifier as the proxy’s upgrade function)
 - expensive deployment: each call requires an additional read from storage to load the admin address and the contract itself is expensive to deploy at over 700k gas
 
-## UUPS Proxy Pattern:
+## [Universal Upgradeable Proxy Standard](https://eips.ethereum.org/EIPS/eip-1822) or UUPS:
 - upgrade logic is placed in the implementation contract
 - all implementation contracts to extend from a base **proxiable** contract
 - since all functions are defined in the implementation contract, the Solidity compiler checks for function selector clashes
