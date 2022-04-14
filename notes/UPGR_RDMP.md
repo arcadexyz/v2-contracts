@@ -1,3 +1,4 @@
 - create MultiSig for performing actual upgrade
+- Contract needs to be EIP1967-compatible
 - ```prepare_upgrade.js``` script needed to specify the Proxy Address
 -

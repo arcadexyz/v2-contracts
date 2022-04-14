@@ -93,11 +93,19 @@ Whenever you deploy a new contract using OpenZeppelin's ```deployProxy```, that 
 
     main();
     ```
-Note: This is where we take note of the deployed proxy address for later use.\
-Only the owner of the ProxyAdmin can upgarde the proxy.
+Note:
+- This is where we take note of the deployed proxy address for later use.
+- Only the owner of the ProxyAdmin can upgarde the proxy.
+- Multi-sig needed to perform an upgrade. Proxy address is used in this step along with address of new implementation.
+- Can be done on Gnosis Safe OpenZeppelin app
+- Implementation contract should be EIP1967-compatible
+- Proxy address is used to interact with an upgraded version of a smart contract
 
-## Technical Limitations of Upgrading:
 
+## Technical Limitations of Upgrades
+When we upgrade a smart contract to a new version we cannot change the storage layout of that contract.\
+Already declared state variables cannot be removed or have their type changed, or have new variables declared before them.\
+This limitation only affects state variables. Functions and events can be changed as needed.
 
 # v2 Contracts to be Made Upgradable
 Does this get implemented automatically: [```_init_unchained``` for Multiple Inheritance](https://docs.openzeppelin.com/contracts/4.x/upgradeable#multiple-inheritance) ?
@@ -158,7 +166,9 @@ Sample [list of vulnerabilities](https://github.com/crytic/slither/blob/master/t
 - Can be [integrated](https://github.com/marketplace/actions/slither-action) with GitHub action
 
 ## [Openzeppelin Upgrades Plugin](https://docs.openzeppelin.com/upgrades-plugins/1.x/)
-Plugin to deploy and manage upgradeable contracts.
+Plugin to deploy and manage upgradeable contracts.\
+If a contract's storage layout is accidentally messed up, the Upgrades Plugin will emit a warning when the upgarde is being implemented.
+
 ### Features:
 - Deployment of upgradeable smart contracts
 - Upgrade of deployed contracts
