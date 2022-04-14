@@ -32,6 +32,9 @@ We can reserve space for future state variables in the base contract by declarin
 OR\
 Use the eternal storage pattern where the implementation contract never declares any variables of its own, but stores them in a mapping, causing Solidity to save them in arbitrary positions of storage based on their assigned names.
 
+**IMPORTANT note: it is possible to be inadvertently changing the storage variables of your contract by [changing its parent contracts](https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable#modifying-your-contracts). Also pay attention to the workaround at the bottom of linked page.**
+
+
 # Sample UUPS Projects
 - Compound uses an append only storage contract to mitigate storage clashes for changes to their (Comptroller Contract)[https://github.com/compound-finance/compound-protocol/blob/v2.8.1/contracts/ComptrollerStorage.sol#L97].
 - The upgrade-safe fork of OpenZeppelin Contracts uses a pattern where they “reserve” space for future space variables in the base contract by declaring dummy variables.

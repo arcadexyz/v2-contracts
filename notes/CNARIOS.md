@@ -16,7 +16,6 @@
 - Would it be interesting to somehow also hold images for the NFT's in the bundle?
 - Might it potentially need to be upgradable to incorporate a different type of permit (other than ERC721Permit)?
 - Bug mitigation.
-- Having a bundle initialized by anyone on behalf of an nft owner; a lender can make an offer on an asset and a bundle / box is created which the borrower can claim on deposit.
 
 ### FeeController.sol
 - Adding varieties of fee and fee structures for more diverse utility such as rollovers.
