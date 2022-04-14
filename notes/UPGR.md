@@ -185,6 +185,10 @@ The following info is tracked:
 - ```storage```: tracks the storage layout of the linearized contract, referencing the types defined in the types section, and is used for verifying that any storage layout changes between subsequent versions are compatible
 
 
+The naming of the network files is ```<network_name>.json```. The network name is inferred from the chain id associated with the entry.\
+Public network files like ```mainnet.json``` or ```ropsten.json``` should be tracked in version control because they contain valuable info about the the project status in the corresponding network, such as the addresses of the contract versions that have been deployed. All project contributors should have the same versions of these files.\
+Local network files should not be tracked.
+
 **Note:** While this plugin keeps track of all the implementation contracts we deploy per network, in order to reuse them and validate storage compatibilities, it does not keep track of the proxies that have been deployed. This means that we will need to manually keep track of each proxy deployment address, to supply those to the upgrade function when needed.
 
 ### OZ Upgrades Plugin References:
