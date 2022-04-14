@@ -170,7 +170,20 @@ Sample [list of vulnerabilities](https://github.com/crytic/slither/blob/master/t
 
 ## [Openzeppelin Upgrades Plugin](https://docs.openzeppelin.com/upgrades-plugins/1.x/)
 Plugin to deploy and manage upgradeable contracts.\
-If a contract's storage layout is accidentally messed up, the Upgrades Plugin will emit a warning when the upgarde is being implemented.
+If a contract's storage layout is accidentally messed up, the Upgrades Plugin will emit a warning when the upgrade is being implemented.\
+Some of the checks implemented are:
+```
+state-variable-assignment
+state-variable-immutable
+external-library-linking
+struct-definition
+enum-definition
+constructor
+delegatecall
+selfdestruct
+missing-public-upgradeto
+```
+
 
 ### Features:
 - Deployment of upgradeable smart contracts
