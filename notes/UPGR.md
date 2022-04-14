@@ -69,6 +69,8 @@ If you call ```deployProxy``` several times for the same implementation contract
 
 A ```proxy``` contract that delegates all of its calls to the ```implementation``` contract. All state and funds are held in the proxy, but the code that is executed comes from the ```implementation```. A ```proxy``` can be upgraded by its admin to use a different ```implementation``` contract.
 
+```immutable``` variables cannot be used because their values are calculated during contract creation and stored directly in the bytecode.  One of the reasons this is incompatible with upgradeable contracts because upgradeable contracts don't have constructors.
+
 ## Basic implementation:
 1. configure Hardhat to use ```@openzeppelin/hardhat-upgrades```
 2. inherit the initializable contract\
