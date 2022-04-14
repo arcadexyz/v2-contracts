@@ -21,7 +21,6 @@ import "./verifiers/ItemsVerifier.sol";
 // NEXT PR:
 // TODO: Look at EIP-2712 signatures, possibly replace approvals
 // TODO: Tests for either EIP-2712 or approvals
-// TODO: Split verifiers up into separate contracts
 // TODO: Add signing nonce
 // TODO: Custom errors
 

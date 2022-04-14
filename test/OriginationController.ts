@@ -25,9 +25,6 @@ import { ItemsPredicate, LoanTerms, SignatureItem } from "./utils/types";
 import { createLoanTermsSignature, createLoanItemsSignature, createPermitSignature } from "./utils/eip712";
 import { encodePredicates, encodeSignatureItems, initializeBundle } from "./utils/loans";
 
-// TODO:
-// Do verifier tests
-
 type Signer = SignerWithAddress;
 
 interface TestContext {
