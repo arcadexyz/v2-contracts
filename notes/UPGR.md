@@ -178,8 +178,14 @@ If a contract's storage layout is accidentally messed up, the Upgrades Plugin wi
 - Proxy admin rights management
 - Ease of use in tests
 
-### Note:
-While this plugin keeps track of all the implementation contracts we deploy per network, in order to reuse them and validate storage compatibilities, it does not keep track of the proxies deployed. This means that we will need to manually keep track of each deployment address, to supply those to the upgrade function when needed.
+### Network Files:
+OZ Upgrades keeps track of all the contract versions that have been deployed in a ```.openzeppelin``` folder in the project root, as well as the proxy admin.
+The following info is tracked:
+- ```types```: keeps track of all the types used in the contract or its ancestors, from basic types like uint256 to custom struct types
+- ```storage```: tracks the storage layout of the linearized contract, referencing the types defined in the types section, and is used for verifying that any storage layout changes between subsequent versions are compatible
+
+
+**Note:** While this plugin keeps track of all the implementation contracts we deploy per network, in order to reuse them and validate storage compatibilities, it does not keep track of the proxies that have been deployed. This means that we will need to manually keep track of each proxy deployment address, to supply those to the upgrade function when needed.
 
 ### OZ Upgrades Plugin References:
 [Step by step tutorial for upgrade using OZ Upgrades Plugin and Hardhat](https://forum.openzeppelin.com/t/openzeppelin-upgrades-step-by-step-tutorial-for-hardhat/3580)
