@@ -31,4 +31,8 @@
 - PromissoryNote NFT: add potential for NFT associated image.
 
 
+TO BE IMPLEMENTED VIA AN ADMIN FUNCTION
 
+TO BE MADE POSSIBLE VIA UPGRADEABILITY
+
+TO BE IMMUTABLE

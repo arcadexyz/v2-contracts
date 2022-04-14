@@ -6,9 +6,9 @@ Evan:
 
 Mouzayan:
 - Upgradeability and dependency architecture\
- Done   - Decide - which contracts should be upgradeable? What upgradebility pattern should they use?\
- Done   - Decide - which dependencies need to get passed in constructors for each contract?\
- Done   - Decide - of those dependencies, which should be changeable by an admin? Which should be immutable and/or only changeable by upgrade?
+ ✅ &nbsp; Decide - which contracts should be upgradeable? What upgradebility pattern should they use?\
+ ✅ &nbsp; Decide - which dependencies need to get passed in constructors for each contract?\
+ ✅ &nbsp; Decide - of those dependencies, which should be changeable by an admin? Which should be immutable and / or only changeable by upgrade?
  - Outline the path to UUPS + ways to avoid storage clashes
 
  - Future Scenarios List: What May Need to Change in the Future Scenarios
@@ -19,8 +19,6 @@ Mouzayan:
 
 
 - Review Installments PR and Origination PR
-
-
 
 Kevin:
 - Write Origination tests
