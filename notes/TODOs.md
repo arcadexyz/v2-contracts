@@ -16,7 +16,7 @@ Evan:
     🔑 For Installment tests, run `npx hardhat test test/Installments.ts` or `npx hardhat test test/InstallmentsRepay.ts`.
 
 - Review Origination PR
-  - loan terms review, then integrate with my functions.
+  - Loan terms review, then integrate with my functions.
 
 Mouzayan:
 - Upgradeability and dependency architecture
