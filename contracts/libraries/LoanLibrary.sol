@@ -1,4 +1,7 @@
-pragma solidity ^0.8.0;
+
+// SPDX-License-Identifier: MIT
+
+pragma solidity ^0.8.11;
 
 library LoanLibrary {
     /**
@@ -33,8 +36,11 @@ library LoanLibrary {
         // Expressed as a APR (rate), unlike V1 gross value
         // Input conversion: 0.01% = (1 * 10**18) ,  10.00% = (1000 * 10**18)
         uint256 interest;
+        // The tokenID of the address holding the collateral
+        /// @dev Can be an AssetVault, or the borrower for unbundled collateral
+        address collateralAddress;
         // The tokenID of the collateral bundle
-        uint256 collateralTokenId;
+        uint256 collateralId;
         // The payable currency for the loan principal and interest
         address payableCurrency;
 
@@ -44,6 +50,37 @@ library LoanLibrary {
         uint256 startDate;
         // Total number of installment periods within the loan duration
         uint256 numInstallments;
+    }
+
+    /**
+     * @dev Modification of loan terms, used for signing only.
+     *      Instead of a collateralId, a list of predicates
+     *      is defined by 'bytes' in items.
+     */
+    struct LoanTermsWithItems {
+        // The number of seconds representing relative due date of the loan
+        uint256 durationSecs;
+        // The amount of principal in terms of the payableCurrency
+        uint256 principal;
+        // The amount of interest in terms of the payableCurrency
+        uint256 interest;
+        // The tokenID of the address holding the collateral
+        /// @dev Must be an AssetVault for LoanTermsWithItems
+        address collateralAddress;
+        // An encoded list of predicates
+        bytes items;
+        // The payable currency for the loan principal and interest
+        address payableCurrency;
+    }
+
+    /**
+     * @dev Predicate for item-based verifications
+     */
+    struct Predicate {
+        // The encoded predicate, to decoded and parsed by the verifier contract
+        bytes data;
+        // The verifier contract
+        address verifier;
     }
 
     /**

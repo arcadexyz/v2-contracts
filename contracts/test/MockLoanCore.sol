@@ -16,7 +16,7 @@ contract MockLoanCore is ILoanCore {
 
     IPromissoryNote public override borrowerNote;
     IPromissoryNote public override lenderNote;
-    IERC721 public override collateralToken;
+    IERC721 public collateralToken;
     IFeeController public override feeController;
 
     mapping(uint256 => LoanLibrary.LoanData) public loans;
@@ -39,40 +39,40 @@ contract MockLoanCore is ILoanCore {
     /**
      * @dev Create store a loan object with some given terms
      */
-     // WRONG!! NOT THE CORRECT FUNCTIONALITY!
-     function createLoan(LoanLibrary.LoanTerms calldata terms) external override returns (uint256 loanId) {
-         LoanLibrary.LoanTerms memory _loanTerms = LoanLibrary.LoanTerms(
-             terms.durationSecs,
-             terms.principal,
-             terms.interest,
-             terms.collateralTokenId,
-             terms.payableCurrency,
-             terms.startDate,
-             terms.numInstallments
-         );
+    function createLoan(LoanLibrary.LoanTerms calldata terms) external override returns (uint256 loanId) {
+        LoanLibrary.LoanTerms memory _loanTerms = LoanLibrary.LoanTerms(
+            terms.durationSecs,
+            terms.principal,
+            terms.interest,
+            terms.collateralAddress,
+            terms.collateralId,
+            terms.payableCurrency,
+            terms.numInstallments,
+            terms.startDate
+        );
 
-         LoanLibrary.LoanData memory _loanData = LoanLibrary.LoanData(
-             0,
-             0,
-             _loanTerms,
-             LoanLibrary.LoanState.Created,
-             terms.durationSecs,
-             terms.principal,
-             0,
-             0,
-             0,
-             0
-         );
+        LoanLibrary.LoanData memory _loanData = LoanLibrary.LoanData(
+            0,
+            0,
+            _loanTerms,
+            LoanLibrary.LoanState.Created,
+            terms.durationSecs,
+            terms.principal,
+            0,
+            0,
+            0,
+            0
+        );
 
-         loanId = loanIdTracker.current();
-         loanIdTracker.increment();
+        loanId = loanIdTracker.current();
+        loanIdTracker.increment();
 
-         loans[loanId] = _loanData;
+        loans[loanId] = _loanData;
 
-         emit LoanCreated(terms, loanId);
+        emit LoanCreated(terms, loanId);
 
-         return loanId;
-     }
+        return loanId;
+    }
 
     /**
      * @dev Start a loan with the given borrower and lender
@@ -82,31 +82,30 @@ contract MockLoanCore is ILoanCore {
      *  - This function can only be called by a whitelisted OriginationController
      *  - The proper principal and collateral must have been sent to this contract before calling.
      */
-     // WRONG!! NOT THE CORRECT FUNCTIONALITY!
-     function startLoan(
-         address lender,
-         address borrower,
-         uint256 loanId
-     ) public override {
-         uint256 borrowerNoteId = borrowerNote.mint(borrower, loanId);
-         uint256 lenderNoteId = lenderNote.mint(lender, loanId);
+    function startLoan(
+        address lender,
+        address borrower,
+        uint256 loanId
+    ) public override {
+        uint256 borrowerNoteId = borrowerNote.mint(borrower, loanId);
+        uint256 lenderNoteId = lenderNote.mint(lender, loanId);
 
-         LoanLibrary.LoanData memory data = loans[loanId];
-         loans[loanId] = LoanLibrary.LoanData(
-             borrowerNoteId,
-             lenderNoteId,
-             data.terms,
-             LoanLibrary.LoanState.Active,
-             data.dueDate,
-             data.balance,
-             data.balancePaid,
-             data.lateFeesAccrued,
-             data.numMissedPayments,
-             data.numInstallmentsPaid
-         );
+        LoanLibrary.LoanData memory data = loans[loanId];
+        loans[loanId] = LoanLibrary.LoanData(
+            borrowerNoteId,
+            lenderNoteId,
+            data.terms,
+            LoanLibrary.LoanState.Active,
+            data.dueDate,
+            data.terms.principal,
+            0,
+            0,
+            0,
+            0
+        );
 
-         emit LoanStarted(loanId, lender, borrower);
-     }
+        emit LoanStarted(loanId, lender, borrower);
+    }
 
     /**
      * @dev Repay the given loan
