@@ -19,8 +19,8 @@ import "./interfaces/ISignatureVerifier.sol";
 import "./verifiers/ItemsVerifier.sol";
 
 // NEXT PR:
-// TODO: Look at EIP-2712 signatures, possibly replace approvals
-// TODO: Tests for either EIP-2712 or approvals
+// TODO: Support EIP-1271 for approvals
+// TODO: Tests for approvals including EIP-1271
 // TODO: Add signing nonce
 // TODO: Custom errors
 

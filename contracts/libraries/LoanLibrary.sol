@@ -33,7 +33,7 @@ library LoanLibrary {
         // The amount of interest in terms of the payableCurrency
         uint256 interest;
         // The tokenID of the address holding the collateral
-        /// @dev Can be an AssetVault, or the borrower for unbundled collateral
+        /// @dev Can be an AssetVault, or the NFT contract for unbundled collateral
         address collateralAddress;
         // The tokenID of the collateral
         uint256 collateralId;

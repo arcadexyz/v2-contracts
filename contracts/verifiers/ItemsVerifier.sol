@@ -93,10 +93,10 @@ contract ArcadeItemsVerifier is IArcadeSignatureVerifier {
                 int256 id = item.tokenId;
 
                 // Wildcard, but vault has no assets
-                if (id == -1 && asset.balanceOf(vault) == 0) return false;
-
+                if (id < 0 && asset.balanceOf(vault) == 0) return false;
                 // Does not own specifically specified asset
-                if (id >= 0 && asset.ownerOf(id.toUint256()) != vault) return false;
+                else if (asset.ownerOf(id.toUint256()) != vault) return false;
+
             } else if (item.cType == CollateralType.ERC_1155) {
                 IERC1155 asset = IERC1155(item.asset);
 
@@ -104,7 +104,7 @@ contract ArcadeItemsVerifier is IArcadeSignatureVerifier {
                 uint256 amt = item.amount;
 
                 // Cannot require 0 amount
-                require(amt >= 0, "item format: zero amount on 1155");
+                require(amt > 0, "item format: zero amount on 1155");
 
                 // Wildcard not allowed for 1155
                 require(id >= 0, "item format: wildcard on 1155");
@@ -117,7 +117,7 @@ contract ArcadeItemsVerifier is IArcadeSignatureVerifier {
                 uint256 amt = item.amount;
 
                 // Cannot require 0 amount
-                require(amt >= 0, "item format: zero amount on 20");
+                require(amt > 0, "item format: zero amount on 20");
 
                 // Does not own specifically specified asset
                 if (asset.balanceOf(vault) < amt) return false;
