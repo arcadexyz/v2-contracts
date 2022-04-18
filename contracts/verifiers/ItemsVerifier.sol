@@ -14,7 +14,13 @@ import "../interfaces/IAssetVault.sol";
 import "../interfaces/ISignatureVerifier.sol";
 import "../libraries/LoanLibrary.sol";
 
-import "hardhat/console.sol";
+import {
+    IV_ItemMissingAddress,
+    IV_InvalidCollateralType,
+    IV_NonPositiveAmount1155,
+    IV_InvalidTokenId1155,
+    IV_NonPositiveAmount20
+} from "../errors/Lending.sol";
 
 /**
  * @title ArcadeItemsVerifier
@@ -86,7 +92,7 @@ contract ArcadeItemsVerifier is IArcadeSignatureVerifier {
             SignatureItem memory item = items[i];
 
             // No asset provided
-            require(item.asset != address(0), "item format: missing address");
+            if (item.asset == address(0)) revert IV_ItemMissingAddress();
 
             if (item.cType == CollateralType.ERC_721) {
                 IERC721 asset = IERC721(item.asset);
@@ -103,10 +109,10 @@ contract ArcadeItemsVerifier is IArcadeSignatureVerifier {
                 uint256 amt = item.amount;
 
                 // Cannot require 0 amount
-                require(amt > 0, "item format: zero amount on 1155");
+                if (amt == 0) revert IV_NonPositiveAmount1155(item.asset, amt);
 
                 // Wildcard not allowed for 1155
-                require(id >= 0, "item format: wildcard on 1155");
+                if (id < 0) revert IV_InvalidTokenId1155(item.asset, id);
 
                 // Does not own specifically specified asset
                 if (asset.balanceOf(vault, id.toUint256()) < amt) return false;
@@ -116,13 +122,13 @@ contract ArcadeItemsVerifier is IArcadeSignatureVerifier {
                 uint256 amt = item.amount;
 
                 // Cannot require 0 amount
-                require(amt > 0, "item format: zero amount on 20");
+                if (amt == 0) revert IV_NonPositiveAmount20(item.asset, amt);
 
                 // Does not own specifically specified asset
                 if (asset.balanceOf(vault) < amt) return false;
             } else {
                 // Interface could not be parsed - fail
-                revert("item format: invalid cType");
+                revert IV_InvalidCollateralType(item.asset, uint256(item.cType));
             }
         }
 

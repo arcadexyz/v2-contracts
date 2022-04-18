@@ -22,6 +22,7 @@ import "./verifiers/ItemsVerifier.sol";
 import { OC_InvalidLoanCore, OC_PredicateFailed, OC_SelfApprove, OC_ApprovedOwnLoan, OC_InvalidSignature, OC_CallerNotParticipant } from "./errors/Lending.sol";
 
 // NEXT PR:
+// TODO: Fix existing tests
 // TODO: Tests for approvals and nonce
 
 /**

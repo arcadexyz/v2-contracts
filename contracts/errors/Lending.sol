@@ -56,3 +56,46 @@ error OC_InvalidSignature(address target, address signer);
  * @param caller                        The unapproved function caller.
  */
 error OC_CallerNotParticipant(address caller);
+
+// ==================================== ITEMS VERIFIER ======================================
+/// @notice All errors prefixed with IV_, to separate from other contracts in the protocol.
+
+/**
+ * @notice Provided SignatureItem is missing an address.
+ */
+ error IV_ItemMissingAddress();
+
+/**
+ * @notice Provided SignatureItem has an invalid collateral type.
+ * @dev    Should never actually fire, since cType is defined by an enum, so will fail on decode.
+ *
+ * @param asset                         The NFT contract being checked.
+ * @param cType                        The collateralTytpe provided.
+ */
+ error IV_InvalidCollateralType(address asset, uint256 cType);
+
+/**
+ * @notice Provided ERC1155 signature item is requiring a non-positive amount.
+ *
+ * @param asset                         The NFT contract being checked.
+ * @param amount                        The amount provided (should be 0).
+ */
+ error IV_NonPositiveAmount1155(address asset, uint256 amount);
+
+/**
+ * @notice Provided ERC1155 signature item is requiring an invalid token ID.
+ *
+ * @param asset                         The NFT contract being checked.
+ * @param tokenId                        The token ID provided.
+ */
+ error IV_InvalidTokenId1155(address asset, int256 tokenId);
+
+/**
+ * @notice Provided ERC20 signature item is requiring a non-positive amount.
+ *
+ * @param asset                         The NFT contract being checked.
+ * @param amount                        The amount provided (should be 0).
+ */
+ error IV_NonPositiveAmount20(address asset, uint256 amount);
+
+
