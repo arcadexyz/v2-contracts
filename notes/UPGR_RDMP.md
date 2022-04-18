@@ -155,12 +155,13 @@ example: ```await upgrades.deployProxy(MyContractV1, { kind: 'uups' });```
 ```await upgrades.upgradeProxy(proxyAddress, MyTokenV2);```
 
 
-With [multiple inheritance](https://docs.openzeppelin.com/contracts/4.x/upgradeable#multiple-inheritance), use ``` __{ContractName}_init_unchained``` to avoid double initialization of the same parent contracts.\
+With [multiple inheritance](https://docs.openzeppelin.com/contracts/4.x/upgradeable#multiple-inheritance), use ``` __{ContractName}_init_unchained``` to avoid double initialization of the same parent contracts.
 
 ---
 
 ## Resources:
-[OpenZeppelin UUPS Tutorial](https://forum.openzeppelin.com/t/uups-proxies-tutorial-solidity-javascript/7786)
+[OpenZeppelin UUPS Tutorial](https://forum.openzeppelin.com/t/uups-proxies-tutorial-solidity-javascript/7786)\
+[Writing Upgradeable Contracts](https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable)
 
 ---
 
