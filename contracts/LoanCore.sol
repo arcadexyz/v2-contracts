@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.11;
 
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
@@ -15,6 +15,9 @@ import "./interfaces/IFeeController.sol";
 import "./interfaces/ILoanCore.sol";
 
 import "./PromissoryNote.sol";
+import "./vault/OwnableERC721.sol";
+
+// TODO: Better natspec
 
 /**
  * @dev LoanCore contract - core contract for creating, repaying, and claiming collateral for PawnFi loans
@@ -30,24 +33,24 @@ contract LoanCore is ILoanCore, AccessControl, Pausable, ICallDelegator {
 
     Counters.Counter private loanIdTracker;
     mapping(uint256 => LoanLibrary.LoanData) private loans;
-    mapping(uint256 => bool) private collateralInUse;
+    mapping(address => mapping(uint256 => bool)) private collateralInUse;
     IPromissoryNote public immutable override borrowerNote;
     IPromissoryNote public immutable override lenderNote;
-    IERC721 public immutable override collateralToken;
     IFeeController public override feeController;
 
     // 10k bps per whole
     uint256 private constant BPS_DENOMINATOR = 10_000;
 
-    constructor(IERC721 _collateralToken, IFeeController _feeController) {
+    constructor(IFeeController _feeController) {
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
         _setupRole(FEE_CLAIMER_ROLE, _msgSender());
         // only those with FEE_CLAIMER_ROLE can update or grant FEE_CLAIMER_ROLE
         _setRoleAdmin(FEE_CLAIMER_ROLE, FEE_CLAIMER_ROLE);
 
         feeController = _feeController;
-        collateralToken = _collateralToken;
 
+        // TODO: Why are these deployed? Can these be provided beforehand?
+        //       Even updatable with note addresses going in LoanData?
         borrowerNote = new PromissoryNote("PawnFi Borrower Note", "pBN");
         lenderNote = new PromissoryNote("PawnFi Lender Note", "pLN");
 
@@ -73,7 +76,10 @@ contract LoanCore is ILoanCore, AccessControl, Pausable, ICallDelegator {
         returns (uint256 loanId)
     {
         require(terms.durationSecs > 0, "LoanCore::create: Loan is already expired");
-        require(!collateralInUse[terms.collateralTokenId], "LoanCore::create: Collateral token already in use");
+        require(
+            !collateralInUse[terms.collateralAddress][terms.collateralId],
+            "LoanCore::create: Collateral token already in use"
+        );
 
         loanId = loanIdTracker.current();
         loanIdTracker.increment();
@@ -85,7 +91,9 @@ contract LoanCore is ILoanCore, AccessControl, Pausable, ICallDelegator {
             LoanLibrary.LoanState.Created,
             block.timestamp + terms.durationSecs
         );
-        collateralInUse[terms.collateralTokenId] = true;
+
+        collateralInUse[terms.collateralAddress][terms.collateralId] = true;
+
         emit LoanCreated(terms, loanId);
     }
 
@@ -98,11 +106,12 @@ contract LoanCore is ILoanCore, AccessControl, Pausable, ICallDelegator {
         uint256 loanId
     ) external override whenNotPaused onlyRole(ORIGINATOR_ROLE) {
         LoanLibrary.LoanData memory data = loans[loanId];
+
         // Ensure valid initial loan state
         require(data.state == LoanLibrary.LoanState.Created, "LoanCore::start: Invalid loan state");
-        // Pull collateral token and principal
-        collateralToken.transferFrom(_msgSender(), address(this), data.terms.collateralTokenId);
 
+        // Pull collateral token and principal
+        IERC721(data.terms.collateralAddress).transferFrom(_msgSender(), address(this), data.terms.collateralId);
         IERC20(data.terms.payableCurrency).safeTransferFrom(_msgSender(), address(this), data.terms.principal);
 
         // Distribute notes and principal
@@ -119,6 +128,7 @@ contract LoanCore is ILoanCore, AccessControl, Pausable, ICallDelegator {
         );
 
         IERC20(data.terms.payableCurrency).safeTransfer(borrower, getPrincipalLessFees(data.terms.principal));
+
         emit LoanStarted(loanId, lender, borrower);
     }
 
@@ -140,14 +150,14 @@ contract LoanCore is ILoanCore, AccessControl, Pausable, ICallDelegator {
         // state changes and cleanup
         // NOTE: these must be performed before assets are released to prevent reentrance
         loans[loanId].state = LoanLibrary.LoanState.Repaid;
-        collateralInUse[data.terms.collateralTokenId] = false;
+        collateralInUse[data.terms.collateralAddress][data.terms.collateralId] = false;
 
         lenderNote.burn(data.lenderNoteId);
         borrowerNote.burn(data.borrowerNoteId);
 
         // asset and collateral redistribution
         IERC20(data.terms.payableCurrency).safeTransfer(lender, returnAmount);
-        collateralToken.transferFrom(address(this), borrower, data.terms.collateralTokenId);
+        IERC721(data.terms.collateralAddress).transferFrom(address(this), borrower, data.terms.collateralId);
 
         emit LoanRepaid(loanId);
     }
@@ -166,13 +176,13 @@ contract LoanCore is ILoanCore, AccessControl, Pausable, ICallDelegator {
 
         // NOTE: these must be performed before assets are released to prevent reentrance
         loans[loanId].state = LoanLibrary.LoanState.Defaulted;
-        collateralInUse[data.terms.collateralTokenId] = false;
+        collateralInUse[data.terms.collateralAddress][data.terms.collateralId] = false;
 
         lenderNote.burn(data.lenderNoteId);
         borrowerNote.burn(data.borrowerNoteId);
 
         // collateral redistribution
-        collateralToken.transferFrom(address(this), lender, data.terms.collateralTokenId);
+        IERC721(data.terms.collateralAddress).transferFrom(address(this), lender, data.terms.collateralId);
 
         emit LoanClaimed(loanId);
     }
@@ -240,7 +250,7 @@ contract LoanCore is ILoanCore, AccessControl, Pausable, ICallDelegator {
      */
     function canCallOn(address caller, address vault) external view override returns (bool) {
         // if the collateral is not currently being used in a loan, disallow
-        if (!collateralInUse[uint256(uint160(vault))]) {
+        if (!collateralInUse[OwnableERC721(vault).ownershipToken()][uint256(uint160(vault))]) {
             return false;
         }
 
@@ -249,7 +259,7 @@ contract LoanCore is ILoanCore, AccessControl, Pausable, ICallDelegator {
             uint256 loanId = borrowerNote.loanIdByNoteId(borrowerNoteId);
             // if the borrower is currently borrowing against this vault,
             // return true
-            if (loans[loanId].terms.collateralTokenId == uint256(uint160(vault))) {
+            if (loans[loanId].terms.collateralId == uint256(uint160(vault))) {
                 return true;
             }
         }

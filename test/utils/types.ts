@@ -8,11 +8,33 @@ export enum LoanState {
     Defaulted = 4,
 }
 
+export interface SignatureItem {
+    cType: 0 | 1 | 2;
+    asset: string;
+    tokenId: BigNumberish;
+    amount: BigNumberish;
+}
+
+export interface ItemsPredicate {
+    data: string;
+    verifier: string;
+}
+
 export interface LoanTerms {
     durationSecs: BigNumberish;
     principal: BigNumber;
     interest: BigNumber;
-    collateralTokenId: BigNumber;
+    collateralAddress: string;
+    collateralId: BigNumber;
+    payableCurrency: string;
+}
+
+export interface ItemsPayload {
+    durationSecs: BigNumberish;
+    principal: BigNumber;
+    interest: BigNumber;
+    collateralAddress: string;
+    itemsHash: string;
     payableCurrency: string;
 }
 

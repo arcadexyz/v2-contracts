@@ -1,52 +1,76 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.11;
 
 import "../libraries/LoanLibrary.sol";
 
-/**
- * @dev Interface for the OriginationController contracts
- */
 interface IOriginationController {
-    /**
-     * @dev initializes loan from loan core
-     * Requirements:
-     * - The caller must be a borrower or lender
-     * - The external signer must not be msg.sender
-     * - The external signer must be a borrower or lender
-     * @param loanTerms - struct containing specifics of loan made between lender and borrower
-     * @param borrower - address of borrowerPromissory note
-     * @param lender - address of lenderPromissory note
-     * @param v, r, s - signature from erc20
-     */
+    // ================ Data Types =============
+
+    struct Signature {
+        uint8 v;
+        bytes32 r;
+        bytes32 s;
+    }
+
+    // ================ Events =================
+
+    event Approval(address indexed owner, address indexed signer);
+
+    // ============== Origination Operations ==============
+
     function initializeLoan(
         LoanLibrary.LoanTerms calldata loanTerms,
         address borrower,
         address lender,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
+        Signature calldata sig
     ) external returns (uint256 loanId);
 
-    /**
-     * @dev creates a new loan, with permit attached
-     * @param loanTerms - struct containing specifics of loan made between lender and borrower
-     * @param borrower - address of borrowerPromissory note
-     * @param lender - address of lenderPromissory note
-     * @param v, r, s - signature from erc20
-     * @param collateralV, collateralR, collateralS - signature from collateral
-     * @param permitDeadline - timestamp at which the collateral signature becomes invalid
-     */
+    function initializeLoanWithItems(
+        LoanLibrary.LoanTerms calldata loanTerms,
+        address borrower,
+        address lender,
+        Signature calldata sig,
+        LoanLibrary.Predicate[] calldata itemPredicates
+    ) external returns (uint256 loanId);
+
     function initializeLoanWithCollateralPermit(
         LoanLibrary.LoanTerms calldata loanTerms,
         address borrower,
         address lender,
-        uint8 v,
-        bytes32 r,
-        bytes32 s,
-        uint8 collateralV,
-        bytes32 collateralR,
-        bytes32 collateralS,
+        Signature calldata sig,
+        Signature calldata collateralSig,
         uint256 permitDeadline
     ) external returns (uint256 loanId);
+
+    function initializeLoanWithCollateralPermitAndItems(
+        LoanLibrary.LoanTerms calldata loanTerms,
+        address borrower,
+        address lender,
+        Signature calldata sig,
+        Signature calldata collateralSig,
+        uint256 permitDeadline,
+        LoanLibrary.Predicate[] calldata itemPredicates
+    ) external returns (uint256 loanId);
+
+    // ================ Permission Management =================
+
+    function approve(address signer, bool approved) external;
+
+    function isApproved(address owner, address signer) external returns (bool);
+
+    function isSelfOrApproved(address target, address signer) external returns (bool);
+
+    // ============== Signature Verification ==============
+
+    function recoverTokenSignature(LoanLibrary.LoanTerms calldata loanTerms, Signature calldata sig)
+        external
+        view
+        returns (address signer);
+
+    function recoverItemsSignature(
+        LoanLibrary.LoanTerms calldata loanTerms,
+        Signature calldata sig,
+        bytes32 itemsHash
+    ) external view returns (address signer);
 }
