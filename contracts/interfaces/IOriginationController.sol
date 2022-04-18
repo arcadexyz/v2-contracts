@@ -62,7 +62,11 @@ interface IOriginationController {
 
     function isSelfOrApproved(address target, address signer) external returns (bool);
 
-    function isApprovedForContract(address target, Signature calldata sig, bytes32 sighash) external returns (bool);
+    function isApprovedForContract(
+        address target,
+        Signature calldata sig,
+        bytes32 sighash
+    ) external returns (bool);
 
     // ============== Signature Verification ==============
 

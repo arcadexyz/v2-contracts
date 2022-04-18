@@ -19,14 +19,7 @@ import "./interfaces/ISignatureVerifier.sol";
 
 import "./verifiers/ItemsVerifier.sol";
 
-import {
-    OC_InvalidLoanCore,
-    OC_PredicateFailed,
-    OC_SelfApprove,
-    OC_ApprovedOwnLoan,
-    OC_InvalidSignature,
-    OC_CallerNotParticipant
-} from "./errors/Lending.sol";
+import { OC_InvalidLoanCore, OC_PredicateFailed, OC_SelfApprove, OC_ApprovedOwnLoan, OC_InvalidSignature, OC_CallerNotParticipant } from "./errors/Lending.sol";
 
 // NEXT PR:
 // TODO: Tests for approvals and nonce
@@ -148,20 +141,18 @@ contract OriginationController is Context, IOriginationController, EIP712, Reent
         LoanLibrary.Predicate[] calldata itemPredicates
     ) public override returns (uint256 loanId) {
         address vault = IVaultFactory(loanTerms.collateralAddress).instanceAt(loanTerms.collateralId);
-        (bytes32 sighash, address externalSigner) = recoverItemsSignature(loanTerms, sig, keccak256(abi.encode(itemPredicates)));
+        (bytes32 sighash, address externalSigner) = recoverItemsSignature(
+            loanTerms,
+            sig,
+            keccak256(abi.encode(itemPredicates))
+        );
 
         _validateCounterparties(borrower, lender, msg.sender, externalSigner, sig, sighash);
 
         for (uint256 i = 0; i < itemPredicates.length; i++) {
             // Verify items are held in the wrapper
-            if (
-                !IArcadeSignatureVerifier(itemPredicates[i].verifier).verifyPredicates(itemPredicates[i].data, vault)
-            ) {
-                revert OC_PredicateFailed(
-                    itemPredicates[i].verifier,
-                    itemPredicates[i].data,
-                    vault
-                );
+            if (!IArcadeSignatureVerifier(itemPredicates[i].verifier).verifyPredicates(itemPredicates[i].data, vault)) {
+                revert OC_PredicateFailed(itemPredicates[i].verifier, itemPredicates[i].data, vault);
             }
         }
 
@@ -284,7 +275,11 @@ contract OriginationController is Context, IOriginationController, EIP712, Reent
      *
      * @return isApprovedForContract        Whether the signer is either the grantor themselves, or approved.
      */
-    function isApprovedForContract(address target, Signature calldata sig, bytes32 sighash) public view override returns (bool) {
+    function isApprovedForContract(
+        address target,
+        Signature calldata sig,
+        bytes32 sighash
+    ) public view override returns (bool) {
         bytes memory signature = new bytes(65);
 
         // Construct byte array directly in assembly for efficiency

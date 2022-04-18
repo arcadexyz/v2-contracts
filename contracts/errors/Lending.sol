@@ -19,40 +19,40 @@ pragma solidity ^0.8.11;
 error OC_InvalidLoanCore();
 
 /**
-    * @notice One of the predicates for item verification failed.
-    *
-    * @param verifier                      The address of the verifier contract.
-    * @param data                          The verification data (to be parsed by verifier).
-    * @param vault                         The user's vault subject to verification.
-    */
+ * @notice One of the predicates for item verification failed.
+ *
+ * @param verifier                      The address of the verifier contract.
+ * @param data                          The verification data (to be parsed by verifier).
+ * @param vault                         The user's vault subject to verification.
+ */
 error OC_PredicateFailed(address verifier, bytes data, address vault);
 
 /**
-    * @notice A caller attempted to approve themselves.
-    *
-    * @param caller                        The caller of the approve function.
-    */
+ * @notice A caller attempted to approve themselves.
+ *
+ * @param caller                        The caller of the approve function.
+ */
 error OC_SelfApprove(address caller);
 
 /**
-    * @notice A caller attempted to originate a loan with their own signature.
-    *
-    * @param caller                        The caller of the approve function, who was also the signer.
-    */
+ * @notice A caller attempted to originate a loan with their own signature.
+ *
+ * @param caller                        The caller of the approve function, who was also the signer.
+ */
 error OC_ApprovedOwnLoan(address caller);
 
 /**
-    * @notice The signature could not be recovered to the counterparty or approved party.
-    *
-    * @param target                        The target party of the signature, which should either be the signer,
-    *                                      or someone who has approved the signer.
-    * @param signer                        The signer determined from ECDSA.recover.
-    */
+ * @notice The signature could not be recovered to the counterparty or approved party.
+ *
+ * @param target                        The target party of the signature, which should either be the signer,
+ *                                      or someone who has approved the signer.
+ * @param signer                        The signer determined from ECDSA.recover.
+ */
 error OC_InvalidSignature(address target, address signer);
 
 /**
-    * @notice The function caller was neither borrower or lender, and was not approved by either.
-    *
-    * @param caller                        The unapproved function caller.
-    */
+ * @notice The function caller was neither borrower or lender, and was not approved by either.
+ *
+ * @param caller                        The unapproved function caller.
+ */
 error OC_CallerNotParticipant(address caller);

@@ -92,7 +92,7 @@ export async function createLoanTermsSignature(
     terms: LoanTerms,
     signer: SignerWithAddress,
     version = "1",
-    nonce = "1"
+    nonce = "1",
 ): Promise<ECDSASignature> {
     const data = buildData(verifyingContract, name, version, { ...terms, nonce }, typedLoanTermsData);
     const signature = await signer._signTypedData(data.domain, data.types, data.message);
@@ -114,7 +114,7 @@ export async function createLoanItemsSignature(
     itemsHash: string,
     signer: SignerWithAddress,
     version = "1",
-    nonce = "1"
+    nonce = "1",
 ): Promise<ECDSASignature> {
     const message: ItemsPayload = {
         durationSecs: terms.durationSecs,
