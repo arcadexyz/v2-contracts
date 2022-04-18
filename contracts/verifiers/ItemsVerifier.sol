@@ -101,7 +101,7 @@ contract ArcadeItemsVerifier is IArcadeSignatureVerifier {
                 // Wildcard, but vault has no assets
                 if (id < 0 && asset.balanceOf(vault) == 0) return false;
                 // Does not own specifically specified asset
-                else if (asset.ownerOf(id.toUint256()) != vault) return false;
+                else if (id >= 0 && asset.ownerOf(id.toUint256()) != vault) return false;
             } else if (item.cType == CollateralType.ERC_1155) {
                 IERC1155 asset = IERC1155(item.asset);
 

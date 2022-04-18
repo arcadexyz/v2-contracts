@@ -1,4 +1,6 @@
-pragma solidity ^0.8.0;
+// SPDX-License-Identifier: MIT
+
+pragma solidity ^0.8.11;
 
 import "@openzeppelin/contracts/utils/Counters.sol";
 
@@ -7,6 +9,8 @@ import "../interfaces/IPromissoryNote.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import "../PromissoryNote.sol";
+
+// TODO: Proper natspec
 
 /**
  * @dev Interface for the LoanCore contract
@@ -21,6 +25,7 @@ contract MockLoanCore is ILoanCore {
     IFeeController public override feeController;
 
     mapping(uint256 => LoanLibrary.LoanData) public loans;
+    mapping(address => uint160) public lastUsedNonce;
 
     constructor() {
         borrowerNote = new PromissoryNote("Mock BorrowerNote", "MB");
@@ -150,4 +155,8 @@ contract MockLoanCore is ILoanCore {
      *  - The current time must be beyond the dueDate
      */
     function claim(uint256 loanId) public override {}
+
+    function consumeNonce(address user, uint256 nonce) external override {
+        require(++lastUsedNonce[user] == nonce, "Invalid nonce");
+    }
 }
