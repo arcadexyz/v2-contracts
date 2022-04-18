@@ -140,7 +140,8 @@ contract MyTokenV1 is Initializable, ERC20Upgradeable, UUPSUpgradeable, OwnableU
 import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 contract MyCollectible is ERC721Upgradeable {
 ```
-5. replace constructors by internal initializer functions with naming convention ``` __{ContractName}_init```
+5. replace constructors by internal initializer functions with naming convention ``` __{ContractName}_init```\
+ with [multiple inheritances](https://docs.openzeppelin.com/contracts/4.x/upgradeable#multiple-inheritance), use ``` __{ContractName}_init_unchained``` to avoid double initialization of the same parent contracts
 6. define a public initializer function and call the parent initializer of the contract being extended
 ```
 function initialize() initializer public {
@@ -153,9 +154,6 @@ function initialize() initializer public {
 example: ```await upgrades.deployProxy(MyContractV1, { kind: 'uups' });```
 9. to deploy a new version of the contract code and to upgrade the proxy, we can use ```upgrades.upgradeProxy``` (it's no longer necessary to specify kind: 'uups' since it is now inferred from the proxy address)\
 ```await upgrades.upgradeProxy(proxyAddress, MyTokenV2);```
-
-
-With [multiple inheritance](https://docs.openzeppelin.com/contracts/4.x/upgradeable#multiple-inheritance), use ``` __{ContractName}_init_unchained``` to avoid double initialization of the same parent contracts.
 
 ---
 
@@ -170,7 +168,7 @@ With [multiple inheritance](https://docs.openzeppelin.com/contracts/4.x/upgradea
 - contract to be EIP1967-compatible
 - ```prepare_upgrade.js``` script needed to specify the Proxy Address
 - re. network files: commit to [source control](https://docs.openzeppelin.com/upgrades-plugins/1.x/network-files) the files for all networks except the ones used in development\
-The development version can be ignored:
+the development version can be ignored:
 ```
 // .gitignore
 # OpenZeppelin
