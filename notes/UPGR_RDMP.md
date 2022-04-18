@@ -117,23 +117,47 @@ contract MyFinalContract is MyContract, Proxiable {
 ---
 
 # Implementation w/ Openzeppelin
+###
+OpenZeppelin's [UpgradeableProxy](https://github.com/OpenZeppelin/openzeppelin-contracts/issues/2421#issuecomment-786034967) is an UUPS proxy.
 
 1. install OZ upgradeable ```yarn add @openzeppelin/contracts-upgradeable```
-2. replace imports with ones that include the ```Upgradeable``` suffix
+2. add the upgrade mechanism to the implementation contract by inheriting ```UUPSUpgradeable ``` and an authorization function to define who should be allowed to upgrade the contract\
+example:
+```
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+
+contract MyTokenV1 is Initializable, ERC20Upgradeable, UUPSUpgradeable, OwnableUpgradeable {
+    function initialize() initializer public {
+      __ERC20_init("MyToken", "MTK");
+      __Ownable_init();
+      __UUPSUpgradeable_init();
+```
+3. to authorize the owner to upgrade the contract, implement ```_authorizeUpgrade```\
+```function _authorizeUpgrade(address) internal override onlyOwner {}```
+4. replace imports with ones that include the ```Upgradeable``` suffix
 ```
 import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 contract MyCollectible is ERC721Upgradeable {
 ```
-3. replace constructors by internal initializer functions with naming convention ``` __{ContractName}_init```
-4. define a public initializer function and call the parent initializer of the contract being extended
+5. replace constructors by internal initializer functions with naming convention ``` __{ContractName}_init```
+6. define a public initializer function and call the parent initializer of the contract being extended
 ```
 function initialize() initializer public {
         __ERC721_init("MyCollectible", "MCO");
      }
 ```
 With [multiple inheritance](https://docs.openzeppelin.com/contracts/4.x/upgradeable#multiple-inheritance), use ``` __{ContractName}_init_unchained``` to avoid double initialization of the same parent contracts.\
-5. compile contract and deploy with the Upgrades Plugins\
-6. **TKTK**
+7. compile contract and deploy using ```deployProxy``` from the Upgrades Plugins\
+(this function will first check for unsafe patterns, then deploy the implementation contract, and finally deploy a proxy connected to that implementation)
+8. to deploy a UUPS proxy, manually specify that with the option ```kind: 'uups'```\
+example: ```await upgrades.deployProxy(MyContractV1, { kind: 'uups' });```
+9. to deploy a new version of the contract code and to upgrade the proxy, we can use ```upgrades.upgradeProxy``` (it's no longer necessary to specify kind: 'uups' since it is now inferred from the proxy address)\
+```await upgrades.upgradeProxy(proxyAddress, MyTokenV2);```
+---
+
+## Resources:
+[OpenZeppelin UUPS Tutorial](https://forum.openzeppelin.com/t/uups-proxies-tutorial-solidity-javascript/7786)
 
 ---
 
