@@ -61,16 +61,18 @@ interface IOriginationController {
 
     function isSelfOrApproved(address target, address signer) external returns (bool);
 
+    function isApprovedForContract(address target, Signature calldata sig, bytes32 sighash) external returns (bool);
+
     // ============== Signature Verification ==============
 
     function recoverTokenSignature(LoanLibrary.LoanTerms calldata loanTerms, Signature calldata sig)
         external
         view
-        returns (address signer);
+        returns (bytes32 sighash, address signer);
 
     function recoverItemsSignature(
         LoanLibrary.LoanTerms calldata loanTerms,
         Signature calldata sig,
         bytes32 itemsHash
-    ) external view returns (address signer);
+    ) external view returns (bytes32 sighash, address signer);
 }

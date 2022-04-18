@@ -8,6 +8,7 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/interfaces/IERC1271.sol";
 
 import "./interfaces/IOriginationController.sol";
 import "./interfaces/ILoanCore.sol";
@@ -21,7 +22,6 @@ import "./verifiers/ItemsVerifier.sol";
 // NEXT PR:
 // TODO: Support EIP-1271 for approvals
 // TODO: Tests for approvals including EIP-1271
-// TODO: Add event for approvals
 // TODO: Add signing nonce
 // TODO: Custom errors
 
@@ -107,9 +107,9 @@ contract OriginationController is Context, IOriginationController, EIP712, Reent
         address lender,
         Signature calldata sig
     ) public override returns (uint256 loanId) {
-        address externalSigner = recoverTokenSignature(loanTerms, sig);
+        (bytes32 sighash, address externalSigner) = recoverTokenSignature(loanTerms, sig);
 
-        _validateCounterparties(borrower, lender, msg.sender, externalSigner);
+        _validateCounterparties(borrower, lender, msg.sender, externalSigner, sig, sighash);
 
         loanId = _initialize(loanTerms, borrower, lender);
     }
@@ -139,9 +139,9 @@ contract OriginationController is Context, IOriginationController, EIP712, Reent
         LoanLibrary.Predicate[] calldata itemPredicates
     ) public override returns (uint256 loanId) {
         address vault = IVaultFactory(loanTerms.collateralAddress).instanceAt(loanTerms.collateralId);
-        address externalSigner = recoverItemsSignature(loanTerms, sig, keccak256(abi.encode(itemPredicates)));
+        (bytes32 sighash, address externalSigner) = recoverItemsSignature(loanTerms, sig, keccak256(abi.encode(itemPredicates)));
 
-        _validateCounterparties(borrower, lender, msg.sender, externalSigner);
+        _validateCounterparties(borrower, lender, msg.sender, externalSigner, sig, sighash);
 
         for (uint256 i = 0; i < itemPredicates.length; i++) {
             // Verify items are held in the wrapper
@@ -263,6 +263,36 @@ contract OriginationController is Context, IOriginationController, EIP712, Reent
     /**
      * @notice Reports whether the signer matches the target or is approved by the target.
      *
+     * @param target                        The grantor of permission - should be a smart contract.
+     * @param sig                           A struct containing the signature data (for checking EIP-1271).
+     * @param sighash                   The hash of the signature payload (used for EIP-1271 check).
+     *
+     * @return isApprovedForContract        Whether the signer is either the grantor themselves, or approved.
+     */
+    function isApprovedForContract(address target, Signature calldata sig, bytes32 sighash) public view override returns (bool) {
+        bytes memory signature = new bytes(65);
+
+        uint8 v = sig.v;
+        bytes32 r = sig.r;
+        bytes32 s = sig.s;
+
+        assembly {
+            mstore(add(signature, 32), r)
+            mstore(add(signature, 64), s)
+            mstore(add(signature, 96), v)
+        }
+
+        // Convert sig struct to bytes
+        (bool success, bytes memory result) = target.staticcall(
+            abi.encodeWithSelector(IERC1271.isValidSignature.selector, sighash, signature)
+        );
+
+        return (success && result.length == 32 && abi.decode(result, (bytes4)) == IERC1271.isValidSignature.selector);
+    }
+
+    /**
+     * @notice Reports whether the signer matches the target or is approved by the target.
+     *
      * @param target                        The grantor of permission.
      * @param signer                        The grantee of permission.
      *
@@ -280,13 +310,14 @@ contract OriginationController is Context, IOriginationController, EIP712, Reent
      * @param loanTerms                     The terms of the loan.
      * @param sig                           The signature, with v, r, s fields.
      *
+     * @return sighash                      The hash that was signed.
      * @return signer                       The address of the recovered signer.
      */
     function recoverTokenSignature(LoanLibrary.LoanTerms calldata loanTerms, Signature calldata sig)
         public
         view
         override
-        returns (address signer)
+        returns (bytes32 sighash, address signer)
     {
         bytes32 loanHash = keccak256(
             abi.encode(
@@ -301,8 +332,8 @@ contract OriginationController is Context, IOriginationController, EIP712, Reent
             )
         );
 
-        bytes32 typedLoanHash = _hashTypedDataV4(loanHash);
-        signer = ECDSA.recover(typedLoanHash, sig.v, sig.r, sig.s);
+        sighash = _hashTypedDataV4(loanHash);
+        signer = ECDSA.recover(sighash, sig.v, sig.r, sig.s);
     }
 
     /**
@@ -312,15 +343,16 @@ contract OriginationController is Context, IOriginationController, EIP712, Reent
      *
      * @param loanTerms                     The terms of the loan.
      * @param sig                           The loan terms signature, with v, r, s fields.
-     * @param itemsHash                         The required items in the specified bundle.
+     * @param itemsHash                     The required items in the specified bundle.
      *
+     * @return sighash                      The hash that was signed.
      * @return signer                       The address of the recovered signer.
      */
     function recoverItemsSignature(
         LoanLibrary.LoanTerms calldata loanTerms,
         Signature calldata sig,
         bytes32 itemsHash
-    ) public view override returns (address signer) {
+    ) public view override returns (bytes32 sighash, address signer) {
         bytes32 loanHash = keccak256(
             abi.encode(
                 _ITEMS_TYPEHASH,
@@ -334,8 +366,8 @@ contract OriginationController is Context, IOriginationController, EIP712, Reent
             )
         );
 
-        bytes32 typedLoanHash = _hashTypedDataV4(loanHash);
-        signer = ECDSA.recover(typedLoanHash, sig.v, sig.r, sig.s);
+        sighash = _hashTypedDataV4(loanHash);
+        signer = ECDSA.recover(sighash, sig.v, sig.r, sig.s);
     }
 
     // =========================================== HELPERS ==============================================
@@ -348,20 +380,24 @@ contract OriginationController is Context, IOriginationController, EIP712, Reent
      * @param lender                    The specified lender for the loan.
      * @param caller                    The address initiating the transaction.
      * @param signer                    The address recovered from the loan terms signature.
+     * @param sig                       A struct containing the signature data (for checking EIP-1271).
+     * @param sighash                   The hash of the signature payload (used for EIP-1271 check).
      */
     function _validateCounterparties(
         address borrower,
         address lender,
         address caller,
-        address signer
+        address signer,
+        Signature calldata sig,
+        bytes32 sighash
     ) internal view {
         require(caller != signer, "Origination: approved own loan");
 
         // Make sure one from each side approves
         if (isSelfOrApproved(lender, caller)) {
-            require(isSelfOrApproved(borrower, signer), "Origination: no counterparty signature");
+            require(isSelfOrApproved(borrower, signer) || isApprovedForContract(borrower, sig, sighash), "Origination: no counterparty signature");
         } else if (isSelfOrApproved(borrower, caller)) {
-            require(isSelfOrApproved(lender, signer), "Origination: no counterparty signature");
+            require(isSelfOrApproved(lender, signer) || isApprovedForContract(lender, sig, sighash), "Origination: no counterparty signature");
         } else {
             revert("Origination: caller not participant");
         }
