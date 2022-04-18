@@ -147,13 +147,16 @@ function initialize() initializer public {
         __ERC721_init("MyCollectible", "MCO");
      }
 ```
-With [multiple inheritance](https://docs.openzeppelin.com/contracts/4.x/upgradeable#multiple-inheritance), use ``` __{ContractName}_init_unchained``` to avoid double initialization of the same parent contracts.\
 7. compile contract and deploy using ```deployProxy``` from the Upgrades Plugins\
 (this function will first check for unsafe patterns, then deploy the implementation contract, and finally deploy a proxy connected to that implementation)
 8. to deploy a UUPS proxy, manually specify that with the option ```kind: 'uups'```\
 example: ```await upgrades.deployProxy(MyContractV1, { kind: 'uups' });```
 9. to deploy a new version of the contract code and to upgrade the proxy, we can use ```upgrades.upgradeProxy``` (it's no longer necessary to specify kind: 'uups' since it is now inferred from the proxy address)\
 ```await upgrades.upgradeProxy(proxyAddress, MyTokenV2);```
+
+
+With [multiple inheritance](https://docs.openzeppelin.com/contracts/4.x/upgradeable#multiple-inheritance), use ``` __{ContractName}_init_unchained``` to avoid double initialization of the same parent contracts.\
+
 ---
 
 ## Resources:
