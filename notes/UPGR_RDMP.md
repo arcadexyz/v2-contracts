@@ -1,8 +1,122 @@
 
 
+# EIP-1822: UUPS (Universal Upgradeable Proxy Standard)
+Developed in 2019, removes the need to inherit a proxy storage.\
+To avoid storage collision, stores the contract logic on a specific storage slot which is predefined (vs. allowing Solidity to select the first storage slot for where the variables are defined in the contract layout).\
+This can be done with ```sstore``` and ```sload``` where, in assembly, a variable can be stored to a specific storage slot and then loaded again from that slot.\
+In the case of EIP-1822, ```keccak256("PROXIABLE") = "0xc5f16f0fcc639fa48a6947836d9850f504798523bf8c9a3a87d5876cf622bcf7"``` is used to specify the storage slot. It's not 100% random, but random enough so that there's no collision under normal circumstances.\
+This comes from ```EIP-1967: Standard Storage Slots``` which is a standard for proxy slots so that block explorers can easily go into the proxy contract and extract the storage location of the logic contract implementation.
+
+---
+
+## ```DELEGATECALL``` Refresh:
+A call where the code at the target address is executed in the context of the calling contract which invoked the ```DELEGATECALL```. Therefore ```msg.sender``` and ```msg.value``` of the original caller are preserved.\
+When ```DELEGATECALL``` is used, the code at the target contract is executed, but the Storage, address and balance of the calling contract are used.
+
+---
+
+## Example using ```EIP-1822```:
+```
+//SPDX-License-Identifier: MIT
+
+pragma solidity 0.8.1;
+
+contract Proxy {
+    // Code position in storage is keccak256("PROXIABLE") = "0xc5f16f0fcc639fa48a6947836d9850f504798523bf8c9a3a87d5876cf622bcf7"
+    constructor(bytes memory constructData, address contractLogic) {
+        // save the code address
+        assembly { // solium-disable-line
+            sstore(0xc5f16f0fcc639fa48a6947836d9850f504798523bf8c9a3a87d5876cf622bcf7, contractLogic)
+        }
+        (bool success, bytes memory result ) = contractLogic.delegatecall(constructData); // solium-disable-line
+        require(success, "Construction failed");
+    }
+
+    fallback() external payable {
+        assembly { // solium-disable-line
+            let contractLogic := sload(0xc5f16f0fcc639fa48a6947836d9850f504798523bf8c9a3a87d5876cf622bcf7)
+            calldatacopy(0x0, 0x0, calldatasize())
+            let success := delegatecall(sub(gas(), 10000), contractLogic, 0x0, calldatasize(), 0, 0)
+            let retSz := returndatasize()
+            returndatacopy(0, 0, retSz)
+            switch success
+            case 0 {
+                revert(0, retSz)
+            }
+            default {
+                return(0, retSz)
+            }
+        }
+    }
+}
+
+contract Proxiable {
+    // Code position in storage is keccak256("PROXIABLE") = "0xc5f16f0fcc639fa48a6947836d9850f504798523bf8c9a3a87d5876cf622bcf7"
+
+    function updateCodeAddress(address newAddress) internal {
+        require(
+            bytes32(0xc5f16f0fcc639fa48a6947836d9850f504798523bf8c9a3a87d5876cf622bcf7) == Proxiable(newAddress).proxiableUUID(),
+            "Not compatible"
+        );
+        assembly { // solium-disable-line
+            sstore(0xc5f16f0fcc639fa48a6947836d9850f504798523bf8c9a3a87d5876cf622bcf7, newAddress)
+        }
+    }
+
+    function proxiableUUID() public pure returns (bytes32) {
+        return 0xc5f16f0fcc639fa48a6947836d9850f504798523bf8c9a3a87d5876cf622bcf7;
+    }
+}
+
+contract MyContract {
+
+    address public owner;
+    uint public myUint;
+
+    function constructor1() public {
+        require(owner == address(0), "Already initalized");
+        owner = msg.sender;
+    }
+
+    function increment() public {
+        //require(msg.sender == owner, "Only the owner can increment"); //someone forget to uncomment this
+        myUint++;
+    }
+}
+
+contract MyFinalContract is MyContract, Proxiable {
+
+    function updateCode(address newCode) onlyOwner public {
+        updateCodeAddress(newCode);
+    }
+
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Only owner is allowed to perform this action");
+        _;
+    }
+}
+
+```
+
+---
+
+## How to upgrade a contract:
+1. deploy the new implementation contract
+2. deploy the ```Proxiable``` contract
+3. call ```updateCodeAddress(address newAddress)``` function in ```Proxiable```, passing the address of the new implementation contract
+4. forget about the Implementation contract's address and treat the Proxy contract's address as the main address.
 
 
+---
 
+## Resources:
+[Making an upgradeable smart contract](https://hackernoon.com/how-to-make-smart-contracts-upgradable-2612e771d5a2)\
+[Upgrades and Proxy Patterns video](https://www.youtube.com/watch?v=YpEm9Ki0qLE&t=1558s)\
+[Upgrade Smart Contracts](https://ethereum-blockchain-developer.com/110-upgrade-smart-contracts/08-eip-1822-uups/)
+
+---
+
+# Implementation w/ Openzeppelin
 
 1. install OZ upgradeable ```yarn add @openzeppelin/contracts-upgradeable```
 2. replace imports with ones that include the ```Upgradeable``` suffix
@@ -18,16 +132,16 @@ function initialize() initializer public {
      }
 ```
 With [multiple inheritance](https://docs.openzeppelin.com/contracts/4.x/upgradeable#multiple-inheritance), use ``` __{ContractName}_init_unchained``` to avoid double initialization of the same parent contracts.\
-5. compile contract and for deploy with Upgrades Plugins\
-6.
+5. compile contract and deploy with the Upgrades Plugins\
+6. **TKTK**
 
+---
 
-
-Other:
-- create MultiSig for performing actual upgrade
-- Contract needs to be EIP1967-compatible
+## Additional TODOs:
+- create MultiSig for performing actual upgrade via OpenZeppelin
+- contract to be EIP1967-compatible
 - ```prepare_upgrade.js``` script needed to specify the Proxy Address
-- Network files: commit to [source control](https://docs.openzeppelin.com/upgrades-plugins/1.x/network-files) the files for all networks except the development ones.
+- re. network files: commit to [source control](https://docs.openzeppelin.com/upgrades-plugins/1.x/network-files) the files for all networks except the ones used in development\
 The development version can be ignored:
 ```
 // .gitignore
