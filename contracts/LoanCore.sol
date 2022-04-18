@@ -34,8 +34,11 @@ contract LoanCore is ILoanCore, FullInterestAmountCalc, AccessControl, Pausable,
     bytes32 public constant FEE_CLAIMER_ROLE = keccak256("FEE_CLAIMER_ROLE");
 
     Counters.Counter private loanIdTracker;
+
     mapping(uint256 => LoanLibrary.LoanData) private loans;
     mapping(address => mapping(uint256 => bool)) private collateralInUse;
+    mapping(address => uint160) public lastUsedNonce;
+
     IPromissoryNote public immutable override borrowerNote;
     IPromissoryNote public immutable override lenderNote;
     IFeeController public override feeController;
@@ -378,5 +381,9 @@ contract LoanCore is ILoanCore, FullInterestAmountCalc, AccessControl, Pausable,
         }
 
         return false;
+    }
+
+    function consumeNonce(address user, uint256 nonce) external override whenNotPaused onlyRole(ORIGINATOR_ROLE) {
+        require(++lastUsedNonce[user] == nonce, "Invalid nonce");
     }
 }

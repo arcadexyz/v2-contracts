@@ -104,6 +104,8 @@ interface ILoanCore {
      */
     function claim(uint256 loanId) external;
 
+    function consumeNonce(address user, uint256 nonce) external;
+
     /**
      * @dev Getters for integrated contracts
      *

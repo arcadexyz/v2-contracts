@@ -8,6 +8,7 @@ interface IOriginationController {
     // ================ Data Types =============
 
     struct Signature {
+        uint160 nonce;
         uint8 v;
         bytes32 r;
         bytes32 s;

@@ -20,9 +20,7 @@ import "./interfaces/ISignatureVerifier.sol";
 import "./verifiers/ItemsVerifier.sol";
 
 // NEXT PR:
-// TODO: Support EIP-1271 for approvals
-// TODO: Tests for approvals including EIP-1271
-// TODO: Add signing nonce
+// TODO: Tests for approvals and nonce
 // TODO: Custom errors
 
 /**
@@ -111,6 +109,7 @@ contract OriginationController is Context, IOriginationController, EIP712, Reent
 
         _validateCounterparties(borrower, lender, msg.sender, externalSigner, sig, sighash);
 
+        ILoanCore(loanCore).consumeNonce(externalSigner, sig.nonce);
         loanId = _initialize(loanTerms, borrower, lender);
     }
 
@@ -151,6 +150,7 @@ contract OriginationController is Context, IOriginationController, EIP712, Reent
             );
         }
 
+        ILoanCore(loanCore).consumeNonce(externalSigner, sig.nonce);
         loanId = _initialize(loanTerms, borrower, lender);
     }
 
@@ -396,6 +396,7 @@ contract OriginationController is Context, IOriginationController, EIP712, Reent
         // Make sure one from each side approves
         if (isSelfOrApproved(lender, caller)) {
             require(isSelfOrApproved(borrower, signer) || isApprovedForContract(borrower, sig, sighash), "Origination: no counterparty signature");
+
         } else if (isSelfOrApproved(borrower, caller)) {
             require(isSelfOrApproved(lender, signer) || isApprovedForContract(lender, sig, sighash), "Origination: no counterparty signature");
         } else {
