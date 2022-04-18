@@ -1,0 +1,58 @@
+// SPDX-License-Identifier: MIT
+
+pragma solidity ^0.8.11;
+
+/**
+ * @title LendingErrors
+ * @author Non-Fungible Technologies, Inc.
+ *
+ * This file contains all custom errors for the lending protocol, with errors prefixed
+ * by the contract that throws them (e.g., "OC_" for OriginationController). Errors
+ * located in one place to make it easier to holistically look at all possible
+ * protocol failure cases.
+ */
+
+// ==================================== ORIGINATION CONTROLLER ======================================
+/// @notice All errors prefixed with OC_, to separate from other contracts in the protocol.
+
+/// @notice Contract created with zero address for Loan Core.
+error OC_InvalidLoanCore();
+
+/**
+    * @notice One of the predicates for item verification failed.
+    *
+    * @param verifier                      The address of the verifier contract.
+    * @param data                          The verification data (to be parsed by verifier).
+    * @param vault                         The user's vault subject to verification.
+    */
+error OC_PredicateFailed(address verifier, bytes data, address vault);
+
+/**
+    * @notice A caller attempted to approve themselves.
+    *
+    * @param caller                        The caller of the approve function.
+    */
+error OC_SelfApprove(address caller);
+
+/**
+    * @notice A caller attempted to originate a loan with their own signature.
+    *
+    * @param caller                        The caller of the approve function, who was also the signer.
+    */
+error OC_ApprovedOwnLoan(address caller);
+
+/**
+    * @notice The signature could not be recovered to the counterparty or approved party.
+    *
+    * @param target                        The target party of the signature, which should either be the signer,
+    *                                      or someone who has approved the signer.
+    * @param signer                        The signer determined from ECDSA.recover.
+    */
+error OC_InvalidSignature(address target, address signer);
+
+/**
+    * @notice The function caller was neither borrower or lender, and was not approved by either.
+    *
+    * @param caller                        The unapproved function caller.
+    */
+error OC_CallerNotParticipant(address caller);

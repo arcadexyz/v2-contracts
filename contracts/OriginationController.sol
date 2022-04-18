@@ -19,9 +19,17 @@ import "./interfaces/ISignatureVerifier.sol";
 
 import "./verifiers/ItemsVerifier.sol";
 
+import {
+    OC_InvalidLoanCore,
+    OC_PredicateFailed,
+    OC_SelfApprove,
+    OC_ApprovedOwnLoan,
+    OC_InvalidSignature,
+    OC_CallerNotParticipant
+} from "./errors/Lending.sol";
+
 // NEXT PR:
 // TODO: Tests for approvals and nonce
-// TODO: Custom errors
 
 /**
  * @title OriginationController
@@ -37,6 +45,8 @@ import "./verifiers/ItemsVerifier.sol";
 contract OriginationController is Context, IOriginationController, EIP712, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
+    // =========================================== ERRORS ==============================================
+
     // ============================================ STATE ==============================================
 
     // =================== Constants =====================
@@ -45,14 +55,14 @@ contract OriginationController is Context, IOriginationController, EIP712, Reent
     bytes32 private constant _TOKEN_ID_TYPEHASH =
         keccak256(
             // solhint-disable-next-line max-line-length
-            "LoanTerms(uint256 durationSecs,uint256 principal,uint256 interestRate,address collateralAddress,uint256 collateralId,address payableCurrency,uint256 numInstallments)"
+            "LoanTerms(uint256 durationSecs,uint256 principal,uint256 interestRate,address collateralAddress,uint256 collateralId,address payableCurrency,uint256 numInstallments,uint160 nonce)"
         );
 
     /// @notice EIP712 type hash for item-based signatures.
     bytes32 private constant _ITEMS_TYPEHASH =
         keccak256(
             // solhint-disable max-line-length
-            "LoanTermsWithItems(uint256 durationSecs,uint256 principal,uint256 interestRate,address collateralAddress,bytes32 itemsHash,address payableCurrency,uint256 numInstallments)"
+            "LoanTermsWithItems(uint256 durationSecs,uint256 principal,uint256 interestRate,address collateralAddress,bytes32 itemsHash,address payableCurrency,uint256 numInstallments,uint160 nonce)"
             // "LoanTermsWithItems(uint256 durationSecs,uint256 principal,uint256 interestRate,address collateralAddress,address payableCurrency)"
         );
 
@@ -77,7 +87,7 @@ contract OriginationController is Context, IOriginationController, EIP712, Reent
      * @param _loanCore                     The address of the loan core logic of the protocol.
      */
     constructor(address _loanCore) EIP712("OriginationController", "2") {
-        require(_loanCore != address(0), "Origination: loanCore not defined");
+        if (_loanCore == address(0)) revert OC_InvalidLoanCore();
         loanCore = _loanCore;
     }
 
@@ -95,7 +105,7 @@ contract OriginationController is Context, IOriginationController, EIP712, Reent
      * @param loanTerms                     The terms agreed by the lender and borrower.
      * @param borrower                      Address of the borrower.
      * @param lender                        Address of the lender.
-     * @param sig                           The loan terms signature, with v, r, s fields.
+     * @param sig                           The loan terms signature, with v, r, s fields, and a nonce.
      *
      * @return loanId                       The unique ID of the new loan.
      */
@@ -125,7 +135,7 @@ contract OriginationController is Context, IOriginationController, EIP712, Reent
      * @param loanTerms                     The terms agreed by the lender and borrower.
      * @param borrower                      Address of the borrower.
      * @param lender                        Address of the lender.
-     * @param sig                           The loan terms signature, with v, r, s fields.
+     * @param sig                           The loan terms signature, with v, r, s fields, and a nonce.
      * @param itemPredicates                The predicate rules for the items in the bundle.
      *
      * @return loanId                       The unique ID of the new loan.
@@ -144,10 +154,15 @@ contract OriginationController is Context, IOriginationController, EIP712, Reent
 
         for (uint256 i = 0; i < itemPredicates.length; i++) {
             // Verify items are held in the wrapper
-            require(
-                IArcadeSignatureVerifier(itemPredicates[i].verifier).verifyPredicates(itemPredicates[i].data, vault),
-                "predicate failed"
-            );
+            if (
+                !IArcadeSignatureVerifier(itemPredicates[i].verifier).verifyPredicates(itemPredicates[i].data, vault)
+            ) {
+                revert OC_PredicateFailed(
+                    itemPredicates[i].verifier,
+                    itemPredicates[i].data,
+                    vault
+                );
+            }
         }
 
         ILoanCore(loanCore).consumeNonce(externalSigner, sig.nonce);
@@ -241,7 +256,7 @@ contract OriginationController is Context, IOriginationController, EIP712, Reent
      * @param approved                      Whether the party should be approved.
      */
     function approve(address signer, bool approved) public override {
-        require(signer != msg.sender, "Origination: approve to caller");
+        if (signer == msg.sender) revert OC_SelfApprove(msg.sender);
 
         _signerApprovals[msg.sender][signer] = approved;
 
@@ -272,6 +287,7 @@ contract OriginationController is Context, IOriginationController, EIP712, Reent
     function isApprovedForContract(address target, Signature calldata sig, bytes32 sighash) public view override returns (bool) {
         bytes memory signature = new bytes(65);
 
+        // Construct byte array directly in assembly for efficiency
         uint8 v = sig.v;
         bytes32 r = sig.r;
         bytes32 s = sig.s;
@@ -329,6 +345,7 @@ contract OriginationController is Context, IOriginationController, EIP712, Reent
                 loanTerms.collateralId,
                 loanTerms.payableCurrency,
                 loanTerms.numInstallments
+                sig.nonce
             )
         );
 
@@ -363,6 +380,7 @@ contract OriginationController is Context, IOriginationController, EIP712, Reent
                 itemsHash,
                 loanTerms.payableCurrency,
                 loanTerms.numInstallments
+                sig.nonce
             )
         );
 
@@ -391,16 +409,19 @@ contract OriginationController is Context, IOriginationController, EIP712, Reent
         Signature calldata sig,
         bytes32 sighash
     ) internal view {
-        require(caller != signer, "Origination: approved own loan");
+        if (caller == signer) revert OC_ApprovedOwnLoan(caller);
 
         // Make sure one from each side approves
         if (isSelfOrApproved(lender, caller)) {
-            require(isSelfOrApproved(borrower, signer) || isApprovedForContract(borrower, sig, sighash), "Origination: no counterparty signature");
-
+            if (!isSelfOrApproved(borrower, signer) && !isApprovedForContract(borrower, sig, sighash)) {
+                revert OC_InvalidSignature(borrower, signer);
+            }
         } else if (isSelfOrApproved(borrower, caller)) {
-            require(isSelfOrApproved(lender, signer) || isApprovedForContract(lender, sig, sighash), "Origination: no counterparty signature");
+            if (!isSelfOrApproved(lender, signer) && !isApprovedForContract(lender, sig, sighash)) {
+                revert OC_InvalidSignature(lender, signer);
+            }
         } else {
-            revert("Origination: caller not participant");
+            revert OC_CallerNotParticipant(caller);
         }
     }
 

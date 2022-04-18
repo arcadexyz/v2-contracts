@@ -42,6 +42,7 @@ const typedLoanTermsData: TypeData = {
             { name: "collateralId", type: "uint256" },
             { name: "payableCurrency", type: "address" },
             { name: "numInstallments", type: "uint256" },
+            { name: "nonce", type: "uint160" },
         ],
     },
     primaryType: "LoanTerms" as const,
@@ -57,6 +58,7 @@ const typedLoanItemsData: TypeData = {
             { name: "itemsHash", type: "bytes32" },
             { name: "payableCurrency", type: "address" },
             { name: "numInstallments", type: "uint256" },
+            { name: "nonce", type: "uint160" }
         ],
     },
     primaryType: "LoanTermsWithItems" as const,
@@ -90,8 +92,9 @@ export async function createLoanTermsSignature(
     terms: LoanTerms,
     signer: SignerWithAddress,
     version = "1",
+    nonce = "1"
 ): Promise<ECDSASignature> {
-    const data = buildData(verifyingContract, name, version, terms, typedLoanTermsData);
+    const data = buildData(verifyingContract, name, version, { ...terms, nonce }, typedLoanTermsData);
     const signature = await signer._signTypedData(data.domain, data.types, data.message);
 
     return fromRpcSig(signature);
@@ -111,6 +114,7 @@ export async function createLoanItemsSignature(
     itemsHash: string,
     signer: SignerWithAddress,
     version = "1",
+    nonce = "1"
 ): Promise<ECDSASignature> {
     const message: ItemsPayload = {
         durationSecs: terms.durationSecs,
@@ -120,6 +124,7 @@ export async function createLoanItemsSignature(
         itemsHash,
         payableCurrency: terms.payableCurrency,
         numInstallments: terms.numInstallments,
+        nonce
     };
 
     const data = buildData(verifyingContract, name, version, message, typedLoanItemsData);

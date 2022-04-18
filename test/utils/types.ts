@@ -38,6 +38,7 @@ export interface ItemsPayload {
     itemsHash: string;
     payableCurrency: string;
     numInstallments: BigNumberish;
+    nonce: BigNumberish;
 }
 
 export interface LoanData {
