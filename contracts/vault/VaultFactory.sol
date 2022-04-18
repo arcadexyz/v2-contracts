@@ -45,8 +45,11 @@ contract VaultFactory is ERC721Enumerable, ERC721Permit, IVaultFactory {
     /**
      * @inheritdoc IVaultFactory
      */
-    function instanceAt(uint256 index) external view override returns (address instance) {
-        return address(uint160(tokenByIndex(index)));
+     function instanceAt(uint256 tokenId) external view override returns (address instance) {
+         require(_exists(tokenId), "Cannot find instance of nonexistent token");
+
+         return address(uint160(tokenId));
+         // return address(uint160(tokenByIndex(index)));
     }
 
     /**

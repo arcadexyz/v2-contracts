@@ -46,10 +46,10 @@ library LoanLibrary {
 
         // Installment loan specific
 
-        // Start date of the loan - used for determine what is due at each installment
-        uint256 startDate;
         // Total number of installment periods within the loan duration
         uint256 numInstallments;
+        // Start date of the loan - used for determine what is due at each installment
+        uint256 startDate;
     }
 
     /**
@@ -71,6 +71,14 @@ library LoanLibrary {
         bytes items;
         // The payable currency for the loan principal and interest
         address payableCurrency;
+
+
+        // Installment loan specific
+
+        // Total number of installment periods within the loan duration
+        uint256 numInstallments;
+        // Start date of the loan - used for determine what is due at each installment
+        uint256 startDate;
     }
 
     /**

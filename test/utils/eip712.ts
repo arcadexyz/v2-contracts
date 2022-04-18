@@ -1,7 +1,7 @@
 import hre from "hardhat";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
 import { BigNumberish } from "ethers";
-import { LoanTerms } from "./types";
+import { LoanTerms, ItemsPayload } from "./types";
 import { fromRpcSig, ECDSASignature } from "ethereumjs-util";
 
 interface TypeData {
@@ -38,11 +38,30 @@ const typedLoanTermsData: TypeData = {
             { name: "durationSecs", type: "uint256" },
             { name: "principal", type: "uint256" },
             { name: "interest", type: "uint256" },
-            { name: "collateralTokenId", type: "uint256" },
+            { name: "collateralAddress", type: "address" },
+            { name: "collateralId", type: "uint256" },
             { name: "payableCurrency", type: "address" },
+            { name: "numInstallments", type: "uint256"},
+            { name: "startDate", type: "uint256"}
         ],
     },
     primaryType: "LoanTerms" as const,
+};
+
+const typedLoanItemsData: TypeData = {
+    types: {
+        LoanTermsWithItems: [
+            { name: "durationSecs", type: "uint256" },
+            { name: "principal", type: "uint256" },
+            { name: "interest", type: "uint256" },
+            { name: "collateralAddress", type: "address" },
+            { name: "itemsHash", type: "bytes32" },
+            { name: "payableCurrency", type: "address" },
+            { name: "numInstallments", type: "uint256"},
+            { name: "startDate", type: "uint256"}
+        ],
+    },
+    primaryType: "LoanTermsWithItems" as const,
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -72,10 +91,45 @@ export async function createLoanTermsSignature(
     name: string,
     terms: LoanTerms,
     signer: SignerWithAddress,
+    version = "1",
 ): Promise<ECDSASignature> {
-    const data = buildData(verifyingContract, name, "1", terms, typedLoanTermsData);
-
+    const data = buildData(verifyingContract, name, version, terms, typedLoanTermsData);
     const signature = await signer._signTypedData(data.domain, data.types, data.message);
+
+    return fromRpcSig(signature);
+}
+
+/**
+ * Create an EIP712 signature for loan terms
+ * @param verifyingContract The address of the contract that will be verifying this signature
+ * @param name The name of the contract that will be verifying this signature
+ * @param terms the LoanTerms object to sign
+ * @param signer The EOA to create the signature
+ */
+export async function createLoanItemsSignature(
+    verifyingContract: string,
+    name: string,
+    terms: LoanTerms,
+    itemsHash: string,
+    signer: SignerWithAddress,
+    version = "1",
+): Promise<ECDSASignature> {
+    const message: ItemsPayload = {
+        durationSecs: terms.durationSecs,
+        principal: terms.principal,
+        interest: terms.interest,
+        collateralAddress: terms.collateralAddress,
+        itemsHash,
+        payableCurrency: terms.payableCurrency,
+        numInstallments: terms.numInstallments,
+        startDate: terms.startDate
+    };
+
+    const data = buildData(verifyingContract, name, version, message, typedLoanItemsData);
+    // console.log("This is data:");
+    // console.log(JSON.stringify(data, null, 4));
+    const signature = await signer._signTypedData(data.domain, data.types, data.message);
+
     return fromRpcSig(signature);
 }
 
@@ -93,7 +147,7 @@ export async function createPermitSignature(
     signer: SignerWithAddress,
 ): Promise<ECDSASignature> {
     const data = buildData(verifyingContract, name, "1", permitData, typedPermitData);
-
     const signature = await signer._signTypedData(data.domain, data.types, data.message);
+
     return fromRpcSig(signature);
 }
