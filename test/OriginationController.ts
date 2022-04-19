@@ -973,7 +973,7 @@ describe("OriginationController", () => {
                 originationController
                     .connect(borrower)
                     .initializeLoanWithItems(
-                        loanTerms,
+                        loanTerms2,
                         await borrower.getAddress(),
                         await lender.getAddress(),
                         sig,
