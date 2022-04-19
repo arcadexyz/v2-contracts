@@ -24,7 +24,7 @@ import "./interfaces/ILoanCore.sol";
 import "./interfaces/IRepaymentController.sol";
 
 // * * * * TESTING ONLY * * * *
-//import "hardhat/console.sol";
+import "hardhat/console.sol";
 
 contract RepaymentController is IRepaymentController, Context {
     using SafeERC20 for IERC20;
@@ -158,8 +158,8 @@ contract RepaymentController is IRepaymentController, Context {
         // console.log("_multiplier: ", _multiplier);
         // console.log("currentTi: ", _currentTime);
         // console.log("startDate: ", startDate);
-        //console.log("DELTA TIME: ", (_currentTime - startDate));
-        //console.log(
+        // console.log("DELTA TIME: ", (_currentTime - startDate));
+        // console.log(
         //     "_relativeTimeInLoan/ _timePerInstallment: ",
         //     _relativeTimeInLoan,
         //     _timePerInstallment * _multiplier
