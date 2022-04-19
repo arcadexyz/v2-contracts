@@ -20,7 +20,7 @@ import "./interfaces/ISignatureVerifier.sol";
 
 import "./verifiers/ItemsVerifier.sol";
 
-import { OC_InvalidLoanCore, OC_PredicateFailed, OC_SelfApprove, OC_ApprovedOwnLoan, OC_InvalidSignature, OC_CallerNotParticipant } from "./errors/Lending.sol";
+import { OC_ZeroAddress, OC_InvalidVerifier, OC_BatchLengthMismatch, OC_PredicateFailed, OC_SelfApprove, OC_ApprovedOwnLoan, OC_InvalidSignature, OC_CallerNotParticipant } from "./errors/Lending.sol";
 
 // NEXT PR:
 // TODO: Tests for approvals and nonce

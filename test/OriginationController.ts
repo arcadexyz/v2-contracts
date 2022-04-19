@@ -110,7 +110,7 @@ describe("OriginationController", () => {
             const [deployer] = signers;
 
             await expect(deploy("OriginationController", deployer, [ZERO_ADDRESS])).to.be.revertedWith(
-                "OC_InvalidLoanCore",
+                "OC_ZeroAddress",
             );
         });
 
@@ -308,8 +308,6 @@ describe("OriginationController", () => {
                     .initializeLoan(loanTerms, await borrower.getAddress(), await lender.getAddress(), sig, 1),
             ).to.be.revertedWith("OC_InvalidSignature");
         });
-
-        it("Reverts if the verifier contract is not approved");
 
         it("Initializes a loan signed by the borrower", async () => {
             const { originationController, mockERC20, vaultFactory, user: lender, other: borrower } = ctx;
@@ -590,10 +588,10 @@ describe("OriginationController", () => {
 
         beforeEach(async () => {
             ctx = await loadFixture(fixture);
-            const { signers: [deployer], originationController } = ctx;
+            const { user, originationController } = ctx;
 
-            verifier = <ArcadeItemsVerifier>await deploy("ArcadeItemsVerifier", ctx.signers[0], []);
-            await originationController.connect(deployer).setAllowedVerifier(verifier, true);
+            verifier = <ArcadeItemsVerifier>await deploy("ArcadeItemsVerifier", user, []);
+            await originationController.connect(user).setAllowedVerifier(verifier.address, true);
         });
 
         it("Reverts if the collateralAddress does not fit the vault factory interface", async () => {
@@ -749,7 +747,7 @@ describe("OriginationController", () => {
             ).to.be.revertedWith("Invalid nonce");
         });
 
-        it("Reverts if the nonce does not match the siagnture", async () => {
+        it("Reverts if the nonce does not match the signature", async () => {
             const { originationController, mockERC20, mockERC721, vaultFactory, user: lender, other: borrower } = ctx;
 
             const bundleId = await initializeBundle(vaultFactory, borrower);
@@ -801,6 +799,62 @@ describe("OriginationController", () => {
                     ),
             ).to.be.revertedWith("OC_InvalidSignature");
         });
+
+        it("Reverts if the verifier contract is not approved", async () => {
+            const { originationController, mockERC20, mockERC721, vaultFactory, user: lender, other: borrower } = ctx;
+
+            // Remove verifier approval
+            await originationController.connect(lender).setAllowedVerifier(verifier.address, false);
+
+            const bundleId = await initializeBundle(vaultFactory, borrower);
+            const bundleAddress = await vaultFactory.instanceAt(bundleId);
+            const tokenId = await mint721(mockERC721, borrower);
+            await mockERC721.connect(borrower).transferFrom(borrower.address, bundleAddress, tokenId);
+
+            const loanTerms = createLoanTerms(mockERC20.address, vaultFactory.address, { collateralId: bundleId });
+            const signatureItems: SignatureItem[] = [
+                {
+                    cType: 0,
+                    asset: mockERC721.address,
+                    tokenId,
+                    amount: 0, // not used for 721
+                },
+            ];
+
+            const predicates: ItemsPredicate[] = [
+                {
+                    verifier: verifier.address,
+                    data: encodeSignatureItems(signatureItems),
+                },
+            ];
+
+            await mint(mockERC20, lender, loanTerms.principal);
+
+            const sig = await createLoanItemsSignature(
+                originationController.address,
+                "OriginationController",
+                loanTerms,
+                encodePredicates(predicates),
+                borrower,
+                "2",
+            );
+
+            await approve(mockERC20, lender, originationController.address, loanTerms.principal);
+            await vaultFactory.connect(borrower).approve(originationController.address, bundleId);
+            await expect(
+                originationController
+                    .connect(lender)
+                    .initializeLoanWithItems(
+                        loanTerms,
+                        await borrower.getAddress(),
+                        await lender.getAddress(),
+                        sig,
+                        1,
+                        predicates,
+                    ),
+            ).to.be.revertedWith("OC_InvalidVerifier");
+        });
+
 
         it("Initalizes a loan signed by the borrower", async () => {
             const { originationController, mockERC20, mockERC721, vaultFactory, user: lender, other: borrower } = ctx;
@@ -1146,11 +1200,72 @@ describe("OriginationController", () => {
     });
 
     describe("verification whitelist", () => {
-        it("does not allow a non-owner to update the whitelist");
-        it("allows the contract owner to update the whitelist");
-        it("does not allow a non-contract owner to perform a batch update");
-        it("allows the contract owner to perform a batch update");
-        it("reports whether a contract is allowed")
+        let ctx: TestContext;
+        let verifier: ArcadeItemsVerifier;
+
+        beforeEach(async () => {
+            ctx = await loadFixture(fixture);
+            verifier = <ArcadeItemsVerifier>await deploy("ArcadeItemsVerifier", ctx.user, []);
+        });
+
+        it("does not allow a non-owner to update the whitelist", async () => {
+            const { other, originationController } = ctx;
+
+            await expect(
+                originationController.connect(other).setAllowedVerifier(verifier.address, true)
+            ).to.be.revertedWith("Ownable: caller is not the owner");
+        });
+
+        it("allows the contract owner to update the whitelist", async () => {
+            const { user, originationController } = ctx;
+
+            await expect(
+                originationController.connect(user).setAllowedVerifier(verifier.address, true)
+            ).to.emit(originationController, "SetAllowedVerifier")
+                .withArgs(verifier.address, true);
+
+            expect(await originationController.isAllowedVerifier(verifier.address)).to.be.true;
+        });
+
+        it("does not allow a non-contract owner to perform a batch update", async () => {
+            const { user, other, originationController } = ctx;
+
+            const verifier2 = <ArcadeItemsVerifier>await deploy("ArcadeItemsVerifier", user, []);
+
+            await expect(
+                originationController.connect(other).setAllowedVerifierBatch([verifier.address, verifier2.address], [true, true])
+            ).to.be.revertedWith("Ownable: caller is not the owner");
+        });
+
+        it("reverts if a batch update's arguments have mismatched length", async () => {
+            const { user, originationController } = ctx;
+
+            const verifier2 = <ArcadeItemsVerifier>await deploy("ArcadeItemsVerifier", user, []);
+
+            await expect(
+                originationController.connect(user).setAllowedVerifierBatch([verifier.address, verifier2.address], [true])
+            ).to.be.revertedWith("OC_BatchLengthMismatch");
+        });
+
+        it("allows the contract owner to perform a batch update", async () => {
+            const { user, originationController } = ctx;
+
+            await originationController.connect(user).setAllowedVerifier(verifier.address, true)
+            expect(await originationController.isAllowedVerifier(verifier.address)).to.be.true;
+
+            // Deploy a new verifier, disable the first one
+            const verifier2 = <ArcadeItemsVerifier>await deploy("ArcadeItemsVerifier", user, []);
+
+            await expect(
+                originationController.connect(user).setAllowedVerifierBatch([verifier.address, verifier2.address], [false, true])
+            ).to.emit(originationController, "SetAllowedVerifier")
+                .withArgs(verifier.address, false)
+            .to.emit(originationController, "SetAllowedVerifier")
+                .withArgs(verifier2.address, true);
+
+            expect(await originationController.isAllowedVerifier(verifier.address)).to.be.false;
+            expect(await originationController.isAllowedVerifier(verifier2.address)).to.be.true;
+        });
     });
 
     describe("approvals", () => {
