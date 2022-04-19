@@ -155,6 +155,35 @@ example: ```await upgrades.deployProxy(MyContractV1, { kind: 'uups' });```
 9. to deploy a new version of the contract code and to upgrade the proxy, we can use ```upgrades.upgradeProxy``` (it's no longer necessary to specify kind: 'uups' since it is now inferred from the proxy address)\
 ```await upgrades.upgradeProxy(proxyAddress, MyTokenV2);```
 
+### Avoid Using Initial Values in Field Declarations
+Solidity allows defining initial values for fields when declaring them in a contract.\
+This is equivalent to setting these values in the constructor, and as such, will not work for upgradeable contracts. Make sure that all initial values are set in an initializer function otherwise, any upgradeable instances will not have these fields set.\
+
+**NO:**
+```
+contract MyContract {
+    uint256 public hasInitialValue = 42; // equivalent to setting in the constructor
+}
+```
+
+**YES:**
+```
+contract MyContract is Initializable {
+    uint256 public hasInitialValue;
+
+    function initialize() public initializer {
+        hasInitialValue = 42; // set initial value in initializer
+    }
+}
+```
+
+It is still ok to define constant state variables, because the compiler does not reserve a storage slot for these variables, and every occurrence is replaced by the respective constant expression. Therefore this is **OK:**
+```
+contract MyContract {
+    uint256 public constant hasInitialValue = 42; // define as constant
+}
+```
+
 ---
 
 ## Resources:
