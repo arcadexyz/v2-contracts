@@ -17,6 +17,8 @@ interface IOriginationController {
 
     event Approval(address indexed owner, address indexed signer);
 
+    event SetAllowedVerifier(address indexed verifier, bool isAllowed);
+
     // ============== Origination Operations ==============
 
     function initializeLoan(
@@ -84,4 +86,12 @@ interface IOriginationController {
         uint160 nonce,
         bytes32 itemsHash
     ) external view returns (bytes32 sighash, address signer);
+
+    // ============== Admin Operations ==============
+
+    function setAllowedVerifier(address verifier, bool isAllowed) external;
+
+    function setAllowedVerifierBatch(address[] calldata verifiers, bool[] calldata isAllowed) external;
+
+    function isAllowedVerifier(address verifier) external view returns (bool);
 }

@@ -3,6 +3,7 @@
 pragma solidity ^0.8.11;
 
 import "@openzeppelin/contracts/utils/Context.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -35,10 +36,8 @@ import { OC_InvalidLoanCore, OC_PredicateFailed, OC_SelfApprove, OC_ApprovedOwnL
  * takes place in this contract. To originate a loan, the controller
  * also takes custody of both the collateral and loan principal.
  */
-contract OriginationController is Context, IOriginationController, EIP712, ReentrancyGuard {
+contract OriginationController is IOriginationController, Context, EIP712, ReentrancyGuard, Ownable {
     using SafeERC20 for IERC20;
-
-    // =========================================== ERRORS ==============================================
 
     // ============================================ STATE ==============================================
 
@@ -63,10 +62,12 @@ contract OriginationController is Context, IOriginationController, EIP712, Reent
 
     address public immutable loanCore;
 
-    // ================= Approval State ==================
+    // ================= State ==================
 
     /// @notice Mapping from owner to operator approvals
     mapping(address => mapping(address => bool)) private _signerApprovals;
+    /// @notice Mapping from address to whether that verifier contract has been whitelisted
+    mapping(address => bool) public allowedVerifiers;
 
     // ========================================== CONSTRUCTOR ===========================================
 
@@ -80,7 +81,7 @@ contract OriginationController is Context, IOriginationController, EIP712, Reent
      * @param _loanCore                     The address of the loan core logic of the protocol.
      */
     constructor(address _loanCore) EIP712("OriginationController", "2") {
-        if (_loanCore == address(0)) revert OC_InvalidLoanCore();
+        if (_loanCore == address(0)) revert OC_ZeroAddress();
         loanCore = _loanCore;
     }
 
@@ -156,8 +157,11 @@ contract OriginationController is Context, IOriginationController, EIP712, Reent
 
         for (uint256 i = 0; i < itemPredicates.length; i++) {
             // Verify items are held in the wrapper
-            if (!IArcadeSignatureVerifier(itemPredicates[i].verifier).verifyPredicates(itemPredicates[i].data, vault)) {
-                revert OC_PredicateFailed(itemPredicates[i].verifier, itemPredicates[i].data, vault);
+            address verifier = itemPredicates[i].verifier;
+            if (!isAllowedVerifier(verifier)) revert OC_InvalidVerifier(verifier);
+
+            if (!IArcadeSignatureVerifier(verifier).verifyPredicates(itemPredicates[i].data, vault)) {
+                revert OC_PredicateFailed(verifier, itemPredicates[i].data, vault);
             }
         }
 
@@ -393,6 +397,52 @@ contract OriginationController is Context, IOriginationController, EIP712, Reent
 
         sighash = _hashTypedDataV4(loanHash);
         signer = ECDSA.recover(sighash, sig.v, sig.r, sig.s);
+    }
+
+    // ==================================== VERIFICATION WHITELIST ======================================
+
+    /**
+     * @notice Manage whitelist for contracts that are allowed to act as a predicate verifier.
+     *         Prevents counterparties from abusing misleading/obscure verification logic.
+     *         The contract owner should take extra care in whitelisting third-party verification contracts:
+     *         for instance, an upgradeable third-party verifier controlled by a borrower could be maliciously
+     *         upgraded to approve an empty bundle.
+     *
+     * @param verifier              The specified verifier contract, should implement IArcadeSignatureVerifier.
+     * @param isAllowed             Whether the specified contract should be allowed.
+     */
+    function setAllowedVerifier(address verifier, bool isAllowed) public override onlyOwner {
+        if (verifier == address(0)) revert OC_ZeroAddress();
+
+        allowedVerifiers[verifier] = isAllowed;
+
+        emit SetAllowedVerifier(verifier, isAllowed);
+    }
+
+    /**
+     * @notice Batch update for verification whitelist, in case of multiple verifiers
+     *         active in production.
+     *
+     * @param verifiers             The list of specified verifier contracts, should implement IArcadeSignatureVerifier.
+     * @param isAllowed             Whether the specified contracts should be allowed, respectively.
+     */
+    function setAllowedVerifierBatch(address[] calldata verifiers, bool[] calldata isAllowed) external override {
+        if (verifiers.length != isAllowed.length) revert OC_BatchLengthMismatch();
+
+        for (uint256 i = 0; i < verifiers.length; i++) {
+            setAllowedVerifier(verifiers[i], isAllowed[i]);
+        }
+    }
+
+    /**
+     * @notice Return whether the address can be used as a verifier.
+     *
+     * @param verifier             The verifier contract to query.
+     *
+     * @return isVerified          Whether the contract is verified.
+     */
+    function isAllowedVerifier(address verifier) public view override returns (bool) {
+        return allowedVerifiers[verifier];
     }
 
     // =========================================== HELPERS ==============================================

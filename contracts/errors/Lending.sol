@@ -15,8 +15,8 @@ pragma solidity ^0.8.11;
 // ==================================== ORIGINATION CONTROLLER ======================================
 /// @notice All errors prefixed with OC_, to separate from other contracts in the protocol.
 
-/// @notice Contract created with zero address for Loan Core.
-error OC_InvalidLoanCore();
+/// @notice Zero address passed in where not allowed.
+error OC_ZeroAddress();
 
 /**
  * @notice One of the predicates for item verification failed.
@@ -51,11 +51,23 @@ error OC_ApprovedOwnLoan(address caller);
 error OC_InvalidSignature(address target, address signer);
 
 /**
+ * @notice The verifier contract specified in a predicate has not been whitelisted.
+ *
+ * @param verifier                      The verifier the caller attempted to use.
+ */
+error OC_InvalidVerifier(address verifier);
+
+/**
  * @notice The function caller was neither borrower or lender, and was not approved by either.
  *
  * @param caller                        The unapproved function caller.
  */
 error OC_CallerNotParticipant(address caller);
+
+/**
+ * @notice Two related parameters for batch operations did not match in length.
+ */
+error OC_BatchLengthMismatch();
 
 // ==================================== ITEMS VERIFIER ======================================
 /// @notice All errors prefixed with IV_, to separate from other contracts in the protocol.

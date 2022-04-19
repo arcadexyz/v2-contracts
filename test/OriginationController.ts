@@ -309,6 +309,8 @@ describe("OriginationController", () => {
             ).to.be.revertedWith("OC_InvalidSignature");
         });
 
+        it("Reverts if the verifier contract is not approved");
+
         it("Initializes a loan signed by the borrower", async () => {
             const { originationController, mockERC20, vaultFactory, user: lender, other: borrower } = ctx;
 
@@ -588,7 +590,10 @@ describe("OriginationController", () => {
 
         beforeEach(async () => {
             ctx = await loadFixture(fixture);
+            const { signers: [deployer], originationController } = ctx;
+
             verifier = <ArcadeItemsVerifier>await deploy("ArcadeItemsVerifier", ctx.signers[0], []);
+            await originationController.connect(deployer).setAllowedVerifier(verifier, true);
         });
 
         it("Reverts if the collateralAddress does not fit the vault factory interface", async () => {
@@ -1138,6 +1143,14 @@ describe("OriginationController", () => {
                 ).to.be.revertedWith("ERC721Permit: not owner");
             });
         });
+    });
+
+    describe("verification whitelist", () => {
+        it("does not allow a non-owner to update the whitelist");
+        it("allows the contract owner to update the whitelist");
+        it("does not allow a non-contract owner to perform a batch update");
+        it("allows the contract owner to perform a batch update");
+        it("reports whether a contract is allowed")
     });
 
     describe("approvals", () => {
