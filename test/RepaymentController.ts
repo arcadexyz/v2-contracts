@@ -72,7 +72,7 @@ describe("RepaymentController", () => {
             collateralTokenId,
             payableCurrency: mockERC20.address,
             numInstallments: 0,
-            startDate: 0
+            startDate: 0,
         };
 
         const createLoanTx = await mockLoanCore.createLoan(terms);

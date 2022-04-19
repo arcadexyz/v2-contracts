@@ -106,9 +106,9 @@ describe("VaultFactory", () => {
 
     describe("instanceAt", async () => {
         it("Should revert if no vault at index", async () => {
-          const { factory, user } = await loadFixture(fixture);
+            const { factory, user } = await loadFixture(fixture);
 
-          await factory.initializeBundle(await user.getAddress());
+            await factory.initializeBundle(await user.getAddress());
 
             await expect(factory.instanceAt(0)).to.be.revertedWith("ERC721Enumerable: global index out of bounds");
         });

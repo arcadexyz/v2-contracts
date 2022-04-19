@@ -7,6 +7,3 @@ Most Proxy patterns use the transaprent proxy and UUPS (universal upgradeable pr
 
 Transparent vs. UUPS Proxy
 Transapreant Proxy Patterns Type:
-
-
-

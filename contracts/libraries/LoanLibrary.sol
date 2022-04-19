@@ -1,4 +1,3 @@
-
 // SPDX-License-Identifier: MIT
 
 pragma solidity ^0.8.11;
@@ -43,13 +42,10 @@ library LoanLibrary {
         uint256 collateralId;
         // The payable currency for the loan principal and interest
         address payableCurrency;
-
         // Installment loan specific
 
         // Total number of installment periods within the loan duration
         uint256 numInstallments;
-        // Start date of the loan - used for determine what is due at each installment
-        uint256 startDate;
     }
 
     /**
@@ -71,14 +67,10 @@ library LoanLibrary {
         bytes items;
         // The payable currency for the loan principal and interest
         address payableCurrency;
-
-
         // Installment loan specific
 
         // Total number of installment periods within the loan duration
         uint256 numInstallments;
-        // Start date of the loan - used for determine what is due at each installment
-        uint256 startDate;
     }
 
     /**
@@ -105,19 +97,17 @@ library LoanLibrary {
         LoanState state;
         // Timestamp representing absolute due date date of the loan
         uint256 dueDate;
-
         // installment loan specific
 
+        // Start date of the loan, using block.timestamp - for determining installment period
+        uint256 startDate;
         // Remaining balance of the loan. Starts as equal to principal. Can reduce based on
         // payments made, can increased based on compounded interest from missed payments and late fees
         uint256 balance;
-        // Amount paid down of the loan. Balance + balance paid should always
-        // be gte than principal + compounded interest (until present)
+        // Amount paid in total by the borrower
         uint256 balancePaid;
-        // The total amount of late fees accrued to the loan
+        // Total amount of late fees accrued
         uint256 lateFeesAccrued;
-        // Number of consecutive missed payments
-        uint256 numMissedPayments;
         // Number of installment payments made on the loan
         uint256 numInstallmentsPaid;
     }

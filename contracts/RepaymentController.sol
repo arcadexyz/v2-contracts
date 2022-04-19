@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.0;
+pragma solidity 0.8.11;
 
 /** V2 Notes
  * Interest input as a rate/ percent value.
@@ -8,9 +8,11 @@ pragma solidity ^0.8.0;
  * calcInstallment - function which returns the current balanceDue(uint256),
  * defaulted(bool), and payableCurrency(address)
  *
- * repayPartMinimum - function for repaying installment payments. The minimum amount payable. Interest and any fees only.
+ * repayPartMinimum - function for repaying installment payments. The minimum amount payable.
+ * Interest and any fees only.
  *
- * repayPart - function for repaying installment payments. The amount must be higher than the minimum amount payable.
+ * repayPart - function for repaying installment payments. The amount must be higher than
+ * the minimum amount payable.
  */
 
 import "@openzeppelin/contracts/utils/Context.sol";
@@ -54,7 +56,7 @@ contract RepaymentController is IRepaymentController, Context {
 
     // ========================= INTEREST RATE CALCULATION =============================
 
-     /**
+    /**
      * @notice Calculate the interest due.
      *
      * @dev Interest and principal must be entered as base 10**18
@@ -62,16 +64,16 @@ contract RepaymentController is IRepaymentController, Context {
      * @param principal                    Principal amount in the loan terms
      * @param interest                     Interest rate in the loan terms
      */
-    function getInterestNoInstallments(
-        uint256 principal,
-        uint256 interest
-    ) internal pure returns (uint256) {
+    function getInterestNoInstallments(uint256 principal, uint256 interest) internal pure returns (uint256) {
         //interest to be greater than or equal to 1 ETH
         require(interest / 10**18 >= 1, "Interest must be greater than 0.01%.");
         //console.log("Interest Amount: ", ((principal * (interest / INTEREST_DENOMINATOR))/BASIS_POINTS_DENOMINATOR));
 
-        //principal must be greater than 10000 wei, this is a require statement in createLoan function in LoanCore
-        //console.log("Principal+interest", principal + ((principal * (interest / INTEREST_DENOMINATOR))/BASIS_POINTS_DENOMINATOR));
+        // principal must be greater than 10000 wei, this is a require statement in createLoan function in LoanCore
+        //console.log(
+        //     "Principal+interest",
+        //          principal + ((principal * (interest / INTEREST_DENOMINATOR))/BASIS_POINTS_DENOMINATOR)
+        // );
         uint256 total = principal + ((principal * (interest / INTEREST_DENOMINATOR)) / BASIS_POINTS_DENOMINATOR);
         return total;
     }
@@ -115,9 +117,9 @@ contract RepaymentController is IRepaymentController, Context {
         loanCore.claim(loanId);
     }
 
-// =========================== INSTALLMENT SPECIFIC OPERATIONS ===============================
+    // =========================== INSTALLMENT SPECIFIC OPERATIONS ===============================
 
-     /**
+    /**
      * @notice Calulates and returns the current installment period when called.
      *
      * @dev Get current installment using the startDate, duration, and current time.
@@ -131,7 +133,7 @@ contract RepaymentController is IRepaymentController, Context {
         uint256 startDate,
         uint256 durationSecs,
         uint256 numInstallments
-    ) internal returns (uint256) {
+    ) internal view returns (uint256) {
         // *** Local State
         uint256 _currentTime = block.timestamp;
         uint256 _installmentPeriod = 1;
@@ -171,7 +173,7 @@ contract RepaymentController is IRepaymentController, Context {
         while ((_timePerInstallment * j) * _multiplier <= _relativeTimeInLoan) {
             //console.log((_timePerInstallment * j) * _multiplier);
             //console.log(_relativeTimeInLoan);
-            _installmentPeriod = j+1;
+            _installmentPeriod = j + 1;
             j++;
         }
 
@@ -180,7 +182,7 @@ contract RepaymentController is IRepaymentController, Context {
         return (_installmentPeriod);
     }
 
-     /**
+    /**
      * @notice Calulates and returns the minimum interest balance on loan, the current late fees,
      *         and the current number of payments missed.
      *
@@ -192,35 +194,36 @@ contract RepaymentController is IRepaymentController, Context {
      *          Y. Calculate minimum balance due with late fees.
      *          N. Return only interest rate payment as minimum balance due
      *
-     * @param data                              Loan data of a particular bundle id.
-     * @param numInstallments                   Duration of the loan in seconds.
+     * @param balance                           Current balance of the loan
+     * @param startDate                         Timestamp of the start of the loan duration
+     * @param durationSecs                      Duration of the loan in seconds
+     * @param numInstallments                   Total number of installments in the loan
+     * @param numInstallmentsPaid               Total number of installments paid, not including this current payment
      * @param interest                          The total interest for the loans duration taken from the loan terms.
      */
     function calcInstallment(
-        LoanLibrary.LoanData memory data,
+        uint256 balance,
+        uint256 startDate,
+        uint256 durationSecs,
         uint256 numInstallments,
+        uint256 numInstallmentsPaid,
         uint256 interest
     )
         internal
+        view
         returns (
             uint256,
             uint256,
             uint256
         )
     {
-        // *** Local Variables
-        uint256 _bal = data.balance;
-
         // *** Installment Values
-        (uint256 _installmentPeriod) = installmentWizard(
-            data.terms.startDate,
-            data.terms.durationSecs,
-            numInstallments
-        );
-        uint256 _installmentsMissed = _installmentPeriod - (data.numInstallmentsPaid + 1); // +1 for the current installment period payment
+        uint256 _installmentPeriod = installmentWizard(startDate, durationSecs, numInstallments);
+        uint256 _installmentsMissed = _installmentPeriod - (numInstallmentsPaid + 1); // +1 for current install payment
 
-        // Interest per installment - using mulitpier of 1 million. There should not be loan with more than 1 million installment periods
-        uint256 _interestPerInstallment = ((interest / INTEREST_DENOMINATOR) * 1000000) / numInstallments; // still need to divide by BASIS_POINTS_DENOMINATOR for rate value
+        // Interest per installment - using mulitpier of 1 million.
+        // There should not be loan with more than 1 million installment periods
+        uint256 _interestPerInstallment = ((interest / INTEREST_DENOMINATOR) * 1000000) / numInstallments;
         //console.log("_interestPerInstallment (/1000000 for BPS): ", _interestPerInstallment);
 
         // *** Determine if late fees are added and if so, how much? ***
@@ -230,8 +233,8 @@ contract RepaymentController is IRepaymentController, Context {
         //console.log("numInstallmentsPaid", data.numInstallmentsPaid);
         if (_installmentsMissed == 0) {
             // Minimum balance due calculation. Based on interest per installment period
-            uint256 minBalDue = ((_bal * _interestPerInstallment) / 1000000) / BASIS_POINTS_DENOMINATOR;
-            //console.log(" _bal: ", _bal);
+            uint256 minBalDue = ((balance * _interestPerInstallment) / 1000000) / BASIS_POINTS_DENOMINATOR;
+            //console.log(" balance: ", balance);
             //console.log(" --- TOTAL MIN AMOUNT DUE:: ", minBalDue);
 
             return (minBalDue, 0, 0);
@@ -239,12 +242,12 @@ contract RepaymentController is IRepaymentController, Context {
         // * If payment is late, or past the loan duration...
         else {
             uint256 minBalDue = 0;
-            uint256 currentBal = _bal;
+            uint256 currentBal = balance;
             uint256 lateFees = 0;
             // late fees compound on any installment periods missed. late fees of first installment numMissedPayments
             // add to the principal of the next late fees calculation
             for (uint256 i = 0; i < _installmentsMissed; i++) {
-                minBalDue = minBalDue + (((currentBal * _interestPerInstallment ) / 1000000) / BASIS_POINTS_DENOMINATOR);
+                minBalDue = minBalDue + (((currentBal * _interestPerInstallment) / 1000000) / BASIS_POINTS_DENOMINATOR);
                 currentBal = currentBal + minBalDue;
                 lateFees = lateFees + ((currentBal * LATE_FEE) / BASIS_POINTS_DENOMINATOR);
                 //console.log("currentBal: ", currentBal);
@@ -261,16 +264,18 @@ contract RepaymentController is IRepaymentController, Context {
     }
 
     /**
-    * @notice Call calcInstallment publicly to determine the amount of the payable currency
-    *         must be approved for the payment. Returns minimum balance due, late fees, and number
-    *         of missed payments.
-    *
-    * @dev Call calcInstallment similar to repay, but do not call LoanCore.
-    *
-    * @param borrowerNoteId             Borrower note tokenId, used to locate loan terms
-    */
+     * @notice Call calcInstallment publicly to determine the amount of the payable currency
+     *         must be approved for the payment. Returns minimum balance due, late fees, and number
+     *         of missed payments.
+     *
+     * @dev Call calcInstallment similar to repay, but do not call LoanCore.
+     *
+     * @param borrowerNoteId             Borrower note tokenId, used to locate loan terms
+     */
     function getInstallmentMinPayment(uint256 borrowerNoteId)
-        public
+        external
+        view
+        override
         returns (
             uint256,
             uint256,
@@ -284,23 +289,25 @@ contract RepaymentController is IRepaymentController, Context {
         LoanLibrary.LoanData memory data = loanCore.getLoan(loanId);
 
         // local variables
-        uint256 startDate = data.terms.startDate;
+        uint256 startDate = data.startDate;
         require(startDate < block.timestamp, "Loan has not started yet.");
         uint256 installments = data.terms.numInstallments;
-        address payableCurrency = data.terms.payableCurrency;
         require(installments > 0, "This loan type does not have any installments.");
 
         // Get the current minimum balance due for the installment.
         (uint256 minBalanceDue, uint256 lateFees, uint256 numMissedPayments) = calcInstallment(
-            data,
-            data.terms.numInstallments,
+            data.balance,
+            startDate,
+            data.terms.durationSecs,
+            installments,
+            data.numInstallmentsPaid,
             data.terms.interest
         );
 
         return (minBalanceDue, lateFees, numMissedPayments);
     }
 
-     /**
+    /**
      * @notice Called when paying back installment loan with the minimum amount due.
      *         Do not call for single payment loan types.
      *
@@ -308,7 +315,7 @@ contract RepaymentController is IRepaymentController, Context {
      *
      * @param borrowerNoteId             Borrower note tokenId, used to locate loan terms
      */
-    function repayPartMinimum(uint256 borrowerNoteId) public {
+    function repayPartMinimum(uint256 borrowerNoteId) external override {
         // get loan from borrower note
         uint256 loanId = borrowerNote.loanIdByNoteId(borrowerNoteId);
         require(loanId != 0, "RepaymentController: repay could not dereference loan");
@@ -316,7 +323,7 @@ contract RepaymentController is IRepaymentController, Context {
         LoanLibrary.LoanData memory data = loanCore.getLoan(loanId);
 
         // local variables
-        uint256 startDate = data.terms.startDate;
+        uint256 startDate = data.startDate;
         require(startDate < block.timestamp, "Loan has not started yet.");
         uint256 installments = data.terms.numInstallments;
         address payableCurrency = data.terms.payableCurrency;
@@ -324,8 +331,11 @@ contract RepaymentController is IRepaymentController, Context {
 
         // Get the current minimum balance due for the installment.
         (uint256 minBalanceDue, uint256 lateFees, uint256 numMissedPayments) = calcInstallment(
-            data,
-            data.terms.numInstallments,
+            data.balance,
+            startDate,
+            data.terms.durationSecs,
+            installments,
+            data.numInstallmentsPaid,
             data.terms.interest
         );
         require(minBalanceDue > 0, "No interest or late fees due.");
@@ -340,18 +350,18 @@ contract RepaymentController is IRepaymentController, Context {
     }
 
     /**
-    * @notice Called when paying back installment loan with an amount greater than the minimum amount due.
-    *         Do not call for single payment loan types.
-    *
-    * @dev Pay off the current interest and, if applicable any late fees accrued, and an additional
-    *      amount to be deducted from the loan principal.
-    *
-    * @param borrowerNoteId             Borrower note tokenId, used to locate loan terms
-    * @param amount                     Amount = minBalDue + lateFees + amountToPayOffPrincipal
-    *                                   value must be greater than minBalDue + latefees returned
-    *                                   from getInstallmentMinPayment function call.
-    */
-    function repayPart(uint256 borrowerNoteId, uint256 amount) public {
+     * @notice Called when paying back installment loan with an amount greater than the minimum amount due.
+     *         Do not call for single payment loan types.
+     *
+     * @dev Pay off the current interest and, if applicable any late fees accrued, and an additional
+     *      amount to be deducted from the loan principal.
+     *
+     * @param borrowerNoteId             Borrower note tokenId, used to locate loan terms
+     * @param amount                     Amount = minBalDue + lateFees + amountToPayOffPrincipal
+     *                                   value must be greater than minBalDue + latefees returned
+     *                                   from getInstallmentMinPayment function call.
+     */
+    function repayPart(uint256 borrowerNoteId, uint256 amount) external override {
         // get loan from borrower note
         uint256 loanId = borrowerNote.loanIdByNoteId(borrowerNoteId);
         require(loanId != 0, "RepaymentController: repay could not dereference loan");
@@ -359,7 +369,7 @@ contract RepaymentController is IRepaymentController, Context {
         LoanLibrary.LoanData memory data = loanCore.getLoan(loanId);
 
         // local variables
-        uint256 startDate = data.terms.startDate;
+        uint256 startDate = data.startDate;
         require(startDate < block.timestamp, "Loan has not started yet.");
         uint256 installments = data.terms.numInstallments;
         address payableCurrency = data.terms.payableCurrency;
@@ -367,8 +377,11 @@ contract RepaymentController is IRepaymentController, Context {
 
         // Get the current minimum balance due for the installment.
         (uint256 minBalanceDue, uint256 lateFees, uint256 numMissedPayments) = calcInstallment(
-            data,
-            data.terms.numInstallments,
+            data.balance,
+            startDate,
+            data.terms.durationSecs,
+            installments,
+            data.numInstallmentsPaid,
             data.terms.interest
         );
         // Require amount to be taken from the _msgSender() to be larger than or equal to minimum amount due

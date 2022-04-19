@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity 0.8.11;
 
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
@@ -55,7 +55,6 @@ contract LoanCore is ILoanCore, AccessControl, Pausable, ICallDelegator {
         borrowerNote = new PromissoryNote("PawnFi Borrower Note", "pBN");
         lenderNote = new PromissoryNote("PawnFi Lender Note", "pLN");
 
-
         // Avoid having loanId = 0
         loanIdTracker.increment();
     }
@@ -72,85 +71,89 @@ contract LoanCore is ILoanCore, AccessControl, Pausable, ICallDelegator {
     /**
      * @inheritdoc ILoanCore
      */
-     function createLoan(LoanLibrary.LoanTerms calldata terms)
-         external
-         override
-         whenNotPaused
-         onlyRole(ORIGINATOR_ROLE)
-         returns (uint256 loanId)
-     {
-         require(terms.durationSecs > 0, "LoanCore::create: Loan is already expired");
-         require(
+    function createLoan(LoanLibrary.LoanTerms calldata terms)
+        external
+        override
+        whenNotPaused
+        onlyRole(ORIGINATOR_ROLE)
+        returns (uint256 loanId)
+    {
+        require(terms.durationSecs > 0, "LoanCore::create: Loan is already expired");
+        require(
             !collateralInUse[terms.collateralAddress][terms.collateralId],
             "LoanCore::create: Collateral token already in use"
         );
 
-         // interest rate must be entered as 10**18
-         require(terms.interest / 10**18 >= 1, "LoanCore::create: Interest must be greater than 0.01%");
+        // interest rate must be entered as 10**18
+        require(terms.interest / 10**18 >= 1, "LoanCore::create: Interest must be greater than 0.01%");
 
-         // number of installments must be an even number
-         require(terms.numInstallments % 2 == 0, "LoanCore::create: Number of installments must be an even number");
+        // number of installments must be an even number
+        // NOTE: DO WE WANT TO PUT A LIMIT ON NUMBER OF INSTALLMENTS?
+        //       IN ORDER TO MITIGATE RISK WITH THE GAS DURING FN CALL.
+        require(terms.numInstallments % 2 == 0, "LoanCore::create: Number of installments must be an even number");
 
-         loanId = loanIdTracker.current();
-         loanIdTracker.increment();
+        require(terms.principal >= 10000 wei, "The minimum Principal allowed is 10000 wei.");
 
-         loans[loanId] = LoanLibrary.LoanData(
-             0,
-             0,
-             terms,
-             LoanLibrary.LoanState.Created,
-             block.timestamp + terms.durationSecs,
-             terms.principal,
-             0,
-             0,
-             0,
-             0
-         );
+        loanId = loanIdTracker.current();
+        loanIdTracker.increment();
 
-         collateralInUse[terms.collateralAddress][terms.collateralId] = true;
+        loans[loanId] = LoanLibrary.LoanData(
+            0, // borrowerNoteId
+            0, // lenderNoteId
+            terms, // loanTerms
+            LoanLibrary.LoanState.Created, // loanState
+            block.timestamp + terms.durationSecs, // dueDate
+            block.timestamp, // startDate
+            terms.principal, // balance
+            0, // balancePaid
+            0, // lateFeesAccrued
+            0 // numInstallmentsPaid
+        );
 
-         emit LoanCreated(terms, loanId);
-     }
+        collateralInUse[terms.collateralAddress][terms.collateralId] = true;
+
+        emit LoanCreated(terms, loanId);
+    }
 
     /**
      * @inheritdoc ILoanCore
      */
-     function startLoan(
-         address lender,
-         address borrower,
-         uint256 loanId
-     ) external override whenNotPaused onlyRole(ORIGINATOR_ROLE) {
-         LoanLibrary.LoanData memory data = loans[loanId];
+    function startLoan(
+        address lender,
+        address borrower,
+        uint256 loanId
+    ) external override whenNotPaused onlyRole(ORIGINATOR_ROLE) {
+        LoanLibrary.LoanData memory data = loans[loanId];
 
-         // Ensure valid initial loan state
-         require(data.state == LoanLibrary.LoanState.Created, "LoanCore::start: Invalid loan state");
+        // Ensure valid initial loan state
+        require(data.state == LoanLibrary.LoanState.Created, "LoanCore::start: Invalid loan state");
 
-         // Pull collateral token and principal
+        // Pull collateral token and principal
         IERC721(data.terms.collateralAddress).transferFrom(_msgSender(), address(this), data.terms.collateralId);
         IERC20(data.terms.payableCurrency).safeTransferFrom(_msgSender(), address(this), data.terms.principal);
 
-         // Distribute notes and principal
-         loans[loanId].state = LoanLibrary.LoanState.Active;
-         uint256 borrowerNoteId = borrowerNote.mint(borrower, loanId);
-         uint256 lenderNoteId = lenderNote.mint(lender, loanId);
+        // Distribute notes and principal
+        loans[loanId].state = LoanLibrary.LoanState.Active;
+        uint256 borrowerNoteId = borrowerNote.mint(borrower, loanId);
+        uint256 lenderNoteId = lenderNote.mint(lender, loanId);
 
-         loans[loanId] = LoanLibrary.LoanData(
-             borrowerNoteId,
-             lenderNoteId,
-             data.terms,
-             LoanLibrary.LoanState.Active,
-             data.dueDate,
-             data.balance,
-             data.balancePaid,
-             data.lateFeesAccrued,
-             data.numMissedPayments,
-             data.numInstallmentsPaid
-         );
+        loans[loanId] = LoanLibrary.LoanData(
+            borrowerNoteId,
+            lenderNoteId,
+            data.terms,
+            LoanLibrary.LoanState.Active,
+            data.dueDate,
+            data.startDate,
+            data.balance,
+            data.balancePaid,
+            data.lateFeesAccrued,
+            data.numInstallmentsPaid
+        );
 
-         IERC20(data.terms.payableCurrency).safeTransfer(borrower, getPrincipalLessFees(data.terms.principal));
+        IERC20(data.terms.payableCurrency).safeTransfer(borrower, getPrincipalLessFees(data.terms.principal));
 
-         emit LoanStarted(loanId, lender, borrower);
-     }
+        emit LoanStarted(loanId, lender, borrower);
+    }
 
     /**
      * @inheritdoc ILoanCore
@@ -239,7 +242,7 @@ contract LoanCore is ILoanCore, AccessControl, Pausable, ICallDelegator {
         address lender = lenderNote.ownerOf(data.lenderNoteId);
         address borrower = borrowerNote.ownerOf(data.borrowerNoteId);
         // if last payment and extra sent
-        if(_repaidAmount > data.balance) {
+        if (_repaidAmount > data.balance) {
             // set the loan state to repaid
             // NOTE: these must be performed before assets are released to prevent reentrance
             data.state = LoanLibrary.LoanState.Repaid;
@@ -256,14 +259,13 @@ contract LoanCore is ILoanCore, AccessControl, Pausable, ICallDelegator {
             // update state
             data.balance = 0;
             data.balancePaid = data.balancePaid + paymentTotal;
-            data.numMissedPayments = data.numMissedPayments + _numMissedPayments;
             data.lateFeesAccrued = data.lateFeesAccrued + _lateFeesAccrued;
             data.numInstallmentsPaid = data.numInstallmentsPaid + _numMissedPayments + 1;
 
             emit LoanRepaid(_loanId);
         }
         // if last payment and exact amount sent
-        else if(_repaidAmount == data.balance) {
+        else if (_repaidAmount == data.balance) {
             // set the loan state to repaid
             // NOTE: these must be performed before assets are released to prevent reentrance
             data.state = LoanLibrary.LoanState.Repaid;
@@ -278,7 +280,6 @@ contract LoanCore is ILoanCore, AccessControl, Pausable, ICallDelegator {
             // update state
             data.balance = 0;
             data.balancePaid = data.balancePaid + paymentTotal;
-            data.numMissedPayments = data.numMissedPayments + _numMissedPayments;
             data.lateFeesAccrued = data.lateFeesAccrued + _lateFeesAccrued;
             data.numInstallmentsPaid = data.numInstallmentsPaid + _numMissedPayments + 1;
 
@@ -289,12 +290,10 @@ contract LoanCore is ILoanCore, AccessControl, Pausable, ICallDelegator {
             // update state
             data.balance = data.balance - _repaidAmount;
             data.balancePaid = data.balancePaid + paymentTotal;
-            data.numMissedPayments = data.numMissedPayments + _numMissedPayments;
             data.lateFeesAccrued = data.lateFeesAccrued + _lateFeesAccrued;
             data.numInstallmentsPaid = data.numInstallmentsPaid + _numMissedPayments + 1;
         }
     }
-
 
     // ============================= ADMIN FUNCTIONS ==================================
 

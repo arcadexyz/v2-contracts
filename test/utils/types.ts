@@ -28,7 +28,6 @@ export interface LoanTerms {
     collateralId: BigNumber;
     payableCurrency: string;
     numInstallments: BigNumberish;
-    startDate: BigNumberish;
 }
 
 export interface ItemsPayload {
@@ -39,7 +38,6 @@ export interface ItemsPayload {
     itemsHash: string;
     payableCurrency: string;
     numInstallments: BigNumberish;
-    startDate: BigNumberish;
 }
 
 export interface LoanData {
@@ -48,8 +46,8 @@ export interface LoanData {
     lenderNoteId: BigNumber;
     state: LoanState;
     dueDate: BigNumberish;
+    startDate: BigNumberish;
     balance: BigNumber;
     balancePaid: BigNumber;
     lateFeesAccrued: BigNumber;
-    numMissedPayments: BigNumber;
 }

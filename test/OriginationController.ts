@@ -87,7 +87,7 @@ const createLoanTerms = (
         interest = hre.ethers.utils.parseEther("1"),
         collateralId = BigNumber.from("1"),
         numInstallments = 0,
-        startDate = 0
+        startDate = 0,
     }: Partial<LoanTerms> = {},
 ): LoanTerms => {
     return {
@@ -98,7 +98,7 @@ const createLoanTerms = (
         collateralId,
         payableCurrency,
         numInstallments,
-        startDate
+        startDate,
     };
 };
 
@@ -634,7 +634,7 @@ describe("OriginationController", () => {
                 loanTerms,
                 encodePredicates(predicates),
                 lender,
-                "2"
+                "2",
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);

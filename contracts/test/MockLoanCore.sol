@@ -47,8 +47,7 @@ contract MockLoanCore is ILoanCore {
             terms.collateralAddress,
             terms.collateralId,
             terms.payableCurrency,
-            terms.numInstallments,
-            terms.startDate
+            terms.numInstallments
         );
 
         LoanLibrary.LoanData memory _loanData = LoanLibrary.LoanData(
@@ -57,8 +56,8 @@ contract MockLoanCore is ILoanCore {
             _loanTerms,
             LoanLibrary.LoanState.Created,
             terms.durationSecs,
+            block.timestamp,
             terms.principal,
-            0,
             0,
             0,
             0
@@ -97,8 +96,8 @@ contract MockLoanCore is ILoanCore {
             data.terms,
             LoanLibrary.LoanState.Active,
             data.dueDate,
+            data.startDate,
             data.terms.principal,
-            0,
             0,
             0,
             0

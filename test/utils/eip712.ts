@@ -41,8 +41,7 @@ const typedLoanTermsData: TypeData = {
             { name: "collateralAddress", type: "address" },
             { name: "collateralId", type: "uint256" },
             { name: "payableCurrency", type: "address" },
-            { name: "numInstallments", type: "uint256"},
-            { name: "startDate", type: "uint256"}
+            { name: "numInstallments", type: "uint256" },
         ],
     },
     primaryType: "LoanTerms" as const,
@@ -57,8 +56,7 @@ const typedLoanItemsData: TypeData = {
             { name: "collateralAddress", type: "address" },
             { name: "itemsHash", type: "bytes32" },
             { name: "payableCurrency", type: "address" },
-            { name: "numInstallments", type: "uint256"},
-            { name: "startDate", type: "uint256"}
+            { name: "numInstallments", type: "uint256" },
         ],
     },
     primaryType: "LoanTermsWithItems" as const,
@@ -122,7 +120,6 @@ export async function createLoanItemsSignature(
         itemsHash,
         payableCurrency: terms.payableCurrency,
         numInstallments: terms.numInstallments,
-        startDate: terms.startDate
     };
 
     const data = buildData(verifyingContract, name, version, message, typedLoanItemsData);
