@@ -14,13 +14,7 @@ import "../interfaces/IAssetVault.sol";
 import "../interfaces/ISignatureVerifier.sol";
 import "../libraries/LoanLibrary.sol";
 
-import {
-    IV_ItemMissingAddress,
-    IV_InvalidCollateralType,
-    IV_NonPositiveAmount1155,
-    IV_InvalidTokenId1155,
-    IV_NonPositiveAmount20
-} from "../errors/Lending.sol";
+import { IV_ItemMissingAddress, IV_InvalidCollateralType, IV_NonPositiveAmount1155, IV_InvalidTokenId1155, IV_NonPositiveAmount20 } from "../errors/Lending.sol";
 
 /**
  * @title ArcadeItemsVerifier

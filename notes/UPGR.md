@@ -106,7 +106,8 @@ A `proxy` contract that delegates all of its calls to the `implementation` contr
 
 8.  create a script to deploy the contract as an upgardeable contract using `deployProxy`\
      example:
-    ```
+
+    ````
     async function main() {
     const MyContract = await ethers.getContractFactory('MyContract');
     console.log('Deploying MyContract...');
@@ -119,6 +120,7 @@ A `proxy` contract that delegates all of its calls to the `implementation` contr
     ```
 
     Note:
+    ````
 
 - This is where we take note of the deployed proxy address for later use.
 - Only the owner of the ProxyAdmin can upgarde the proxy.

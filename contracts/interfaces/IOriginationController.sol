@@ -75,10 +75,11 @@ interface IOriginationController {
 
     // ============== Signature Verification ==============
 
-    function recoverTokenSignature(LoanLibrary.LoanTerms calldata loanTerms, Signature calldata sig, uint160 nonce)
-        external
-        view
-        returns (bytes32 sighash, address signer);
+    function recoverTokenSignature(
+        LoanLibrary.LoanTerms calldata loanTerms,
+        Signature calldata sig,
+        uint160 nonce
+    ) external view returns (bytes32 sighash, address signer);
 
     function recoverItemsSignature(
         LoanLibrary.LoanTerms calldata loanTerms,

@@ -272,7 +272,7 @@ describe("OriginationController", () => {
                 loanTerms,
                 borrower,
                 "2",
-                "2" // Use nonce 2
+                "2", // Use nonce 2
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -298,7 +298,7 @@ describe("OriginationController", () => {
                 loanTerms,
                 borrower,
                 "2",
-                "2" // Use nonce 2
+                "2", // Use nonce 2
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -419,8 +419,7 @@ describe("OriginationController", () => {
                 originationController
                     .connect(borrower)
                     .initializeLoan(loanTerms, await borrower.getAddress(), await lender.getAddress(), sig, 1),
-            )
-                .to.be.revertedWith("Invalid nonce");
+            ).to.be.revertedWith("Invalid nonce");
         });
 
         describe("initializeLoanWithCollateralPermit", () => {
@@ -728,23 +727,21 @@ describe("OriginationController", () => {
                 encodePredicates(predicates),
                 borrower,
                 "2",
-                "2" // Use nonce 2
+                "2", // Use nonce 2
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
             await vaultFactory.connect(borrower).approve(originationController.address, bundleId);
             await expect(
-                originationController
-                    .connect(lender)
-                    .initializeLoanWithItems(
-                        loanTerms,
-                        await borrower.getAddress(),
-                        await lender.getAddress(),
-                        sig,
-                        // Use nonce 2, skipping nonce 1
-                        2,
-                        predicates,
-                    ),
+                originationController.connect(lender).initializeLoanWithItems(
+                    loanTerms,
+                    await borrower.getAddress(),
+                    await lender.getAddress(),
+                    sig,
+                    // Use nonce 2, skipping nonce 1
+                    2,
+                    predicates,
+                ),
             ).to.be.revertedWith("Invalid nonce");
         });
 
@@ -782,7 +779,7 @@ describe("OriginationController", () => {
                 encodePredicates(predicates),
                 borrower,
                 "2",
-                "2" // Use nonce 2
+                "2", // Use nonce 2
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -855,7 +852,6 @@ describe("OriginationController", () => {
                     ),
             ).to.be.revertedWith("OC_InvalidVerifier");
         });
-
 
         it("Initalizes a loan signed by the borrower", async () => {
             const { originationController, mockERC20, mockERC721, vaultFactory, user: lender, other: borrower } = ctx;
@@ -1213,16 +1209,15 @@ describe("OriginationController", () => {
             const { other, originationController } = ctx;
 
             await expect(
-                originationController.connect(other).setAllowedVerifier(verifier.address, true)
+                originationController.connect(other).setAllowedVerifier(verifier.address, true),
             ).to.be.revertedWith("Ownable: caller is not the owner");
         });
 
         it("allows the contract owner to update the whitelist", async () => {
             const { user, originationController } = ctx;
 
-            await expect(
-                originationController.connect(user).setAllowedVerifier(verifier.address, true)
-            ).to.emit(originationController, "SetAllowedVerifier")
+            await expect(originationController.connect(user).setAllowedVerifier(verifier.address, true))
+                .to.emit(originationController, "SetAllowedVerifier")
                 .withArgs(verifier.address, true);
 
             expect(await originationController.isAllowedVerifier(verifier.address)).to.be.true;
@@ -1234,7 +1229,9 @@ describe("OriginationController", () => {
             const verifier2 = <ArcadeItemsVerifier>await deploy("ArcadeItemsVerifier", user, []);
 
             await expect(
-                originationController.connect(other).setAllowedVerifierBatch([verifier.address, verifier2.address], [true, true])
+                originationController
+                    .connect(other)
+                    .setAllowedVerifierBatch([verifier.address, verifier2.address], [true, true]),
             ).to.be.revertedWith("Ownable: caller is not the owner");
         });
 
@@ -1244,24 +1241,29 @@ describe("OriginationController", () => {
             const verifier2 = <ArcadeItemsVerifier>await deploy("ArcadeItemsVerifier", user, []);
 
             await expect(
-                originationController.connect(user).setAllowedVerifierBatch([verifier.address, verifier2.address], [true])
+                originationController
+                    .connect(user)
+                    .setAllowedVerifierBatch([verifier.address, verifier2.address], [true]),
             ).to.be.revertedWith("OC_BatchLengthMismatch");
         });
 
         it("allows the contract owner to perform a batch update", async () => {
             const { user, originationController } = ctx;
 
-            await originationController.connect(user).setAllowedVerifier(verifier.address, true)
+            await originationController.connect(user).setAllowedVerifier(verifier.address, true);
             expect(await originationController.isAllowedVerifier(verifier.address)).to.be.true;
 
             // Deploy a new verifier, disable the first one
             const verifier2 = <ArcadeItemsVerifier>await deploy("ArcadeItemsVerifier", user, []);
 
             await expect(
-                originationController.connect(user).setAllowedVerifierBatch([verifier.address, verifier2.address], [false, true])
-            ).to.emit(originationController, "SetAllowedVerifier")
+                originationController
+                    .connect(user)
+                    .setAllowedVerifierBatch([verifier.address, verifier2.address], [false, true]),
+            )
+                .to.emit(originationController, "SetAllowedVerifier")
                 .withArgs(verifier.address, false)
-            .to.emit(originationController, "SetAllowedVerifier")
+                .to.emit(originationController, "SetAllowedVerifier")
                 .withArgs(verifier2.address, true);
 
             expect(await originationController.isAllowedVerifier(verifier.address)).to.be.false;
@@ -1292,7 +1294,7 @@ describe("OriginationController", () => {
                 originationController.address,
                 "OriginationController",
                 loanTerms,
-                newSigner,  // Now signed by a third party
+                newSigner, // Now signed by a third party
                 "2",
             );
 
@@ -1323,7 +1325,7 @@ describe("OriginationController", () => {
                 originationController.address,
                 "OriginationController",
                 loanTerms,
-                newSigner,  // Now signed by a third party
+                newSigner, // Now signed by a third party
                 "2",
             );
 
@@ -1409,7 +1411,7 @@ describe("OriginationController", () => {
             const loanTerms = createLoanTerms(mockERC20.address, vaultFactory.address, { collateralId: bundleId });
             await mint(mockERC20, lender, loanTerms.principal);
             await mockERC20.connect(lender).transfer(lenderContract.address, loanTerms.principal);
-            await lenderContract.approve(mockERC20.address, originationController.address)
+            await lenderContract.approve(mockERC20.address, originationController.address);
 
             // No approval for origination - OC will check ERC-1271
 
@@ -1487,5 +1489,5 @@ describe("OriginationController", () => {
                     .initializeLoan(loanTerms, await borrower.getAddress(), await lender.getAddress(), sig, 1),
             ).to.be.revertedWith("OC_ApprovedOwnLoan");
         });
-    })
+    });
 });

@@ -113,8 +113,9 @@ describe("ItemsVerifier", () => {
             ];
 
             // Will revert because 4 can't be parsed as an enum
-            await expect(verifier.verifyPredicates(encodeSignatureItems(signatureItems), bundleAddress))
-                .to.be.revertedWith("IV_ItemMissingAddress");
+            await expect(
+                verifier.verifyPredicates(encodeSignatureItems(signatureItems), bundleAddress),
+            ).to.be.revertedWith("IV_ItemMissingAddress");
         });
 
         it("fails if an ERC1155 item has a non-positive required amount", async () => {
@@ -137,8 +138,9 @@ describe("ItemsVerifier", () => {
             ];
 
             // Will revert because 4 can't be parsed as an enum
-            await expect(verifier.verifyPredicates(encodeSignatureItems(signatureItems), bundleAddress))
-                .to.be.revertedWith("IV_NonPositiveAmount1155");
+            await expect(
+                verifier.verifyPredicates(encodeSignatureItems(signatureItems), bundleAddress),
+            ).to.be.revertedWith("IV_NonPositiveAmount1155");
         });
 
         it("fails if an ERC1155 item has a an invalid token ID", async () => {
@@ -155,13 +157,15 @@ describe("ItemsVerifier", () => {
                 {
                     cType: 1,
                     asset: mockERC1155.address,
-                    tokenId: -1,  // invalid for 1155
-                    amount: 5,                },
+                    tokenId: -1, // invalid for 1155
+                    amount: 5,
+                },
             ];
 
             // Will revert because 4 can't be parsed as an enum
-            await expect(verifier.verifyPredicates(encodeSignatureItems(signatureItems), bundleAddress))
-                .to.be.revertedWith("IV_InvalidTokenId1155");
+            await expect(
+                verifier.verifyPredicates(encodeSignatureItems(signatureItems), bundleAddress),
+            ).to.be.revertedWith("IV_InvalidTokenId1155");
         });
 
         it("fails if an ERC20 item has a non-positive required amount", async () => {
@@ -179,13 +183,14 @@ describe("ItemsVerifier", () => {
                     cType: 2,
                     asset: mockERC20.address,
                     tokenId: 0,
-                    amount: 0 // invalid for 20
-                }
+                    amount: 0, // invalid for 20
+                },
             ];
 
             // Will revert because 4 can't be parsed as an enum
-            await expect(verifier.verifyPredicates(encodeSignatureItems(signatureItems), bundleAddress))
-                .to.be.revertedWith("IV_NonPositiveAmount20");
+            await expect(
+                verifier.verifyPredicates(encodeSignatureItems(signatureItems), bundleAddress),
+            ).to.be.revertedWith("IV_NonPositiveAmount20");
         });
 
         it("verifies a specific ERC721 and token id", async () => {

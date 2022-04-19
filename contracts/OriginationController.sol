@@ -338,12 +338,11 @@ contract OriginationController is IOriginationController, Context, EIP712, Reent
      * @return sighash                      The hash that was signed.
      * @return signer                       The address of the recovered signer.
      */
-    function recoverTokenSignature(LoanLibrary.LoanTerms calldata loanTerms, Signature calldata sig, uint160 nonce)
-        public
-        view
-        override
-        returns (bytes32 sighash, address signer)
-    {
+    function recoverTokenSignature(
+        LoanLibrary.LoanTerms calldata loanTerms,
+        Signature calldata sig,
+        uint160 nonce
+    ) public view override returns (bytes32 sighash, address signer) {
         bytes32 loanHash = keccak256(
             abi.encode(
                 _TOKEN_ID_TYPEHASH,

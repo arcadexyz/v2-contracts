@@ -75,7 +75,7 @@ error OC_BatchLengthMismatch();
 /**
  * @notice Provided SignatureItem is missing an address.
  */
- error IV_ItemMissingAddress();
+error IV_ItemMissingAddress();
 
 /**
  * @notice Provided SignatureItem has an invalid collateral type.
@@ -84,7 +84,7 @@ error OC_BatchLengthMismatch();
  * @param asset                         The NFT contract being checked.
  * @param cType                        The collateralTytpe provided.
  */
- error IV_InvalidCollateralType(address asset, uint256 cType);
+error IV_InvalidCollateralType(address asset, uint256 cType);
 
 /**
  * @notice Provided ERC1155 signature item is requiring a non-positive amount.
@@ -92,7 +92,7 @@ error OC_BatchLengthMismatch();
  * @param asset                         The NFT contract being checked.
  * @param amount                        The amount provided (should be 0).
  */
- error IV_NonPositiveAmount1155(address asset, uint256 amount);
+error IV_NonPositiveAmount1155(address asset, uint256 amount);
 
 /**
  * @notice Provided ERC1155 signature item is requiring an invalid token ID.
@@ -100,7 +100,7 @@ error OC_BatchLengthMismatch();
  * @param asset                         The NFT contract being checked.
  * @param tokenId                        The token ID provided.
  */
- error IV_InvalidTokenId1155(address asset, int256 tokenId);
+error IV_InvalidTokenId1155(address asset, int256 tokenId);
 
 /**
  * @notice Provided ERC20 signature item is requiring a non-positive amount.
@@ -108,6 +108,4 @@ error OC_BatchLengthMismatch();
  * @param asset                         The NFT contract being checked.
  * @param amount                        The amount provided (should be 0).
  */
- error IV_NonPositiveAmount20(address asset, uint256 amount);
-
-
+error IV_NonPositiveAmount20(address asset, uint256 amount);
