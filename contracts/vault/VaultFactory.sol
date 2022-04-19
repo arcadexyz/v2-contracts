@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
-pragma solidity ^0.8.0;
+
+pragma solidity ^0.8.11;
 
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
@@ -45,11 +46,11 @@ contract VaultFactory is ERC721Enumerable, ERC721Permit, IVaultFactory {
     /**
      * @inheritdoc IVaultFactory
      */
-     function instanceAt(uint256 tokenId) external view override returns (address instance) {
-         require(_exists(tokenId), "Cannot find instance of nonexistent token");
+    function instanceAt(uint256 tokenId) external view override returns (address instance) {
+        require(_exists(tokenId), "Cannot find instance of nonexistent token");
 
-         return address(uint160(tokenId));
-         // return address(uint160(tokenByIndex(index)));
+        return address(uint160(tokenId));
+        // return address(uint160(tokenByIndex(index)));
     }
 
     /**
@@ -79,12 +80,18 @@ contract VaultFactory is ERC721Enumerable, ERC721Permit, IVaultFactory {
     /**
      * @dev Hook that is called before any token transfer
      * @dev note this notifies the vault contract about the ownership transfer
+     *
+     * Does not let tokens with withdraw enabled be transferred - ensures
+     * items cannot be withdrawn in a frontrunning attack before loan origination.
      */
     function _beforeTokenTransfer(
         address from,
         address to,
         uint256 tokenId
     ) internal virtual override(ERC721, ERC721Enumerable) {
+        IAssetVault vault = IAssetVault(address(uint160(tokenId)));
+        require(!vault.withdrawEnabled(), "cannot transfer with withdraw enabled");
+
         super._beforeTokenTransfer(from, to, tokenId);
     }
 
