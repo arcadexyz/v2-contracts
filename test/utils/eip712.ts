@@ -10,7 +10,6 @@ interface TypeData {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     primaryType: any;
 }
-
 export interface PermitData {
     owner: string;
     spender: string;
@@ -85,6 +84,8 @@ const buildData = (verifyingContract: string, name: string, version: string, mes
  * @param name The name of the contract that will be verifying this signature
  * @param terms the LoanTerms object to sign
  * @param signer The EOA to create the signature
+ * @param version The EIP712 version of the contract to use
+ * @param nonce The signature nonce
  */
 export async function createLoanTermsSignature(
     verifyingContract: string,
@@ -106,6 +107,8 @@ export async function createLoanTermsSignature(
  * @param name The name of the contract that will be verifying this signature
  * @param terms the LoanTerms object to sign
  * @param signer The EOA to create the signature
+ * @param version The EIP712 version of the contract to use
+ * @param nonce The signature nonce
  */
 export async function createLoanItemsSignature(
     verifyingContract: string,

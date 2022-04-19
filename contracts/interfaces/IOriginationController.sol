@@ -8,7 +8,6 @@ interface IOriginationController {
     // ================ Data Types =============
 
     struct Signature {
-        uint160 nonce;
         uint8 v;
         bytes32 r;
         bytes32 s;
@@ -24,7 +23,8 @@ interface IOriginationController {
         LoanLibrary.LoanTerms calldata loanTerms,
         address borrower,
         address lender,
-        Signature calldata sig
+        Signature calldata sig,
+        uint160 nonce
     ) external returns (uint256 loanId);
 
     function initializeLoanWithItems(
@@ -32,6 +32,7 @@ interface IOriginationController {
         address borrower,
         address lender,
         Signature calldata sig,
+        uint160 nonce,
         LoanLibrary.Predicate[] calldata itemPredicates
     ) external returns (uint256 loanId);
 
@@ -40,6 +41,7 @@ interface IOriginationController {
         address borrower,
         address lender,
         Signature calldata sig,
+        uint160 nonce,
         Signature calldata collateralSig,
         uint256 permitDeadline
     ) external returns (uint256 loanId);
@@ -49,6 +51,7 @@ interface IOriginationController {
         address borrower,
         address lender,
         Signature calldata sig,
+        uint160 nonce,
         Signature calldata collateralSig,
         uint256 permitDeadline,
         LoanLibrary.Predicate[] calldata itemPredicates
@@ -70,7 +73,7 @@ interface IOriginationController {
 
     // ============== Signature Verification ==============
 
-    function recoverTokenSignature(LoanLibrary.LoanTerms calldata loanTerms, Signature calldata sig)
+    function recoverTokenSignature(LoanLibrary.LoanTerms calldata loanTerms, Signature calldata sig, uint160 nonce)
         external
         view
         returns (bytes32 sighash, address signer);
@@ -78,6 +81,7 @@ interface IOriginationController {
     function recoverItemsSignature(
         LoanLibrary.LoanTerms calldata loanTerms,
         Signature calldata sig,
+        uint160 nonce,
         bytes32 itemsHash
     ) external view returns (bytes32 sighash, address signer);
 }

@@ -20,7 +20,7 @@ import "./PromissoryNote.sol";
 import "./vault/OwnableERC721.sol";
 
 // TODO: Better natspec
-// TODO: Re-Entrancy mechanisms just for a safegaurd? - Kyle/Shipyard
+// TODO: Custom errors
 
 /**
  * @dev LoanCore contract - core contract for creating, repaying, and claiming collateral for PawnFi loans

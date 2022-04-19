@@ -22,7 +22,6 @@ import "./verifiers/ItemsVerifier.sol";
 import { OC_InvalidLoanCore, OC_PredicateFailed, OC_SelfApprove, OC_ApprovedOwnLoan, OC_InvalidSignature, OC_CallerNotParticipant } from "./errors/Lending.sol";
 
 // NEXT PR:
-// TODO: Fix existing tests
 // TODO: Tests for approvals and nonce
 
 /**
@@ -100,6 +99,7 @@ contract OriginationController is Context, IOriginationController, EIP712, Reent
      * @param borrower                      Address of the borrower.
      * @param lender                        Address of the lender.
      * @param sig                           The loan terms signature, with v, r, s fields, and a nonce.
+     * @param nonce                         The signature nonce.
      *
      * @return loanId                       The unique ID of the new loan.
      */
@@ -107,13 +107,14 @@ contract OriginationController is Context, IOriginationController, EIP712, Reent
         LoanLibrary.LoanTerms calldata loanTerms,
         address borrower,
         address lender,
-        Signature calldata sig
+        Signature calldata sig,
+        uint160 nonce
     ) public override returns (uint256 loanId) {
-        (bytes32 sighash, address externalSigner) = recoverTokenSignature(loanTerms, sig);
+        (bytes32 sighash, address externalSigner) = recoverTokenSignature(loanTerms, sig, nonce);
 
         _validateCounterparties(borrower, lender, msg.sender, externalSigner, sig, sighash);
 
-        ILoanCore(loanCore).consumeNonce(externalSigner, sig.nonce);
+        ILoanCore(loanCore).consumeNonce(externalSigner, nonce);
         loanId = _initialize(loanTerms, borrower, lender);
     }
 
@@ -130,6 +131,7 @@ contract OriginationController is Context, IOriginationController, EIP712, Reent
      * @param borrower                      Address of the borrower.
      * @param lender                        Address of the lender.
      * @param sig                           The loan terms signature, with v, r, s fields, and a nonce.
+     * @param nonce                         The signature nonce.
      * @param itemPredicates                The predicate rules for the items in the bundle.
      *
      * @return loanId                       The unique ID of the new loan.
@@ -139,12 +141,14 @@ contract OriginationController is Context, IOriginationController, EIP712, Reent
         address borrower,
         address lender,
         Signature calldata sig,
+        uint160 nonce,
         LoanLibrary.Predicate[] calldata itemPredicates
     ) public override returns (uint256 loanId) {
         address vault = IVaultFactory(loanTerms.collateralAddress).instanceAt(loanTerms.collateralId);
         (bytes32 sighash, address externalSigner) = recoverItemsSignature(
             loanTerms,
             sig,
+            nonce,
             keccak256(abi.encode(itemPredicates))
         );
 
@@ -157,7 +161,7 @@ contract OriginationController is Context, IOriginationController, EIP712, Reent
             }
         }
 
-        ILoanCore(loanCore).consumeNonce(externalSigner, sig.nonce);
+        ILoanCore(loanCore).consumeNonce(externalSigner, nonce);
         loanId = _initialize(loanTerms, borrower, lender);
     }
 
@@ -172,6 +176,7 @@ contract OriginationController is Context, IOriginationController, EIP712, Reent
      * @param borrower                      Address of the borrower.
      * @param lender                        Address of the lender.
      * @param sig                           The loan terms signature, with v, r, s fields.
+     * @param nonce                         The signature nonce for the loan terms signature.
      * @param collateralSig                 The collateral permit signature, with v, r, s fields.
      * @param permitDeadline                The last timestamp for which the signature is valid.
      *
@@ -182,6 +187,7 @@ contract OriginationController is Context, IOriginationController, EIP712, Reent
         address borrower,
         address lender,
         Signature calldata sig,
+        uint160 nonce,
         Signature calldata collateralSig,
         uint256 permitDeadline
     ) external override returns (uint256 loanId) {
@@ -195,7 +201,7 @@ contract OriginationController is Context, IOriginationController, EIP712, Reent
             collateralSig.s
         );
 
-        loanId = initializeLoan(loanTerms, borrower, lender, sig);
+        loanId = initializeLoan(loanTerms, borrower, lender, sig, nonce);
     }
 
     /**
@@ -210,6 +216,7 @@ contract OriginationController is Context, IOriginationController, EIP712, Reent
      * @param borrower                      Address of the borrower.
      * @param lender                        Address of the lender.
      * @param sig                           The loan terms signature, with v, r, s fields.
+     * @param nonce                         The signature nonce for the loan terms signature.
      * @param collateralSig                 The collateral permit signature, with v, r, s fields.
      * @param permitDeadline                The last timestamp for which the signature is valid.
      * @param itemPredicates                The predicate rules for the items in the bundle.
@@ -221,6 +228,7 @@ contract OriginationController is Context, IOriginationController, EIP712, Reent
         address borrower,
         address lender,
         Signature calldata sig,
+        uint160 nonce,
         Signature calldata collateralSig,
         uint256 permitDeadline,
         LoanLibrary.Predicate[] calldata itemPredicates
@@ -235,7 +243,7 @@ contract OriginationController is Context, IOriginationController, EIP712, Reent
             collateralSig.s
         );
 
-        loanId = initializeLoanWithItems(loanTerms, borrower, lender, sig, itemPredicates);
+        loanId = initializeLoanWithItems(loanTerms, borrower, lender, sig, nonce, itemPredicates);
     }
 
     // ==================================== PERMISSION MANAGEMENT =======================================
@@ -321,11 +329,12 @@ contract OriginationController is Context, IOriginationController, EIP712, Reent
      *
      * @param loanTerms                     The terms of the loan.
      * @param sig                           The signature, with v, r, s fields.
+     * @param nonce                         The signature nonce.
      *
      * @return sighash                      The hash that was signed.
      * @return signer                       The address of the recovered signer.
      */
-    function recoverTokenSignature(LoanLibrary.LoanTerms calldata loanTerms, Signature calldata sig)
+    function recoverTokenSignature(LoanLibrary.LoanTerms calldata loanTerms, Signature calldata sig, uint160 nonce)
         public
         view
         override
@@ -340,8 +349,8 @@ contract OriginationController is Context, IOriginationController, EIP712, Reent
                 loanTerms.collateralAddress,
                 loanTerms.collateralId,
                 loanTerms.payableCurrency,
-                loanTerms.numInstallments
-                sig.nonce
+                loanTerms.numInstallments,
+                nonce
             )
         );
 
@@ -356,6 +365,7 @@ contract OriginationController is Context, IOriginationController, EIP712, Reent
      *
      * @param loanTerms                     The terms of the loan.
      * @param sig                           The loan terms signature, with v, r, s fields.
+     * @param nonce                         The signature nonce.
      * @param itemsHash                     The required items in the specified bundle.
      *
      * @return sighash                      The hash that was signed.
@@ -364,6 +374,7 @@ contract OriginationController is Context, IOriginationController, EIP712, Reent
     function recoverItemsSignature(
         LoanLibrary.LoanTerms calldata loanTerms,
         Signature calldata sig,
+        uint160 nonce,
         bytes32 itemsHash
     ) public view override returns (bytes32 sighash, address signer) {
         bytes32 loanHash = keccak256(
@@ -375,8 +386,8 @@ contract OriginationController is Context, IOriginationController, EIP712, Reent
                 loanTerms.collateralAddress,
                 itemsHash,
                 loanTerms.payableCurrency,
-                loanTerms.numInstallments
-                sig.nonce
+                loanTerms.numInstallments,
+                nonce
             )
         );
 
