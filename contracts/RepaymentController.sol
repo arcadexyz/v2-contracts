@@ -26,7 +26,7 @@ import "./interfaces/ILoanCore.sol";
 import "./interfaces/IRepaymentController.sol";
 
 // * * * * TESTING ONLY * * * *
-import "hardhat/console.sol";
+//import "hardhat/console.sol";
 
 contract RepaymentController is IRepaymentController, Context {
     using SafeERC20 for IERC20;
