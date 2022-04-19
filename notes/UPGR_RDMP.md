@@ -140,14 +140,20 @@ contract MyTokenV1 is Initializable, ERC20Upgradeable, UUPSUpgradeable, OwnableU
 import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 contract MyCollectible is ERC721Upgradeable {
 ```
-5. replace constructors by internal initializer functions with naming convention ``` __{ContractName}_init```\
- with [multiple inheritances](https://docs.openzeppelin.com/contracts/4.x/upgradeable#multiple-inheritance), use ``` __{ContractName}_init_unchained``` to avoid double initialization of the same parent contracts
+5. replace constructors by internal initializer functions with naming convention ``` __{ContractName}_init```
 6. define a public initializer function and call the parent initializer of the contract being extended
 ```
 function initialize() initializer public {
         __ERC721_init("MyCollectible", "MCO");
      }
 ```
+- do not leave an implementation contract uninitialized (an uninitialized implementation contract can be taken over by an attacker, which may impact the proxy)\
+either invoke the initializer manually, or include a constructor to automatically mark it as initialized when it is deployed:
+```
+/// @custom:oz-upgrades-unsafe-allow constructor
+constructor() initializer {}
+```
+- with [multiple inheritances](https://docs.openzeppelin.com/contracts/4.x/upgradeable#multiple-inheritance), use ``` __{ContractName}_init_unchained``` to avoid double initialization of the same parent contracts
 7. compile contract and deploy using ```deployProxy``` from the Upgrades Plugins\
 (this function will first check for unsafe patterns, then deploy the implementation contract, and finally deploy a proxy connected to that implementation)
 8. to deploy a UUPS proxy, manually specify that with the option ```kind: 'uups'```\
@@ -157,16 +163,16 @@ example: ```await upgrades.deployProxy(MyContractV1, { kind: 'uups' });```
 
 ### Avoid Using Initial Values in Field Declarations
 Solidity allows defining initial values for fields when declaring them in a contract.\
-This is equivalent to setting these values in the constructor, and as such, will not work for upgradeable contracts. Make sure that all initial values are set in an initializer function otherwise, any upgradeable instances will not have these fields set.\
+This is equivalent to setting these values in the constructor, and as such, will not work for upgradeable contracts. Make sure that all initial values are set in an initializer function otherwise, any upgradeable instances will not have these fields set.
 
-**NO:**
+**DO NOT:**
 ```
 contract MyContract {
     uint256 public hasInitialValue = 42; // equivalent to setting in the constructor
 }
 ```
 
-**YES:**
+**DO THIS INSTEAD:**
 ```
 contract MyContract is Initializable {
     uint256 public hasInitialValue;
@@ -177,12 +183,19 @@ contract MyContract is Initializable {
 }
 ```
 
-It is still ok to define constant state variables, because the compiler does not reserve a storage slot for these variables, and every occurrence is replaced by the respective constant expression. Therefore this is **OK:**
+It is still ok to define constant state variables, because the compiler does not reserve a storage slot for these variables, and every occurrence is replaced by the respective constant expression.
+
+**THIS IS OK:**
 ```
 contract MyContract {
     uint256 public constant hasInitialValue = 42; // define as constant
 }
 ```
+
+### Creating New Instances from Contract Code
+New instance of a contracts created from a contract’s code are handled directly by Solidity and not by OpenZeppelin Upgrades, which means that these contracts will not be upgradeable.\
+The easiest way to achieve upgradeable instances is to accept an instance of that contract as a parameter, and inject it after creating it.
+
 
 ---
 
