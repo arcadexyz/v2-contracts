@@ -15,7 +15,7 @@ interface IOriginationController {
 
     // ================ Events =================
 
-    event Approval(address indexed owner, address indexed signer);
+    event Approval(address indexed owner, address indexed signer, bool isApproved);
 
     event SetAllowedVerifier(address indexed verifier, bool isAllowed);
 

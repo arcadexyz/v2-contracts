@@ -264,7 +264,7 @@ contract OriginationController is IOriginationController, Context, EIP712, Reent
 
         _signerApprovals[msg.sender][signer] = approved;
 
-        emit Approval(msg.sender, signer);
+        emit Approval(msg.sender, signer, approved);
     }
 
     /**
