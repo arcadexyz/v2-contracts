@@ -192,8 +192,8 @@ contract MyContract {
 }
 ```
 
-### Creating New Instances from Contract Code
-New instance of a contracts created from a contract’s code are handled directly by Solidity and not by OpenZeppelin Upgrades, which means that these contracts will not be upgradeable.\
+### Note on Creating New Instances from Contract Code
+New instance of a contract created from its code are handled directly by Solidity and not by OpenZeppelin Upgrades, which means that these contracts will not be upgradeable.\
 The easiest way to achieve upgradeable instances is to accept an instance of that contract as a parameter, and inject it after creating it.
 
 
