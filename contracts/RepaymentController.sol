@@ -26,7 +26,7 @@ import "./interfaces/ILoanCore.sol";
 import "./interfaces/IRepaymentController.sol";
 
 // * * * * TESTING ONLY * * * *
-import "hardhat/console.sol";
+//import "hardhat/console.sol";
 
 contract RepaymentController is IRepaymentController, Context {
     using SafeERC20 for IERC20;
@@ -251,10 +251,10 @@ contract RepaymentController is IRepaymentController, Context {
                 //console.log("  lateFees: ", lateFees);
             }
 
-            //console.log(" minBalDue: ", minBalDue);
-            //console.log("  lateFees: ", lateFees);
-            //console.log("_installmentsMissed: ", _installmentsMissed);
-            //console.log(" --- TOTAL MIN AMOUNT DUE::", minBalDue + lateFees);
+            // console.log(" minBalDue: ", minBalDue);
+            // console.log("  lateFees: ", lateFees);
+            // console.log("_installmentsMissed: ", _installmentsMissed);
+            // console.log(" --- TOTAL MIN AMOUNT DUE::", minBalDue + lateFees);
 
             return (minBalDue, lateFees, _installmentsMissed);
         }

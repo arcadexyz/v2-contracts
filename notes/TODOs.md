@@ -19,6 +19,7 @@ Evan:
     - Convert AssetWrapper in the tests to new AssetVault implementation.
   - (IN PROGRESS) Finish writing test scripts
     - tests around the createLoan require statements and interest as a rate with legacy functions.
+    - for loop tests
 
 🔑 For Installment tests, run `npx hardhat test test/Installments.ts`.
 

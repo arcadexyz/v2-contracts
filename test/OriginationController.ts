@@ -87,7 +87,6 @@ const createLoanTerms = (
         interest = hre.ethers.utils.parseEther("1"),
         collateralId = BigNumber.from("1"),
         numInstallments = 0,
-        startDate = 0,
     }: Partial<LoanTerms> = {},
 ): LoanTerms => {
     return {
@@ -98,7 +97,6 @@ const createLoanTerms = (
         collateralAddress,
         payableCurrency,
         numInstallments,
-        startDate,
     };
 };
 

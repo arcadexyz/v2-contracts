@@ -329,7 +329,8 @@ contract OriginationController is Context, IOriginationController, EIP712, Reent
                 loanTerms.interest,
                 loanTerms.collateralAddress,
                 itemsHash,
-                loanTerms.payableCurrency
+                loanTerms.payableCurrency,
+                loanTerms.numInstallments
             )
         );
 
