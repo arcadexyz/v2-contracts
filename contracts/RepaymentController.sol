@@ -26,7 +26,7 @@ import "./interfaces/ILoanCore.sol";
 import "./interfaces/IRepaymentController.sol";
 
 // * * * * TESTING ONLY * * * *
-//import "hardhat/console.sol";
+import "hardhat/console.sol";
 
 contract RepaymentController is IRepaymentController, Context {
     using SafeERC20 for IERC20;
@@ -39,7 +39,7 @@ contract RepaymentController is IRepaymentController, Context {
     uint256 public constant INTEREST_DENOMINATOR = 1 * 10**18;
     uint256 public constant BASIS_POINTS_DENOMINATOR = 10000;
 
-    // Installment LoanState
+    // Installment State
     // * * * NOTE: Finsh implementation of grace period?
     uint256 public constant GRACE_PERIOD = 604800; // 60*60*24*7 // 1 week
     uint256 public constant LATE_FEE = 50; // 50/BASIS_POINTS_DENOMINATOR = 0.5%
@@ -64,16 +64,13 @@ contract RepaymentController is IRepaymentController, Context {
      * @param principal                    Principal amount in the loan terms
      * @param interest                     Interest rate in the loan terms
      */
-    function getInterestNoInstallments(uint256 principal, uint256 interest) internal pure returns (uint256) {
+    function getInterestNoInstallments(uint256 principal, uint256 interest) internal view returns (uint256) {
         //interest to be greater than or equal to 1 ETH
         require(interest / 10**18 >= 1, "Interest must be greater than 0.01%.");
-        //console.log("Interest Amount: ", ((principal * (interest / INTEREST_DENOMINATOR))/BASIS_POINTS_DENOMINATOR));
 
         // principal must be greater than 10000 wei, this is a require statement in createLoan function in LoanCore
-        //console.log(
-        //     "Principal+interest",
-        //          principal + ((principal * (interest / INTEREST_DENOMINATOR))/BASIS_POINTS_DENOMINATOR)
-        // );
+        // if interest is 0.01%, principal needs to be greater than the BASIS_POINTS_DENOMINATOR
+        // to remain a positive integer
         uint256 total = principal + ((principal * (interest / INTEREST_DENOMINATOR)) / BASIS_POINTS_DENOMINATOR);
         return total;
     }

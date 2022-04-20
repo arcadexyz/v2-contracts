@@ -14,14 +14,20 @@ Evan:
     - Rewrite comments in natspec.
   - (DONE) Port over `repayPart` function to LoanCore.sol
     - Update other functions to jive with LoanTerms.
-     - 📌 (NEEDS REVIEW) `createLoan` require statements added, need to review.
+    - (NEEDS REVIEW) `createLoan` require statements added, need to review.
   - (DONE) port over two new test scripts into one script called `Installments.ts`.
     - Convert AssetWrapper in the tests to new AssetVault implementation.
   - (IN PROGRESS) Finish writing test scripts
-    - tests around the createLoan require statements.
+    - tests around the createLoan require statements and interest as a rate with legacy functions.
 
 🔑 For Installment tests, run `npx hardhat test test/Installments.ts`.
 
+📌  For Review Items:
+- Minimum Payment and interest as a rate formulas.
+- `createLoan` require statements added.
+- Global parameters, `LATE_FEE` and `GRACE_PERIOD`.
+- Interest rate changes for a percentage/ rate as opposed to total amount.
+- `startDate` and `LoanData` in general being initialized in `createLoan` and not `startLoan`. What happens if `createLoan` is called separately or fails between create and start?
 
 Mouzayan:
 

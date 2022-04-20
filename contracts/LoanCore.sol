@@ -84,7 +84,7 @@ contract LoanCore is ILoanCore, AccessControl, Pausable, ICallDelegator {
             "LoanCore::create: Collateral token already in use"
         );
 
-        // interest rate must be entered as 10**18
+        // interest rate must be greater than or equal to 10**18
         require(terms.interest / 10**18 >= 1, "LoanCore::create: Interest must be greater than 0.01%");
 
         // number of installments must be an even number
@@ -92,7 +92,7 @@ contract LoanCore is ILoanCore, AccessControl, Pausable, ICallDelegator {
         //       IN ORDER TO MITIGATE RISK WITH THE GAS DURING FN CALL.
         require(terms.numInstallments % 2 == 0, "LoanCore::create: Number of installments must be an even number");
 
-        require(terms.principal >= 10000 wei, "The minimum Principal allowed is 10000 wei.");
+        require(terms.principal >= 10000 wei, "LoanCore::create: The minimum Principal allowed is 10000 wei.");
 
         loanId = loanIdTracker.current();
         loanIdTracker.increment();
@@ -156,6 +156,26 @@ contract LoanCore is ILoanCore, AccessControl, Pausable, ICallDelegator {
     }
 
     /**
+     * @notice Calculate the interest due.
+     *
+     * @dev Interest and principal must be entered as base 10**18
+     *
+     * @param principal                    Principal amount in the loan terms
+     * @param interest                     Interest rate in the loan terms
+     */
+    function getInterestNoInstallments(uint256 principal, uint256 interest) internal view returns (uint256) {
+        //interest to be greater than or equal to 1 ETH
+        require(interest / 10**18 >= 1, "Interest must be greater than 0.01%.");
+        //console.log("Interest Amount: ", ((principal * (interest / INTEREST_DENOMINATOR))/BASIS_POINTS_DENOMINATOR));
+
+        // Principal must be greater than 10000 wei, this is a require statement in createLoan function in LoanCore
+        // if interest is 0.01%, principal needs to be greater than the BASIS_POINTS_DENOMINATOR
+        // to remain a positive integer
+        uint256 total = principal + ((principal * (interest / INTEREST_DENOMINATOR)) / BASIS_POINTS_DENOMINATOR);
+        return total;
+    }
+
+    /**
      * @inheritdoc ILoanCore
      */
     function repay(uint256 loanId) external override onlyRole(REPAYER_ROLE) {
@@ -164,7 +184,8 @@ contract LoanCore is ILoanCore, AccessControl, Pausable, ICallDelegator {
         require(data.state == LoanLibrary.LoanState.Active, "LoanCore::repay: Invalid loan state");
 
         // ensure repayment was valid
-        uint256 returnAmount = data.terms.principal.add(data.terms.interest);
+        uint256 returnAmount = getInterestNoInstallments(data.terms.principal, data.terms.interest);
+        require(returnAmount > 0, "No payment due.");
         IERC20(data.terms.payableCurrency).safeTransferFrom(_msgSender(), address(this), returnAmount);
 
         address lender = lenderNote.ownerOf(data.lenderNoteId);
