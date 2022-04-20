@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.11;
+pragma solidity ^0.8.11;
 
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
@@ -16,6 +16,8 @@ import "./interfaces/ILoanCore.sol";
 
 import "./PromissoryNote.sol";
 import "./vault/OwnableERC721.sol";
+
+// TODO: Better natspec
 
 /**
  * @dev LoanCore contract - core contract for creating, repaying, and claiming collateral for PawnFi loans

@@ -30,12 +30,21 @@ Evan:
 - `startDate` and `LoanData` in general being initialized in `createLoan` and not `startLoan`. What happens if `createLoan` is called separately or fails between create and start?
 
 Mouzayan:
+- Upgradeability and dependency architecture\
+ ✅ &nbsp; Decide - which contracts should be upgradeable? What upgradebility pattern should they use?\
+ ✅ &nbsp; Decide - which dependencies need to get passed in constructors for each contract?\
+ ✅ &nbsp; Decide - of those dependencies, which should be changeable by an admin? Which should be immutable and / or only changeable by upgrade?\
+ ✅ &nbsp; Outline the path to UUPS + ways to avoid storage clashes
+ - Outline changes to v2 Protocol to add upgradeability
 
-- Upgradeability and dependency architecture
-  - Decide - which contracts should be upgradeable? What upgradeability pattern should they use?
-  - Decide - which dependencies need to get passed in constructors for each contract?
-  - Decide - of those dependencies, which should be changeable by an admin? Which should be immutable and/or only changeable by upgrade?
-- Review Installments PR and Origination PR
+✅ &nbsp; Future Scenarios List: What May Need to Change in the Future Scenarios\
+✅ &nbsp; For each scenario, how would we make it possible? admin function or upgradeability etc...
+
+ ✅ &nbsp; Look into [OZ upgrades plugin](https://docs.openzeppelin.com/upgrades-plugins/1.x/) for checks for conflicts, adds a deployment history you can check into git, wrapped "upgrade" functions for deploy scripts + other features\
+✅ &nbsp; Compare with [Slither](https://github.com/crytic/slither/wiki/Upgradeability-Checks) plugin
+
+✅ &nbsp; Review Origination PR
+- Review Installments PR
 
 Kevin:
 

@@ -19,8 +19,9 @@ import "./interfaces/ISignatureVerifier.sol";
 import "./verifiers/ItemsVerifier.sol";
 
 // NEXT PR:
-// TODO: Look at EIP-2712 signatures, possibly replace approvals
-// TODO: Tests for either EIP-2712 or approvals
+// TODO: Support EIP-1271 for approvals
+// TODO: Tests for approvals including EIP-1271
+// TODO: Add event for approvals
 // TODO: Add signing nonce
 // TODO: Custom errors
 
@@ -91,7 +92,7 @@ contract OriginationController is Context, IOriginationController, EIP712, Reent
      *
      * @dev The caller must be a borrower or lender, or approved by a borrower or lender.
      * @dev The external signer must be a borrower or lender, or approved by a borrower or lender.
-     * @dev The external signer must come from the oppoite side of the loan as the caller.
+     * @dev The external signer must come from the opposite side of the loan as the caller.
      *
      * @param loanTerms                     The terms agreed by the lender and borrower.
      * @param borrower                      Address of the borrower.
@@ -158,7 +159,7 @@ contract OriginationController is Context, IOriginationController, EIP712, Reent
      *
      * @dev The caller must be a borrower or lender, or approved by a borrower or lender.
      * @dev The external signer must be a borrower or lender, or approved by a borrower or lender.
-     * @dev The external signer must come from the oppoite side of the loan as the caller.
+     * @dev The external signer must come from the opposite side of the loan as the caller.
      *
      * @param loanTerms                     The terms agreed by the lender and borrower.
      * @param borrower                      Address of the borrower.
@@ -196,7 +197,7 @@ contract OriginationController is Context, IOriginationController, EIP712, Reent
      *
      * @dev The caller must be a borrower or lender, or approved by a borrower or lender.
      * @dev The external signer must be a borrower or lender, or approved by a borrower or lender.
-     * @dev The external signer must come from the oppoite side of the loan as the caller.
+     * @dev The external signer must come from the opposite side of the loan as the caller.
      *
      * @param loanTerms                     The terms agreed by the lender and borrower.
      * @param borrower                      Address of the borrower.
@@ -328,8 +329,7 @@ contract OriginationController is Context, IOriginationController, EIP712, Reent
                 loanTerms.interest,
                 loanTerms.collateralAddress,
                 itemsHash,
-                loanTerms.payableCurrency,
-                loanTerms.numInstallments
+                loanTerms.payableCurrency
             )
         );
 
@@ -354,6 +354,8 @@ contract OriginationController is Context, IOriginationController, EIP712, Reent
         address caller,
         address signer
     ) internal view {
+        require(caller != signer, "Origination: approved own loan");
+
         // Make sure one from each side approves
         if (isSelfOrApproved(lender, caller)) {
             require(isSelfOrApproved(borrower, signer), "Origination: no counterparty signature");
