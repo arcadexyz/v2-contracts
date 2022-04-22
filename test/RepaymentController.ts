@@ -18,7 +18,7 @@ import {
 import { BlockchainTime } from "./utils/time";
 import { deploy } from "./utils/contracts";
 import { approve, mint } from "./utils/erc20";
-import { LoanTerms, LoanData, LoanState } from "./utils/types";
+import { LoanTerms, LoanData } from "./utils/types";
 import { createLoanTermsSignature } from "./utils/eip712";
 
 const SECTION_SEPARATOR = "\n" + "=".repeat(80) + "\n";
@@ -169,7 +169,6 @@ const initializeLoan = async (
     principal: BigNumber,
     interest: BigNumber,
     numInstallments: number,
-    terms?: Partial<LoanTerms>,
 ): Promise<LoanDef> => {
     const { originationController, mockERC20, vaultFactory, loanCore, lender, borrower } = context;
     const bundleId = await initializeBundle(vaultFactory, borrower);
@@ -223,8 +222,8 @@ const initializeLoan = async (
 describe("Legacy Repayments with interest parameter as a rate:", () => {
     it("Create legacy loan type (no installments) and repay interest. 100 ETH principal, 10% interest rate.", async () => {
         const context = await loadFixture(fixture);
-        const { repaymentController, vaultFactory, mockERC20, loanCore, borrower, lender } = context;
-        const { loanId, loanTerms, loanData, bundleId } = await initializeLoan(
+        const { repaymentController, vaultFactory, mockERC20, loanCore, borrower } = context;
+        const { loanData, bundleId } = await initializeLoan(
             context,
             mockERC20.address,
             86400, // durationSecs
@@ -248,8 +247,8 @@ describe("Legacy Repayments with interest parameter as a rate:", () => {
 
     it("Create legacy loan type (no installments) and repay interest. 10 ETH principal, 7.5% interest rate.", async () => {
         const context = await loadFixture(fixture);
-        const { repaymentController, vaultFactory, mockERC20, loanCore, borrower, lender } = context;
-        const { loanId, loanTerms, loanData, bundleId } = await initializeLoan(
+        const { repaymentController, vaultFactory, mockERC20, loanCore, borrower } = context;
+        const { loanData, bundleId } = await initializeLoan(
             context,
             mockERC20.address,
             86400, // durationSecs
@@ -273,8 +272,8 @@ describe("Legacy Repayments with interest parameter as a rate:", () => {
 
     it("Create legacy loan type (no installments) and repay interest. 25 ETH principal, 2.5% interest rate.", async () => {
         const context = await loadFixture(fixture);
-        const { repaymentController, vaultFactory, mockERC20, loanCore, borrower, lender } = context;
-        const { loanId, loanTerms, loanData, bundleId } = await initializeLoan(
+        const { repaymentController, vaultFactory, mockERC20, loanCore, borrower } = context;
+        const { loanData, bundleId } = await initializeLoan(
             context,
             mockERC20.address,
             86400, // durationSecs
@@ -298,8 +297,8 @@ describe("Legacy Repayments with interest parameter as a rate:", () => {
 
     it("Create legacy loan type (no installments) and repay interest. 25 ETH principal, 2.5% interest rate. Borrower tries to repay with insufficient amount. Should revert.", async () => {
         const context = await loadFixture(fixture);
-        const { repaymentController, vaultFactory, mockERC20, loanCore, borrower, lender } = context;
-        const { loanId, loanTerms, loanData, bundleId } = await initializeLoan(
+        const { repaymentController, vaultFactory, mockERC20, loanCore, borrower } = context;
+        const { loanData, bundleId } = await initializeLoan(
             context,
             mockERC20.address,
             86400, // durationSecs
@@ -323,8 +322,8 @@ describe("Legacy Repayments with interest parameter as a rate:", () => {
 
     it("Create legacy loan type (no installments) and repay interest. 25 ETH principal, 2.5% interest rate. Repay function called without borrower approval. Should revert.", async () => {
         const context = await loadFixture(fixture);
-        const { repaymentController, vaultFactory, mockERC20, loanCore, borrower, lender } = context;
-        const { loanId, loanTerms, loanData, bundleId } = await initializeLoan(
+        const { repaymentController, vaultFactory, mockERC20, loanCore, borrower } = context;
+        const { loanData, bundleId } = await initializeLoan(
             context,
             mockERC20.address,
             86400, // durationSecs
@@ -347,7 +346,7 @@ describe("Legacy Repayments with interest parameter as a rate:", () => {
 
     it("Create legacy loan type (no installments) and repay interest. 25 ETH principal, 2.5% interest rate. Repay function called without borrower approval. Should revert.", async () => {
         const context = await loadFixture(fixture);
-        const { repaymentController, vaultFactory, mockERC20, loanCore, borrower, lender } = context;
+        const { mockERC20 } = context;
         await expect(
             initializeLoan(
                 context,
@@ -362,8 +361,8 @@ describe("Legacy Repayments with interest parameter as a rate:", () => {
 
     it("Create legacy loan type (no installments) and repay interest. 25 ETH principal, 2.5% interest rate. Repay function called without borrower approval. Should revert.", async () => {
         const context = await loadFixture(fixture);
-        const { repaymentController, vaultFactory, mockERC20, loanCore, borrower, lender } = context;
-        const { loanId, loanTerms, loanData, bundleId } = await initializeLoan(
+        const { repaymentController, vaultFactory, mockERC20, loanCore, borrower } = context;
+        const { loanData, bundleId } = await initializeLoan(
             context,
             mockERC20.address,
             86400, // durationSecs

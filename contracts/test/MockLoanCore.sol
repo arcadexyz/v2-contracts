@@ -4,6 +4,7 @@ import "@openzeppelin/contracts/utils/Counters.sol";
 
 import "../interfaces/ILoanCore.sol";
 import "../interfaces/IPromissoryNote.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import "../PromissoryNote.sol";
 
@@ -119,19 +120,24 @@ contract MockLoanCore is ILoanCore {
         emit LoanRepaid(loanId);
     }
 
-    // WRONG!! NOT THE CORRECT FUNCTIONALITY!
+    /**
+     * @dev * * * THIS FUNCTION IS NOT VALID SEE LOANCORE REPAYPART FUNCTION!!!
+     */
     function repayPart(
         uint256 _loanId,
-        uint256 _repaidAmount,
-        uint256 _numMissedPayments,
-        uint256 _lateFeesAccrued
+        uint256 _repaidAmount, // amount paid to principal
+        uint256 _numMissedPayments, // number of missed payments (number of payments since the last payment)
+        uint256 _lateFeesAccrued // any minimum payments to interest and or late fees
     ) external override {
-        LoanLibrary.LoanData memory data = loans[_loanId];
+        LoanLibrary.LoanData storage data = loans[_loanId];
         // Ensure valid initial loan state
         require(data.state == LoanLibrary.LoanState.Active, "LoanCore::repay: Invalid loan state");
-        data.state = LoanLibrary.LoanState.Repaid;
-
-        emit LoanRepaid(_loanId);
+        // transfer funds to LoanCore
+        uint256 paymentTotal = _repaidAmount + _lateFeesAccrued;
+        //console.log("TOTAL PAID FROM BORROWER: ", paymentTotal);
+        IERC20(data.terms.payableCurrency).transferFrom(msg.sender, address(this), paymentTotal);
+        // use variable.
+        data.numInstallmentsPaid = data.numInstallmentsPaid + _numMissedPayments + 1;
     }
 
     /**
