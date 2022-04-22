@@ -117,13 +117,13 @@ describe("Integration", () => {
         }: Partial<LoanTerms> = {},
     ): LoanTerms => {
         return {
-          durationSecs,
-          principal,
-          interest,
-          collateralAddress,
-          collateralId,
-          payableCurrency,
-          numInstallments,
+            durationSecs,
+            principal,
+            interest,
+            collateralAddress,
+            collateralId,
+            payableCurrency,
+            numInstallments,
         };
     };
 
@@ -386,7 +386,10 @@ describe("Integration", () => {
             const { originationController, mockERC20, vaultFactory, loanCore, lender, borrower } = context;
             const durationSecs = 1000;
             const bundleId = terms?.collateralId ?? (await createWnft(vaultFactory, borrower));
-            const loanTerms = createLoanTerms(mockERC20.address, vaultFactory.address, { collateralId: bundleId, durationSecs });
+            const loanTerms = createLoanTerms(mockERC20.address, vaultFactory.address, {
+                collateralId: bundleId,
+                durationSecs,
+            });
             if (terms) Object.assign(loanTerms, terms);
             await mint(mockERC20, lender, loanTerms.principal);
 
