@@ -81,8 +81,8 @@ function createMainnetConfig(): NetworkUserConfig {
             mnemonic,
         },
         chainId: chainIds.mainnet,
-        // url: `https://eth-mainnet.alchemyapi.io/v2/${alchemyApiKey}`,
-        url: `https://rpc.tenderly.co/fork/250365ef-3edf-435e-a482-d9dc69beff58`
+        url: `https://eth-mainnet.alchemyapi.io/v2/${alchemyApiKey}`,
+        // url: `https://rpc.tenderly.co/fork/250365ef-3edf-435e-a482-d9dc69beff58`
     };
 }
 

@@ -148,8 +148,6 @@ contract FlashRolloverNewLender is IFlashRolloverNewLender, ReentrancyGuard, ERC
         _repayLoan(opContracts, loanData, borrower);
 
         {
-            _recreateBundle(opContracts, loanData);
-
             uint256 newLoanId = _initializeNewLoan(
                 opContracts,
                 borrower,
@@ -257,66 +255,6 @@ contract FlashRolloverNewLender is IFlashRolloverNewLender, ReentrancyGuard, ERC
         contracts.targetBorrowerNote.safeTransferFrom(address(this), borrower, newLoanData.borrowerNoteId);
 
         return newLoanId;
-    }
-
-    function _recreateBundle(
-        OperationContracts memory contracts,
-        LoanLibrary.LoanData memory loanData
-    ) internal returns (uint256 bundleId) {
-        uint256 oldBundleId = loanData.terms.collateralTokenId;
-        AssetWrapper sourceAssetWrapper = AssetWrapper(address(contracts.sourceAssetWrapper));
-        AssetWrapper targetAssetWrapper = AssetWrapper(address(contracts.targetAssetWrapper));
-
-        ERC721Holding[] memory bundleERC721Holdings = new ERC721Holding[](20);
-        ERC1155Holding[] memory bundleERC1155Holdings = new ERC1155Holding[](20);
-
-        for (uint256 i = 0; i < bundleERC721Holdings.length; i++) {
-            try sourceAssetWrapper.bundleERC721Holdings(oldBundleId, i) returns (address tokenAddr, uint256 tokenId) {
-                bundleERC721Holdings[i] = ERC721Holding(tokenAddr, tokenId);
-            } catch { break; }
-        }
-
-        for (uint256 i = 0; i < bundleERC1155Holdings.length; i++) {
-            try sourceAssetWrapper.bundleERC1155Holdings(oldBundleId, i) returns (address tokenAddr, uint256 tokenId, uint256 amount) {
-                bundleERC1155Holdings[i] = ERC1155Holding(tokenAddr, tokenId, amount);
-            } catch { break; }
-            // (address tokenAddr, uint256 tokenId, uint256 amount) =
-            //     sourceAssetWrapper.bundleERC1155Holdings(oldBundleId, i);
-
-            // if (tokenAddr == address(0)) {
-            //     break;
-            // }
-
-            // bundleERC1155Holdings[i] = ERC1155Holding(tokenAddr, tokenId, amount);
-        }
-
-        sourceAssetWrapper.withdraw(oldBundleId);
-
-        targetAssetWrapper.initializeBundleWithId(address(this), oldBundleId);
-
-        for (uint256 i = 0; i < bundleERC721Holdings.length; i++) {
-            ERC721Holding memory h = bundleERC721Holdings[i];
-
-            if (h.tokenAddress == address(0)) {
-                break;
-            }
-
-            IERC721(h.tokenAddress).approve(address(targetAssetWrapper), h.tokenId);
-            targetAssetWrapper.depositERC721(h.tokenAddress, h.tokenId, oldBundleId);
-        }
-
-        for (uint256 i = 0; i < bundleERC1155Holdings.length; i++) {
-            ERC1155Holding memory h = bundleERC1155Holdings[i];
-
-            if (h.tokenAddress == address(0)) {
-                break;
-            }
-
-            IERC1155(h.tokenAddress).setApprovalForAll(address(targetAssetWrapper), true);
-            targetAssetWrapper.depositERC1155(h.tokenAddress, h.tokenId, h.amount, oldBundleId);
-        }
-
-        bundleId = oldBundleId;
     }
 
     function _getContracts(RolloverContractParams memory contracts) internal returns (OperationContracts memory) {
