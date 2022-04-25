@@ -100,7 +100,7 @@ export async function main(
 
     const ADDRESSES_PROVIDER_ADDRESS = "0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5";
 
-    const FlashRolloverFactory = await ethers.getContractFactory("DelegatedFlashRollover");
+    const FlashRolloverFactory = await ethers.getContractFactory("FlashRolloverNewLender");
     const flashRollover = <FlashRollover>(
         await FlashRolloverFactory.deploy(
             ADDRESSES_PROVIDER_ADDRESS
