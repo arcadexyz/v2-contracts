@@ -26,10 +26,6 @@ const SECTION_SEPARATOR = "\n" + "=".repeat(80) + "\n";
 const ORIGINATOR_ROLE = "0x59abfac6520ec36a6556b2a4dd949cc40007459bcd5cd2507f1e5cc77b6bc97e";
 const REPAYER_ROLE = "0x9c60024347074fd9de2c1e36003080d22dbc76a41ef87444d21e361bcb39118e";
 
-//interest rate parameters
-const INTEREST_DENOMINATOR = ethers.utils.parseEther("1"); //1*10**18
-const BASIS_POINTS_DENOMINATOR = BigNumber.from(10000);
-
 interface TestContext {
     loanCore: LoanCore;
     mockERC20: MockERC20;

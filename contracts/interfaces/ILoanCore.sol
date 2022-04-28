@@ -30,6 +30,11 @@ interface ILoanCore {
     event LoanRepaid(uint256 loanId);
 
     /**
+     * @dev Emitted when an installment payment is made that does not pay off the loan entirely
+     */
+    event InstallmentPaymentReceived( uint256 loanId, uint256 repaidAmount, uint256 remBalance);
+
+    /**
      * @dev Emitted when a loan collateral is claimed by the lender
      */
     event LoanClaimed(uint256 loanId);

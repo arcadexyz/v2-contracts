@@ -20,6 +20,11 @@ Evan:
   - (IN PROGRESS) Finish writing test scripts
     - tests around the createLoan require statements and interest as a rate with legacy functions.
     - for loop tests
+  - (IN PROGRESS) Mark PR comments and fixes.
+    - error handling, interest demonminator
+
+- Other: Implement the `grantPeriod` into the RepaymentController.
+  - tests
 
 🔑 For Installment tests, run `npx hardhat test test/Installments.ts`.
 

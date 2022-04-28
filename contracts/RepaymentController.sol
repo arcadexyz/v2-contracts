@@ -64,13 +64,10 @@ contract RepaymentController is IRepaymentController, Context {
      * @param principal                    Principal amount in the loan terms
      * @param interest                     Interest rate in the loan terms
      */
-    function getInterestNoInstallments(uint256 principal, uint256 interest) internal view returns (uint256) {
-        //interest to be greater than or equal to 1 ETH
-        require(interest / 10**18 >= 1, "Interest must be greater than 0.01%.");
+    function getFullTermInterest(uint256 principal, uint256 interest) internal view returns (uint256) {
+        // Interest to be greater than or equal to 0.01%
+        require(interest / INTEREST_DENOMINATOR >= 1, "Interest must be greater than 0.01%.");
 
-        // principal must be greater than 10000 wei, this is a require statement in createLoan function in LoanCore
-        // if interest is 0.01%, principal needs to be greater than the BASIS_POINTS_DENOMINATOR
-        // to remain a positive integer
         uint256 total = principal + ((principal * (interest / INTEREST_DENOMINATOR)) / BASIS_POINTS_DENOMINATOR);
         return total;
     }
@@ -88,7 +85,7 @@ contract RepaymentController is IRepaymentController, Context {
         LoanLibrary.LoanTerms memory terms = loanCore.getLoan(loanId).terms;
 
         // withdraw principal plus interest from borrower and send to loan core
-        uint256 total = getInterestNoInstallments(terms.principal, terms.interest);
+        uint256 total = getFullTermInterest(terms.principal, terms.interest);
         require(total > 0, "No payment due.");
 
         IERC20(terms.payableCurrency).safeTransferFrom(_msgSender(), address(this), total);
@@ -219,7 +216,7 @@ contract RepaymentController is IRepaymentController, Context {
         uint256 _installmentsMissed = _installmentPeriod - (numInstallmentsPaid + 1); // +1 for current install payment
 
         // Interest per installment - using mulitpier of 1 million.
-        // There should not be loan with more than 1 million installment periods
+        // There should not be loan with more than 1 million installment periods.
         uint256 _interestPerInstallment = ((interest / INTEREST_DENOMINATOR) * 1000000) / numInstallments;
         //console.log("_interestPerInstallment (/1000000 for BPS): ", _interestPerInstallment);
 
@@ -338,7 +335,7 @@ contract RepaymentController is IRepaymentController, Context {
         require(minBalanceDue > 0, "No interest or late fees due.");
 
         uint256 _amount = minBalanceDue + lateFees;
-        // Gather  minimum payment from _msgSender()
+        // Gather minimum payment from _msgSender()
         IERC20(payableCurrency).safeTransferFrom(_msgSender(), address(this), _amount);
         // approve loanCore to take minBalanceDue
         IERC20(payableCurrency).approve(address(loanCore), _amount);

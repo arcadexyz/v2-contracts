@@ -57,6 +57,7 @@ describe("VaultFactory", () => {
         if (!vault) {
             throw new Error("Unable to create new vault");
         }
+        console.log(vault.address)
         return vault;
     };
 
@@ -107,9 +108,7 @@ describe("VaultFactory", () => {
     describe("instanceAt", async () => {
         it("Should revert if no vault at index", async () => {
             const { factory, user } = await loadFixture(fixture);
-
-            await factory.initializeBundle(await user.getAddress());
-
+            // no vault created...
             await expect(factory.instanceAt(0)).to.be.revertedWith("ERC721Enumerable: global index out of bounds");
         });
 

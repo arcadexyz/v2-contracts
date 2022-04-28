@@ -18,6 +18,7 @@ import "./PromissoryNote.sol";
 import "./vault/OwnableERC721.sol";
 
 // TODO: Better natspec
+// TODO: Re-Entrancy mechanisms just for a safegaurd? - Kyle/Shipyard
 
 /**
  * @dev LoanCore contract - core contract for creating, repaying, and claiming collateral for PawnFi loans
@@ -86,32 +87,31 @@ contract LoanCore is ILoanCore, AccessControl, Pausable, ICallDelegator {
             "LoanCore::create: Collateral token already in use"
         );
 
-        // interest rate must be greater than or equal to 10**18
-        require(terms.interest / 10**18 >= 1, "LoanCore::create: Interest must be greater than 0.01%");
+        // Interest rate must be greater than or equal to 0.01%
+        require(terms.interest / INTEREST_DENOMINATOR >= 1, "LoanCore::create: Interest must be greater than 0.01%");
 
-        // number of installments must be an even number
+        // Number of installments must be an even number.
         // NOTE: DO WE WANT TO PUT A LIMIT ON NUMBER OF INSTALLMENTS?
         //       IN ORDER TO MITIGATE RISK WITH THE GAS DURING FN CALL.
         require(terms.numInstallments % 2 == 0, "LoanCore::create: Number of installments must be an even number");
 
-        require(terms.principal >= 10000 wei, "LoanCore::create: The minimum Principal allowed is 10000 wei.");
-
+        // get current loanId and increment for next function call
         loanId = loanIdTracker.current();
         loanIdTracker.increment();
-
-        loans[loanId] = LoanLibrary.LoanData(
-            0, // borrowerNoteId
-            0, // lenderNoteId
-            terms, // loanTerms
-            LoanLibrary.LoanState.Created, // loanState
-            block.timestamp + terms.durationSecs, // dueDate
-            block.timestamp, // startDate
-            terms.principal, // balance
-            0, // balancePaid
-            0, // lateFeesAccrued
-            0 // numInstallmentsPaid
-        );
-
+        // Using loanId, set inital LoanData state
+        loans[loanId] = LoanLibrary.LoanData({
+            borrowerNoteId: 0,
+            lenderNoteId: 0,
+            terms: terms,
+            state: LoanLibrary.LoanState.Created,
+            dueDate: block.timestamp + terms.durationSecs,
+            startDate: block.timestamp,
+            balance: terms.principal,
+            balancePaid: 0,
+            lateFeesAccrued: 0,
+            numInstallmentsPaid: 0
+        });
+        // set collateral to in use.
         collateralInUse[terms.collateralAddress][terms.collateralId] = true;
 
         emit LoanCreated(terms, loanId);
@@ -165,17 +165,12 @@ contract LoanCore is ILoanCore, AccessControl, Pausable, ICallDelegator {
      * @param principal                    Principal amount in the loan terms
      * @param interest                     Interest rate in the loan terms
      */
-    function getInterestNoInstallments(uint256 principal, uint256 interest) internal view returns (uint256) {
-        //interest to be greater than or equal to 1 ETH
-        require(interest / 10**18 >= 1, "Interest must be greater than 0.01%.");
-        //console.log("Interest Amount: ", ((principal * (interest / INTEREST_DENOMINATOR))/BASIS_POINTS_DENOMINATOR));
+     function getFullTermInterest(uint256 principal, uint256 interest) internal view returns (uint256 total) {
+         // Interest to be greater than or equal to 0.01%
+         require(interest / INTEREST_DENOMINATOR >= 1, "Interest must be greater than 0.01%.");
 
-        // Principal must be greater than 10000 wei, this is a require statement in createLoan function in LoanCore
-        // if interest is 0.01%, principal needs to be greater than the BASIS_POINTS_DENOMINATOR
-        // to remain a positive integer
-        uint256 total = principal + ((principal * (interest / INTEREST_DENOMINATOR)) / BASIS_POINTS_DENOMINATOR);
-        return total;
-    }
+         return principal + ((principal * (interest / INTEREST_DENOMINATOR)) / BASIS_POINTS_DENOMINATOR);
+     }
 
     /**
      * @inheritdoc ILoanCore
@@ -186,7 +181,7 @@ contract LoanCore is ILoanCore, AccessControl, Pausable, ICallDelegator {
         require(data.state == LoanLibrary.LoanState.Active, "LoanCore::repay: Invalid loan state");
 
         // ensure repayment was valid
-        uint256 returnAmount = getInterestNoInstallments(data.terms.principal, data.terms.interest);
+        uint256 returnAmount = getFullTermInterest(data.terms.principal, data.terms.interest);
         require(returnAmount > 0, "No payment due.");
         IERC20(data.terms.payableCurrency).safeTransferFrom(_msgSender(), address(this), returnAmount);
 
@@ -243,78 +238,70 @@ contract LoanCore is ILoanCore, AccessControl, Pausable, ICallDelegator {
     // ======================== INSTALLMENT SPECIFIC OPERATIONS =============================
 
     /**
-     * @dev Called from RepaymentController when paying back installment loan.
-     * Function takes in the loanId and amount repaid to RepaymentController.
-     * This amount is then transferred to the lender and loan data is updated accordingly.
+     * @dev Called from RepaymentController when paying back an installment loan.
+     * New loan state parameters are calculated in the Repayment Controller.
+     * Based on if the _paymentToPrincipal is greater than the current balance
+     * the loan state is updated. (0 = minimum payment sent, > 0 pay down principal)
+     * The paymentTotal (_paymentToPrincipal + _paymentToLateFees) is always transferred to the lender.
+     *
+     * @param _loanId                       Used to get LoanData
+     * @param _paymentToPrincipal           Amount sent in addition to minimum amount due, used to pay down principal
+     * @param _currentMissedPayments        Number of payments missed since the last isntallment payment
+     * @param _paymentToLateFees            Amount due in only late fees.
      */
     function repayPart(
         uint256 _loanId,
-        uint256 _repaidAmount, // amount paid to principal
-        uint256 _numMissedPayments, // number of missed payments (number of payments since the last payment)
-        uint256 _lateFeesAccrued // any minimum payments to interest and or late fees
-    ) external override {
+        uint256 _paymentToPrincipal,
+        uint256 _currentMissedPayments,
+        uint256 _paymentToLateFees
+    ) external override onlyRole(REPAYER_ROLE) {
         LoanLibrary.LoanData storage data = loans[_loanId];
         // Ensure valid initial loan state
         require(data.state == LoanLibrary.LoanState.Active, "LoanCore::repay: Invalid loan state");
-        // transfer funds to LoanCore
-        uint256 paymentTotal = _repaidAmount + _lateFeesAccrued;
+        // calculate total sent by borrower
+        uint256 paymentTotal = _paymentToPrincipal + _paymentToLateFees;
         //console.log("TOTAL PAID FROM BORROWER: ", paymentTotal);
         IERC20(data.terms.payableCurrency).safeTransferFrom(_msgSender(), address(this), paymentTotal);
-
         // update LoanData
         address lender = lenderNote.ownerOf(data.lenderNoteId);
         address borrower = borrowerNote.ownerOf(data.borrowerNoteId);
-        // if last payment and extra sent
-        if (_repaidAmount > data.balance) {
+        // update common state
+        data.balancePaid = data.balancePaid + paymentTotal;
+        data.lateFeesAccrued = data.lateFeesAccrued + _paymentToLateFees;
+        data.numInstallmentsPaid = data.numInstallmentsPaid + _currentMissedPayments + 1;
+
+        // If payment sent is exact or extra than remaining principal
+        if (_paymentToPrincipal > data.balance || _paymentToPrincipal == data.balance) {
             // set the loan state to repaid
-            // NOTE: these must be performed before assets are released to prevent reentrance
             data.state = LoanLibrary.LoanState.Repaid;
             collateralInUse[data.terms.collateralAddress][data.terms.collateralId] = false;
+
             // return the difference to borrower
-            uint256 diffAmount = _repaidAmount - data.balance;
-            IERC20(data.terms.payableCurrency).safeTransfer(borrower, diffAmount);
-            // state changes and cleanup
-            lenderNote.burn(data.lenderNoteId);
-            borrowerNote.burn(data.borrowerNoteId);
-            // Loan is fully repaid, redistribute asset and collateral.
-            IERC20(data.terms.payableCurrency).safeTransfer(lender, paymentTotal);
-            IERC721(data.terms.collateralAddress).transferFrom(address(this), borrower, data.terms.collateralId);
-            // update state
-            data.balance = 0;
-            data.balancePaid = data.balancePaid + paymentTotal;
-            data.lateFeesAccrued = data.lateFeesAccrued + _lateFeesAccrued;
-            data.numInstallmentsPaid = data.numInstallmentsPaid + _numMissedPayments + 1;
+            if(_paymentToPrincipal > data.balance) {
+                uint256 diffAmount = _paymentToPrincipal - data.balance;
+                IERC20(data.terms.payableCurrency).safeTransfer(borrower, diffAmount);
+            }
 
-            emit LoanRepaid(_loanId);
-        }
-        // if last payment and exact amount sent
-        else if (_repaidAmount == data.balance) {
-            // set the loan state to repaid
-            // NOTE: these must be performed before assets are released to prevent reentrance
-            data.state = LoanLibrary.LoanState.Repaid;
-            collateralInUse[data.terms.collateralAddress][data.terms.collateralId] = false;
             // state changes and cleanup
             lenderNote.burn(data.lenderNoteId);
             borrowerNote.burn(data.borrowerNoteId);
+
             // Loan is fully repaid, redistribute asset and collateral.
             IERC20(data.terms.payableCurrency).safeTransfer(lender, paymentTotal);
             IERC721(data.terms.collateralAddress).transferFrom(address(this), borrower, data.terms.collateralId);
 
-            // update state
+            // update balance state
             data.balance = 0;
-            data.balancePaid = data.balancePaid + paymentTotal;
-            data.lateFeesAccrued = data.lateFeesAccrued + _lateFeesAccrued;
-            data.numInstallmentsPaid = data.numInstallmentsPaid + _numMissedPayments + 1;
 
             emit LoanRepaid(_loanId);
         }
-        // else, (mid loan payment)
+        // Else, (mid loan payment)
         else {
-            // update state
-            data.balance = data.balance - _repaidAmount;
-            data.balancePaid = data.balancePaid + paymentTotal;
-            data.lateFeesAccrued = data.lateFeesAccrued + _lateFeesAccrued;
-            data.numInstallmentsPaid = data.numInstallmentsPaid + _numMissedPayments + 1;
+            // update balance state
+            data.balance = data.balance - _paymentToPrincipal;
+
+            // minimum repayment events will emit 0 and unchanged principal
+            emit InstallmentPaymentReceived(_loanId, _paymentToPrincipal, data.balance);
         }
     }
 
@@ -334,7 +321,7 @@ contract LoanCore is ILoanCore, AccessControl, Pausable, ICallDelegator {
     /**
      * @dev Claim the protocol fees for the given token
      *
-     * @param token The address of the ERC20 token to claim fees for
+     * @param token - The address of the ERC20 token to claim fees for
      *
      * Requirements:
      *
