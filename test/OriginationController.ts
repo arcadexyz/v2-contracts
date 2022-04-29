@@ -1,5 +1,5 @@
 import chai, { expect } from "chai";
-import hre, { waffle } from "hardhat";
+import hre, { waffle, upgrades } from "hardhat";
 import { solidity } from "ethereum-waffle";
 const { loadFixture } = waffle;
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
@@ -55,9 +55,11 @@ const fixture = async (): Promise<TestContext> => {
     const mockERC20 = <MockERC20>await deploy("MockERC20", deployer, ["Mock ERC20", "MOCK"]);
     const mockERC721 = <MockERC721>await deploy("MockERC721", deployer, ["Mock ERC721", "MOCK"]);
 
+    const OriginationController = await hre.ethers.getContractFactory("OriginationController");
     const originationController = <OriginationController>(
-        await deploy("OriginationController", deployer, [loanCore.address])
+        await upgrades.deployProxy(OriginationController, [loanCore.address], { kind: 'uups' })
     );
+    console.log("loancore--------", (await originationController.loanCore()));
 
     const borrowerNoteAddress = await loanCore.borrowerNote();
     const lenderNoteAddress = await loanCore.lenderNote();
@@ -105,14 +107,14 @@ const createLoanTerms = (
 const maxDeadline = hre.ethers.constants.MaxUint256;
 
 describe("OriginationController", () => {
-    describe("constructor", () => {
+    describe("initializer", () => {
         it("Reverts if _loanCore address is not provided", async () => {
             const signers: Signer[] = await hre.ethers.getSigners();
             const [deployer] = signers;
 
-            await expect(deploy("OriginationController", deployer, [ZERO_ADDRESS])).to.be.revertedWith(
-                "OC_ZeroAddress",
-            );
+
+            const OriginationController = await hre.ethers.getContractFactory("OriginationController");
+            await expect(upgrades.deployProxy(OriginationController, [ZERO_ADDRESS])).to.be.revertedWith("OC_ZeroAddress");
         });
 
         it("Instantiates the OriginationController", async () => {
@@ -120,8 +122,8 @@ describe("OriginationController", () => {
             const [deployer] = signers;
 
             const loanCore = <MockLoanCore>await deploy("MockLoanCore", deployer, []);
-
-            const originationController = await deploy("OriginationController", deployer, [loanCore.address]);
+            const OriginationController = await hre.ethers.getContractFactory("OriginationController");
+            const originationController = await upgrades.deployProxy(OriginationController, [loanCore.address]);
 
             expect(await originationController.loanCore()).to.equal(loanCore.address);
         });
