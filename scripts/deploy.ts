@@ -66,7 +66,7 @@ export async function main(
 
     console.log("RepaymentController deployed to:", repaymentController.address);
 
-    const OriginationControllerFactory = await hre.ethers.getContractFactory("OriginationController");
+    const OriginationControllerFactory = await ethers.getContractFactory("OriginationController");
     const originationController = <OriginationController>(
         await upgrades.deployProxy(OriginationControllerFactory, [loanCore.address], { kind: 'uups' })
     );
