@@ -105,8 +105,8 @@ const maxDeadline = hre.ethers.constants.MaxUint256;
 describe("OriginationController", () => {
     describe("initializer", () => {
         it("Reverts if _loanCore address is not provided", async () => {
-            const signers: Signer[] = await hre.ethers.getSigners();
-            const [deployer] = signers;
+            // const signers: Signer[] = await hre.ethers.getSigners();
+            // const [deployer] = signers;
 
             const OriginationController = await hre.ethers.getContractFactory("OriginationController");
             await expect(upgrades.deployProxy(OriginationController, [ZERO_ADDRESS])).to.be.revertedWith(
@@ -230,7 +230,7 @@ describe("OriginationController", () => {
                     // sender is the borrower, signer is also the borrower
                     .connect(borrower)
                     .initializeLoan(loanTerms, await borrower.getAddress(), await lender.getAddress(), sig),
-            ).to.be.revertedWith("Origination: no counterparty signature");
+            ).to.be.revertedWith("Origination: approved own loan");
         });
 
         it("Reverts if signer is not a participant", async () => {
