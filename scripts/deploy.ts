@@ -71,8 +71,6 @@ export async function main(
         await upgrades.deployProxy(OriginationControllerFactory, [loanCore.address], { kind: 'uups' })
     );
 
-    // await originationController.initialize(loanCore.address)
-
     await originationController.deployed();
     const updateOriginationControllerPermissions = await loanCore.grantRole(
         ORIGINATOR_ROLE,
