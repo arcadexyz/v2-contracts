@@ -20,12 +20,14 @@ import {
     ArcadeItemsVerifier,
     FeeController,
     ERC1271LenderMock
+    MockOriginationController,
 } from "../typechain";
 import { approve, mint, ZERO_ADDRESS } from "./utils/erc20";
 import { mint as mint721 } from "./utils/erc721";
 import { ItemsPredicate, LoanTerms, SignatureItem } from "./utils/types";
 import { createLoanTermsSignature, createLoanItemsSignature, createPermitSignature } from "./utils/eip712";
 import { encodePredicates, encodeSignatureItems, initializeBundle } from "./utils/loans";
+import { toNamespacedPath } from "path";
 
 type Signer = SignerWithAddress;
 
@@ -40,6 +42,7 @@ interface TestContext {
     user: Signer;
     other: Signer;
     signers: Signer[];
+    mockOriginationController: MockOriginationController;
 }
 
 const fixture = async (): Promise<TestContext> => {
@@ -59,7 +62,9 @@ const fixture = async (): Promise<TestContext> => {
     const originationController = <OriginationController>(
         await upgrades.deployProxy(OriginationController, [loanCore.address], { kind: 'uups' })
     );
-    console.log("loancore--------", (await originationController.loanCore()));
+
+    const MockOriginationController = await hre.ethers.getContractFactory("MockOriginationController");
+    const mockOriginationController = <MockOriginationController>(await hre.upgrades.upgradeProxy("0x0A5eCAC03ACB40206AbBB8E7238AAf491375923C", MockOriginationController));
 
     const borrowerNoteAddress = await loanCore.borrowerNote();
     const lenderNoteAddress = await loanCore.lenderNote();
@@ -79,6 +84,7 @@ const fixture = async (): Promise<TestContext> => {
         user: deployer,
         other: signers[1],
         signers: signers.slice(2),
+        mockOriginationController
     };
 };
 
@@ -109,8 +115,6 @@ const maxDeadline = hre.ethers.constants.MaxUint256;
 describe("OriginationController", () => {
     describe("initializer", () => {
         it("Reverts if _loanCore address is not provided", async () => {
-            // const signers: Signer[] = await hre.ethers.getSigners();
-            // const [deployer] = signers;
 
 
             const OriginationController = await hre.ethers.getContractFactory("OriginationController");
@@ -1494,3 +1498,13 @@ describe("OriginationController", () => {
         });
     });
 });
+
+describe("MockOriginationController", () => {
+    it("Upgrades to v2", async () => {
+        const MockOriginationController = await hre.ethers.getContractFactory("MockOriginationController");
+        const mockOriginationController = <MockOriginationController>(await hre.upgrades.upgradeProxy("0x0A5eCAC03ACB40206AbBB8E7238AAf491375923C", MockOriginationController));
+
+        expect (await mockOriginationController.version()).to.equal("This is OriginationController V2!");
+    });
+});
+
