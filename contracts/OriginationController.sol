@@ -420,8 +420,3 @@ contract OriginationController is Initializable, ContextUpgradeable, IOriginatio
     }
 }
 
-// contract OriginationControllerV2 is OriginationController {
-//     function version() pure public returns (string memory) {
-//         return "OriginationController V2!";
-//     }
-// }
