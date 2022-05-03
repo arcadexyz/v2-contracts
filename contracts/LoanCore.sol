@@ -2,15 +2,21 @@
 
 pragma solidity ^0.8.11;
 
-import "@openzeppelin/contracts/security/Pausable.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "@openzeppelin/contracts/access/AccessControl.sol";
-import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/utils/Counters.sol";
 
 import "./FullInterestAmountCalc.sol";
+
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol";
+
+
 import "./interfaces/ICallDelegator.sol";
 import "./interfaces/IPromissoryNote.sol";
 import "./interfaces/IAssetVault.sol";
@@ -25,45 +31,80 @@ import "./vault/OwnableERC721.sol";
 /**
  * @dev LoanCore contract - core contract for creating, repaying, and claiming collateral for PawnFi loans
  */
-contract LoanCore is ILoanCore, FullInterestAmountCalc, AccessControl, Pausable, ICallDelegator {
-    using Counters for Counters.Counter;
-    using SafeMath for uint256;
-    using SafeERC20 for IERC20;
+
+contract LoanCore is ILoanCore, Initializable, FullInterestAmountCalc, AccessControlUpgradeable, PausableUpgradeable, ICallDelegator, OwnableUpgradeable, UUPSUpgradeable {
+    using CountersUpgradeable for CountersUpgradeable.Counter;
+    using SafeERC20Upgradeable for IERC20Upgradeable;
+    using SafeMathUpgradeable for uint256;
 
     bytes32 public constant ORIGINATOR_ROLE = keccak256("ORIGINATOR_ROLE");
     bytes32 public constant REPAYER_ROLE = keccak256("REPAYER_ROLE");
     bytes32 public constant FEE_CLAIMER_ROLE = keccak256("FEE_CLAIMER_ROLE");
 
-    Counters.Counter private loanIdTracker;
-
+    CountersUpgradeable.Counter private loanIdTracker;
     mapping(uint256 => LoanLibrary.LoanData) private loans;
     mapping(address => mapping(uint256 => bool)) private collateralInUse;
     mapping(address => mapping(uint160 => bool)) public usedNonces;
-
-    IPromissoryNote public immutable override borrowerNote;
-    IPromissoryNote public immutable override lenderNote;
+    IPromissoryNote public override borrowerNote;
+    IPromissoryNote public override lenderNote;
     IFeeController public override feeController;
 
-    uint256 private constant BPS_DENOMINATOR = 10_000; // 10k bps per whole
+    // 10k bps per whole
+    uint256 private constant BPS_DENOMINATOR = 10_000;
 
-    constructor(IFeeController _feeController) {
-        _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
-        _setupRole(FEE_CLAIMER_ROLE, _msgSender());
-        // only those with FEE_CLAIMER_ROLE can update or grant FEE_CLAIMER_ROLE
-        _setRoleAdmin(FEE_CLAIMER_ROLE, FEE_CLAIMER_ROLE);
+       // ========================================== CONSTRUCTOR ===========================================
 
-        feeController = _feeController;
+    /**
+     * @notice Runs the initializer function in an upgradeable contract.
+     *
+     *  @dev Add Unsafe-allow comment to notify upgrades plugin to accept the constructor.
+     */
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() initializer {}
 
-        // TODO: Why are these deployed? Can these be provided beforehand?
-        //       Even updatable with note addresses going in LoanData?
-        borrowerNote = new PromissoryNote("PawnFi Borrower Note", "pBN");
-        lenderNote = new PromissoryNote("PawnFi Lender Note", "pLN");
+    // ========================================== INITIALIZER ===========================================
 
-        // Avoid having loanId = 0
-        loanIdTracker.increment();
+    /**
+     * @notice Creates a new origination controller contract, also initializing
+     * the parent signature verifier.
+     *
+     * @dev For this controller to work, it needs to be granted the ORIGINATOR_ROLE
+     *      in loan core after deployment.
+     *
+     * @param _feeController      The address of the origination fee contract of the protocol.
+     */
+
+    function initialize(IFeeController _feeController) initializer public {
+    _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
+    _setupRole(FEE_CLAIMER_ROLE, _msgSender());
+    // only those with FEE_CLAIMER_ROLE can update or grant FEE_CLAIMER_ROLE
+    _setRoleAdmin(FEE_CLAIMER_ROLE, FEE_CLAIMER_ROLE);
+
+    feeController = _feeController;
+
+    // TODO: Why are these deployed? Can these be provided beforehand?
+    //       Even updatable with note addresses going in LoanData?
+    borrowerNote = new PromissoryNote("PawnFi Borrower Note", "pBN");
+    lenderNote = new PromissoryNote("PawnFi Lender Note", "pLN");
+
+    // Avoid having loanId = 0
+    loanIdTracker.increment();
     }
 
-    // ============================= V1 FUNCTIONALITY ==================================
+
+    // ======================================= UPGRADE AUTHORIZATION ========================================
+
+    /**
+     * @notice Authorization function to define who should be allowed to upgrade the contract
+     *
+     * @param newImplementation           The address of the upgraded verion of this contract
+     */
+
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
+
+
+
+    // ==================================== LOANCORE OPERATIONS ======================================
 
     /**
      * @inheritdoc ILoanCore
@@ -141,7 +182,7 @@ contract LoanCore is ILoanCore, FullInterestAmountCalc, AccessControl, Pausable,
 
         // Pull collateral token and principal
         IERC721(data.terms.collateralAddress).transferFrom(_msgSender(), address(this), data.terms.collateralId);
-        IERC20(data.terms.payableCurrency).safeTransferFrom(_msgSender(), address(this), data.terms.principal);
+        IERC20Upgradeable(data.terms.payableCurrency).safeTransferFrom(_msgSender(), address(this), data.terms.principal);
 
         // Distribute notes and principal
         loans[loanId].state = LoanLibrary.LoanState.Active;
@@ -161,7 +202,7 @@ contract LoanCore is ILoanCore, FullInterestAmountCalc, AccessControl, Pausable,
             data.numInstallmentsPaid
         );
 
-        IERC20(data.terms.payableCurrency).safeTransfer(borrower, getPrincipalLessFees(data.terms.principal));
+        IERC20Upgradeable(data.terms.payableCurrency).safeTransfer(borrower, getPrincipalLessFees(data.terms.principal));
 
         emit LoanStarted(loanId, lender, borrower);
     }
@@ -191,7 +232,7 @@ contract LoanCore is ILoanCore, FullInterestAmountCalc, AccessControl, Pausable,
         borrowerNote.burn(data.borrowerNoteId);
 
         // asset and collateral redistribution
-        IERC20(data.terms.payableCurrency).safeTransfer(lender, returnAmount);
+        IERC20Upgradeable(data.terms.payableCurrency).safeTransfer(lender, returnAmount);
         IERC721(data.terms.collateralAddress).transferFrom(address(this), borrower, data.terms.collateralId);
 
         emit LoanRepaid(loanId);
@@ -223,6 +264,7 @@ contract LoanCore is ILoanCore, FullInterestAmountCalc, AccessControl, Pausable,
     }
 
     /**
+
      * Take a principal value and return the amount less protocol fees
      */
     function getPrincipalLessFees(uint256 principal) internal view returns (uint256) {
@@ -333,7 +375,7 @@ contract LoanCore is ILoanCore, FullInterestAmountCalc, AccessControl, Pausable,
      *
      * - Must be called by the owner of this contract
      */
-    function claimFees(IERC20 token) external onlyRole(FEE_CLAIMER_ROLE) {
+    function claimFees(IERC20Upgradeable token) external onlyRole(FEE_CLAIMER_ROLE) {
         // any token balances remaining on this contract are fees owned by the protocol
         uint256 amount = token.balanceOf(address(this));
         token.safeTransfer(_msgSender(), amount);
@@ -380,7 +422,6 @@ contract LoanCore is ILoanCore, FullInterestAmountCalc, AccessControl, Pausable,
                 return true;
             }
         }
-
         return false;
     }
 

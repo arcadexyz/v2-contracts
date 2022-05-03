@@ -5,6 +5,7 @@ import "hardhat-gas-reporter";
 import "solidity-coverage";
 import "@nomiclabs/hardhat-ethers";
 import "@openzeppelin/hardhat-upgrades";
+import "hardhat-contract-sizer";
 
 import "./tasks/accounts";
 import "./tasks/clean";
@@ -64,7 +65,15 @@ function createHardhatConfig(): HardhatNetworkUserConfig {
         accounts: {
             mnemonic,
         },
+        allowUnlimitedContractSize: true,
         chainId: chainIds.hardhat,
+        contractSizer: {
+            alphaSort: true,
+            disambiguatePaths: false,
+            runOnCompile: true,
+            strict: true,
+            only: [':ERC20$'],
+    }
     };
 
     if (forkMainnet) {
@@ -151,7 +160,7 @@ const config: HardhatUserConfig = {
                     // https://hardhat.org/hardhat-network/#solidity-optimizer-support
                     optimizer: {
                         enabled: optimizerEnabled,
-                        runs: 999999,
+                        runs: 200,
                     },
                 },
             },
@@ -166,7 +175,7 @@ const config: HardhatUserConfig = {
     },
     etherscan: {
         apiKey: process.env.ETHERSCAN_API_KEY,
-    },
+    }
 };
 
 export default config;
