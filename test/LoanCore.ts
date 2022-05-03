@@ -8,16 +8,12 @@ import {
     FeeController,
     PromissoryNote,
     MockERC20,
-    MockERC721,
     CallWhitelist,
     VaultFactory,
     AssetVault,
+    LoanCoreV2Mock
 } from "../typechain";
 import { mint as mintERC721 } from "./utils/erc721";
-=======
-    AssetVault
-} from "../typechain";
-
 import { BlockchainTime } from "./utils/time";
 import { LoanTerms, LoanState } from "./utils/types";
 import { deploy } from "./utils/contracts";
@@ -112,6 +108,11 @@ describe("LoanCore", () => {
 
         await loanCore.connect(signers[0]).grantRole(ORIGINATOR_ROLE, await originator.getAddress());
         await loanCore.connect(signers[0]).grantRole(REPAYER_ROLE, await repayer.getAddress());
+
+
+        // const LoanCoreV2Mock = await hre.ethers.getContractFactory("LoanCoreV2Mock");
+        // const loanCoreV2Mock = <LoanCoreV2Mock>(await hre.upgrades.upgradeProxy("0xdeaBbBe620EDF275F06E75E8fab18183389d606F", LoanCoreV2Mock));
+        // console.log("loanCoreV2Mock ---------------", loanCoreV2Mock.address)
 
         const borrowerNoteAddress = await loanCore.borrowerNote();
         const mockBorrowerNote = <PromissoryNote>(
@@ -1416,4 +1417,11 @@ describe("LoanCore", () => {
     });
 });
 
+describe("LoanCoreV2Mock", () => {
+    it("Upgrades to v2", async () => {
+        const LoanCoreV2Mock = await hre.ethers.getContractFactory("LoanCoreV2Mock");
+        const loanCoreV2Mock = <LoanCoreV2Mock>(await hre.upgrades.upgradeProxy("0xaEF48370a5f37CFb760CE44E6cbF986C4DeFF389", LoanCoreV2Mock));
 
+        expect (await loanCoreV2Mock.version()).to.equal("This is LoanCore V2!");
+    });
+});
