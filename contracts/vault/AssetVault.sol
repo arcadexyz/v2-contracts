@@ -49,6 +49,7 @@ contract AssetVault is IAssetVault, OwnableERC721, Initializable, ERC1155Holder,
         _;
     }
 
+
     /**
      * @dev initialize values so initialize cannot be called on template
      */

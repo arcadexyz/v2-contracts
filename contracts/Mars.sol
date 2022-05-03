@@ -20,8 +20,9 @@ contract Mars is Initializable, ERC20Upgradeable, UUPSUpgradeable, OwnableUpgrad
 
     }
 
-    function updateValue() view public virtual returns(uint) {
+    function updateValue() public virtual returns(uint) {
        uint updatedVal = initialValue + 8;
+       initialValue = updatedVal;
        return updatedVal;
     }
 
@@ -36,8 +37,9 @@ contract MarsV2 is Mars {
         return "V2!";
     }
 
-    function updateValue() view public override returns(uint) {
+    function updateValue() public override returns(uint) {
        uint updatedVal = initialValue * 2;
+       initialValue = updatedVal;
        return updatedVal;
     }
 }
