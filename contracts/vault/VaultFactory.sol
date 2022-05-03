@@ -107,4 +107,5 @@ contract VaultFactory is ERC721Enumerable, ERC721Permit, IVaultFactory {
     {
         return super.supportsInterface(interfaceId);
     }
+
 }

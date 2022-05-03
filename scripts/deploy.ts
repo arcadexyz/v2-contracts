@@ -43,8 +43,9 @@ export async function main(
     console.log("FeeController deployed to: ", feeController.address);
 
     const LoanCoreFactory = await ethers.getContractFactory("LoanCore");
-    const loanCore = <LoanCore>await LoanCoreFactory.deploy(feeController.address);
+    const loanCore = <LoanCore>await upgrades.deployProxy(LoanCoreFactory, [feeController.address], { kind: 'uups' });
     await loanCore.deployed();
+
 
     const promissoryNoteFactory = await ethers.getContractFactory("PromissoryNote");
     const borrowerNoteAddr = await loanCore.borrowerNote();

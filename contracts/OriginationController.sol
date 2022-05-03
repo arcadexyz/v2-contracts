@@ -61,7 +61,7 @@ contract OriginationController is Initializable, ContextUpgradeable, IOriginatio
             // "LoanTermsWithItems(uint256 durationSecs,uint256 principal,uint256 interest,address collateralAddress,address payableCurrency)"
         );
 
-    // ============= Global Immutable State ==============
+    // ============= Global State ==============
 
     address public loanCore;
 
