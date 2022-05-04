@@ -15,19 +15,21 @@ Evan:
   - (DONE) Updated for loop so `minBalDue` was not double accounted for.
   - (DONE) Updated allowances in tests for late fee scenarios, all values here went down especially as the number of times compounded grew.
   - (DONE) Tests added for repaying minimum, waiting a while then repaying more.
-  - (DONE) Removed all console logs from RepaymentController and LoanCore
+  - (DONE) Removed all console logs from RepaymentController and LoanCore.
 
-- Other: Implement `GRACE_PERIOD` into the repayment scheme.
-  - tests
-- Other: Tune LoanTerms dials for what will be accepted. Test the boundaries of these parameters once implemented.
+  - Tune LoanTerms dials for what will be accepted. Test the boundaries of these parameters once implemented.
+  - Add `closeLoan` function for borrower with automatically calculates the amount necessary to close the loan.
+    - Corresponding view function.
+  - Implement `GRACE_PERIOD` into the repayment scheme.
+    - tests
 
 🔑 For Installment tests, run `npx hardhat test test/Installments.ts`.
 
-📌 For Review Items:
+📌 For Further Review Items:
 
-- Minimum Payment and interest as a rate formulas.
-- `createLoan` require statements added.
-- Global parameters, `LATE_FEE` and `GRACE_PERIOD`.
+- `createLoan` require statements that have been added
+- Global parameters, `LATE_FEE` and `GRACE_PERIOD`
+- `claim` functionality with installment loans
 
 Mouzayan:
 
