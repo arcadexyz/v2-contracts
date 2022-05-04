@@ -14,7 +14,7 @@ import {
     VaultFactory,
     AssetVault,
     FeeController,
-    RepaymentController
+    RepaymentController,
 } from "../typechain";
 import { deploy } from "./utils/contracts";
 import { LoanTerms, LoanState } from "./utils/types";
@@ -29,7 +29,7 @@ interface TestContext {
     borrowerPromissoryNote: PromissoryNote;
     lenderPromissoryNote: PromissoryNote;
     loanCore: LoanCore;
-    repaymentController: RepaymentController
+    repaymentController: RepaymentController;
     originationController: OriginationController;
     vaultFactory: VaultFactory;
     mockERC20: MockERC20;
@@ -41,9 +41,8 @@ interface TestContext {
 }
 
 describe("PromissoryNote", () => {
-
-  // ========== HELPER FUNCTIONS ===========
-  // Create Loan Terms
+    // ========== HELPER FUNCTIONS ===========
+    // Create Loan Terms
     const createLoanTerms = (
         payableCurrency: string,
         collateralAddress: string,
@@ -56,13 +55,13 @@ describe("PromissoryNote", () => {
         }: Partial<LoanTerms> = {},
     ): LoanTerms => {
         return {
-          durationSecs,
-          principal,
-          interest,
-          collateralId,
-          collateralAddress,
-          payableCurrency,
-          numInstallments,
+            durationSecs,
+            principal,
+            interest,
+            collateralId,
+            collateralAddress,
+            payableCurrency,
+            numInstallments,
         };
     };
 
@@ -97,11 +96,18 @@ describe("PromissoryNote", () => {
         );
 
         const repaymentController = <RepaymentController>(
-            await deploy("RepaymentController", signers[0], [loanCore.address, borrowerPromissoryNote.address, lenderPromissoryNote.address])
+            await deploy("RepaymentController", signers[0], [
+                loanCore.address,
+                borrowerPromissoryNote.address,
+                lenderPromissoryNote.address,
+            ])
         );
         await repaymentController.deployed();
-        const updateRepaymentControllerPermissions = await loanCore.grantRole(REPAYER_ROLE, repaymentController.address);
-        await updateRepaymentControllerPermissions.wait()
+        const updateRepaymentControllerPermissions = await loanCore.grantRole(
+            REPAYER_ROLE,
+            repaymentController.address,
+        );
+        await updateRepaymentControllerPermissions.wait();
 
         return {
             borrowerPromissoryNote,
@@ -144,7 +150,12 @@ describe("PromissoryNote", () => {
     };
 
     // Repay Loan
-    const repayLoan = async (loanCore: LoanCore, repaymentController: RepaymentController, user: Signer, loanId: BigNumber) => {
+    const repayLoan = async (
+        loanCore: LoanCore,
+        repaymentController: RepaymentController,
+        user: Signer,
+        loanId: BigNumber,
+    ) => {
         const loanData = await loanCore.connect(user).getLoan(loanId);
         const transaction = await repaymentController.connect(user).repay(loanData.borrowerNoteId);
         await transaction.wait();

@@ -57,7 +57,7 @@ describe("VaultFactory", () => {
         if (!vault) {
             throw new Error("Unable to create new vault");
         }
-        console.log(vault.address)
+        console.log(vault.address);
         return vault;
     };
 

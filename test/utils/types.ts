@@ -23,7 +23,7 @@ export interface ItemsPredicate {
 export interface LoanTerms {
     durationSecs: BigNumberish;
     principal: BigNumber;
-    interest: BigNumber;
+    interestRate: BigNumber;
     collateralAddress: string;
     collateralId: BigNumber;
     payableCurrency: string;
@@ -33,7 +33,7 @@ export interface LoanTerms {
 export interface ItemsPayload {
     durationSecs: BigNumberish;
     principal: BigNumber;
-    interest: BigNumber;
+    interestRate: BigNumber;
     collateralAddress: string;
     itemsHash: string;
     payableCurrency: string;

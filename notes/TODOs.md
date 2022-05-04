@@ -2,29 +2,24 @@
 
 Evan:
 
-- Write installments tests
-  - (DONE) Update LoanTerms struct.
-    - Change from `collateralTokenId` to `collateralId`.
-    - Move startDate variable to LoanData struct and fix tests
-  - (DONE) Implement interest rate functionality into RepaymentController.sol.
-    - legacy functions.
-    - Internal calc function for interest rate for legacy functions.
-    - Move over `repayPart` and `repayPartMinimum` functions
-  - (DONE) Port over (5) RepaymentController functions and (1) LoanCore function.
-    - Rewrite comments in natspec.
-  - (DONE) Port over `repayPart` function to LoanCore.sol
-    - Update other functions to jive with LoanTerms.
-    - (NEEDS REVIEW) `createLoan` require statements added, need to review.
-  - (DONE) port over two new test scripts into one script called `Installments.ts`.
-    - Convert AssetWrapper in the tests to new AssetVault implementation.
-  - (IN PROGRESS) Finish writing test scripts
-    - tests around the createLoan require statements and interest as a rate with legacy functions.
-    - for loop tests
-  - (IN PROGRESS) Mark PR comments and fixes.
-    - error handling, interest demonminator
+- Installments PR
 
-- Other: Implement the `grantPeriod` into the RepaymentController.
+  - (DONE) Update `installmentWizard` to `currentInstallmentPeriod`.
+  - RepaymentController and LoanCore
+  - (DONE) Update `getFullTermInterest` to `getFullInterestAmount`.
+  - (DONE) Update `calcInstallment` to `calcAmountsDue`.
+  - (DONE) Change variables from interest to interestRate.
+    - roots: `LoanTerms`, `LoanTermsWithItems` -> OriginationController, LoanCore, RepaymentController
+  - (DONE) Add `getInstallmentMinPayment` view function to `repayPartMinimum` and `repayPart` functions to reduce repetitive code.
+    - Changed this function to return the `loanId` attached to the borrowerNote. This saves both `repayPart` and `repayPartMinimum` from loading it as a local variable.
+  - (DONE) Updated for loop so `minBalDue` was not double accounted for.
+  - (DONE) Updated allowances in tests for late fee scenarios, all values here went down especially as the number of times compounded grew.
+  - (DONE) Tests added for repaying minimum, waiting a while then repaying more.
+  - (DONE) Removed all console logs from RepaymentController and LoanCore
+
+- Other: Implement `GRACE_PERIOD` into the repayment scheme.
   - tests
+- Other: Tune LoanTerms dials for what will be accepted. Test the boundaries of these parameters once implemented.
 
 🔑 For Installment tests, run `npx hardhat test test/Installments.ts`.
 
@@ -33,8 +28,6 @@ Evan:
 - Minimum Payment and interest as a rate formulas.
 - `createLoan` require statements added.
 - Global parameters, `LATE_FEE` and `GRACE_PERIOD`.
-- Interest rate changes for a percentage/ rate as opposed to total amount.
-- `startDate` and `LoanData` in general being initialized in `createLoan` and not `startLoan`. What happens if `createLoan` is called separately or fails between create and start?
 
 Mouzayan:
 

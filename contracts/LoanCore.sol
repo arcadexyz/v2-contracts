@@ -88,12 +88,16 @@ contract LoanCore is ILoanCore, AccessControl, Pausable, ICallDelegator {
         );
 
         // Interest rate must be greater than or equal to 0.01%
-        require(terms.interest / INTEREST_DENOMINATOR >= 1, "LoanCore::create: Interest must be greater than 0.01%");
+        require(
+            terms.interestRate / INTEREST_DENOMINATOR >= 1,
+            "LoanCore::create: Interest must be greater than 0.01%"
+        );
 
         // Number of installments must be an even number.
-        // NOTE: DO WE WANT TO PUT A LIMIT ON NUMBER OF INSTALLMENTS?
-        //       IN ORDER TO MITIGATE RISK WITH THE GAS DURING FN CALL.
-        require(terms.numInstallments % 2 == 0, "LoanCore::create: Number of installments must be an even number");
+        require(
+            terms.numInstallments % 2 == 0 && terms.numInstallments < 1000000,
+            "LoanCore::create: Even num of installments and must be < 1 mill"
+        );
 
         // get current loanId and increment for next function call
         loanId = loanIdTracker.current();
@@ -163,14 +167,14 @@ contract LoanCore is ILoanCore, AccessControl, Pausable, ICallDelegator {
      * @dev Interest and principal must be entered as base 10**18
      *
      * @param principal                    Principal amount in the loan terms
-     * @param interest                     Interest rate in the loan terms
+     * @param interestRate                 Interest rate in the loan terms
      */
-     function getFullTermInterest(uint256 principal, uint256 interest) internal view returns (uint256 total) {
-         // Interest to be greater than or equal to 0.01%
-         require(interest / INTEREST_DENOMINATOR >= 1, "Interest must be greater than 0.01%.");
+    function getFullInterestAmount(uint256 principal, uint256 interestRate) internal view returns (uint256 total) {
+        // Interest rate to be greater than or equal to 0.01%
+        require(interestRate / INTEREST_DENOMINATOR >= 1, "Interest must be greater than 0.01%.");
 
-         return principal + ((principal * (interest / INTEREST_DENOMINATOR)) / BASIS_POINTS_DENOMINATOR);
-     }
+        return principal + ((principal * (interestRate / INTEREST_DENOMINATOR)) / BASIS_POINTS_DENOMINATOR);
+    }
 
     /**
      * @inheritdoc ILoanCore
@@ -181,7 +185,7 @@ contract LoanCore is ILoanCore, AccessControl, Pausable, ICallDelegator {
         require(data.state == LoanLibrary.LoanState.Active, "LoanCore::repay: Invalid loan state");
 
         // ensure repayment was valid
-        uint256 returnAmount = getFullTermInterest(data.terms.principal, data.terms.interest);
+        uint256 returnAmount = getFullInterestAmount(data.terms.principal, data.terms.interestRate);
         require(returnAmount > 0, "No payment due.");
         IERC20(data.terms.payableCurrency).safeTransferFrom(_msgSender(), address(this), returnAmount);
 
@@ -253,34 +257,35 @@ contract LoanCore is ILoanCore, AccessControl, Pausable, ICallDelegator {
         uint256 _loanId,
         uint256 _paymentToPrincipal,
         uint256 _currentMissedPayments,
+        uint256 _paymentToInterest,
         uint256 _paymentToLateFees
     ) external override onlyRole(REPAYER_ROLE) {
         LoanLibrary.LoanData storage data = loans[_loanId];
-        // Ensure valid initial loan state
+        // ensure valid initial loan state
         require(data.state == LoanLibrary.LoanState.Active, "LoanCore::repay: Invalid loan state");
         // calculate total sent by borrower
-        uint256 paymentTotal = _paymentToPrincipal + _paymentToLateFees;
-        //console.log("TOTAL PAID FROM BORROWER: ", paymentTotal);
+        uint256 paymentTotal = _paymentToPrincipal + _paymentToLateFees + _paymentToInterest;
         IERC20(data.terms.payableCurrency).safeTransferFrom(_msgSender(), address(this), paymentTotal);
-        // update LoanData
+        // get the lender and borrower
         address lender = lenderNote.ownerOf(data.lenderNoteId);
         address borrower = borrowerNote.ownerOf(data.borrowerNoteId);
         // update common state
-        data.balancePaid = data.balancePaid + paymentTotal;
         data.lateFeesAccrued = data.lateFeesAccrued + _paymentToLateFees;
         data.numInstallmentsPaid = data.numInstallmentsPaid + _currentMissedPayments + 1;
 
-        // If payment sent is exact or extra than remaining principal
+        // * If payment sent is exact or extra than remaining principal
         if (_paymentToPrincipal > data.balance || _paymentToPrincipal == data.balance) {
             // set the loan state to repaid
             data.state = LoanLibrary.LoanState.Repaid;
             collateralInUse[data.terms.collateralAddress][data.terms.collateralId] = false;
 
             // return the difference to borrower
-            if(_paymentToPrincipal > data.balance) {
+            if (_paymentToPrincipal > data.balance) {
                 uint256 diffAmount = _paymentToPrincipal - data.balance;
+                // update paymentTotal since extra amount sent
                 IERC20(data.terms.payableCurrency).safeTransfer(borrower, diffAmount);
             }
+            data.balancePaid = data.balancePaid + paymentTotal;
 
             // state changes and cleanup
             lenderNote.burn(data.lenderNoteId);
@@ -295,10 +300,11 @@ contract LoanCore is ILoanCore, AccessControl, Pausable, ICallDelegator {
 
             emit LoanRepaid(_loanId);
         }
-        // Else, (mid loan payment)
+        // * Else, (mid loan payment)
         else {
             // update balance state
             data.balance = data.balance - _paymentToPrincipal;
+            data.balancePaid = data.balancePaid + paymentTotal;
 
             // minimum repayment events will emit 0 and unchanged principal
             emit InstallmentPaymentReceived(_loanId, _paymentToPrincipal, data.balance);

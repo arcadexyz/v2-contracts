@@ -149,13 +149,13 @@ describe("LoanCore", () => {
         }: Partial<LoanTerms> = {},
     ): LoanTerms => {
         return {
-          durationSecs,
-          principal,
-          interest,
-          collateralAddress,
-          collateralId,
-          payableCurrency,
-          numInstallments,
+            durationSecs,
+            principal,
+            interest,
+            collateralAddress,
+            collateralId,
+            payableCurrency,
+            numInstallments,
         };
     };
 
@@ -803,14 +803,7 @@ describe("LoanCore", () => {
         });
 
         it("should fail if the loan is already claimed", async () => {
-            const {
-                mockERC20,
-                loanId,
-                loanCore,
-                user: borrower,
-                terms,
-                blockchainTime
-            } = await setupLoan();
+            const { mockERC20, loanId, loanCore, user: borrower, terms, blockchainTime } = await setupLoan();
             await mockERC20.connect(borrower).mint(loanCore.address, terms.principal.add(terms.interest));
 
             await blockchainTime.increaseTime(360001);
@@ -901,14 +894,7 @@ describe("LoanCore", () => {
         };
 
         it("should successfully claim loan", async () => {
-            const {
-                mockERC20,
-                loanId,
-                loanCore,
-                user: borrower,
-                terms,
-                blockchainTime,
-            } = await setupLoan();
+            const { mockERC20, loanId, loanCore, user: borrower, terms, blockchainTime } = await setupLoan();
             await mockERC20.connect(borrower).mint(loanCore.address, terms.principal.add(terms.interest));
 
             await blockchainTime.increaseTime(360001);
@@ -917,15 +903,7 @@ describe("LoanCore", () => {
         });
 
         it("Rejects calls from non-repayer", async () => {
-            const {
-                mockERC20,
-                loanId,
-                loanCore,
-                user: borrower,
-                other,
-                terms,
-                blockchainTime,
-            } = await setupLoan();
+            const { mockERC20, loanId, loanCore, user: borrower, other, terms, blockchainTime } = await setupLoan();
             await mockERC20.connect(borrower).mint(loanCore.address, terms.principal.add(terms.interest));
             await blockchainTime.increaseTime(360001);
 
@@ -964,14 +942,7 @@ describe("LoanCore", () => {
         });
 
         it("should fail if the loan is already claimed", async () => {
-            const {
-                mockERC20,
-                loanId,
-                loanCore,
-                user: borrower,
-                terms,
-                blockchainTime,
-            } = await setupLoan();
+            const { mockERC20, loanId, loanCore, user: borrower, terms, blockchainTime } = await setupLoan();
             await mockERC20.connect(borrower).mint(loanCore.address, terms.principal.add(terms.interest));
 
             await blockchainTime.increaseTime(360001);
@@ -992,14 +963,7 @@ describe("LoanCore", () => {
         });
 
         it("should fail when paused", async () => {
-            const {
-                mockERC20,
-                loanId,
-                loanCore,
-                user: borrower,
-                terms,
-                blockchainTime,
-            } = await setupLoan();
+            const { mockERC20, loanId, loanCore, user: borrower, terms, blockchainTime } = await setupLoan();
             await mockERC20.connect(borrower).mint(loanCore.address, terms.principal.add(terms.interest));
 
             await blockchainTime.increaseTime(360001);
@@ -1009,14 +973,7 @@ describe("LoanCore", () => {
         });
 
         it("gas [ @skip-on-coverage ]", async () => {
-            const {
-                mockERC20,
-                loanId,
-                loanCore,
-                user: borrower,
-                terms,
-                blockchainTime,
-            } = await setupLoan();
+            const { mockERC20, loanId, loanCore, user: borrower, terms, blockchainTime } = await setupLoan();
             await mockERC20.connect(borrower).mint(loanCore.address, terms.principal.add(terms.interest));
 
             await blockchainTime.increaseTime(360001);
@@ -1253,7 +1210,7 @@ describe("LoanCore", () => {
                 loanCore,
                 borrower,
                 terms: { collateralId },
-                user
+                user,
             } = await setupLoan();
 
             await vaultFactory
@@ -1281,7 +1238,7 @@ describe("LoanCore", () => {
                 borrower,
                 lender,
                 signers,
-                user
+                user,
             } = await setupLoan();
             await vaultFactory
                 .connect(borrower)
@@ -1299,8 +1256,7 @@ describe("LoanCore", () => {
             )
                 .to.emit(loanCore, "LoanStarted")
                 .withArgs(loanId, await lender.getAddress(), await borrower.getAddress());
-            expect(await loanCore.canCallOn(await signers[2].getAddress(), vault.address)).to.be
-                .false;
+            expect(await loanCore.canCallOn(await signers[2].getAddress(), vault.address)).to.be.false;
         });
 
         it("should return false for lender user on vault in use as collateral", async () => {
@@ -1312,7 +1268,7 @@ describe("LoanCore", () => {
                 terms: { collateralId, principal },
                 borrower,
                 lender,
-                user
+                user,
             } = await setupLoan();
             await vaultFactory
                 .connect(borrower)

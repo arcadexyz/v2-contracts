@@ -44,7 +44,7 @@ contract MockLoanCore is ILoanCore {
         LoanLibrary.LoanTerms memory _loanTerms = LoanLibrary.LoanTerms(
             terms.durationSecs,
             terms.principal,
-            terms.interest,
+            terms.interestRate,
             terms.collateralAddress,
             terms.collateralId,
             terms.payableCurrency,
@@ -127,13 +127,14 @@ contract MockLoanCore is ILoanCore {
         uint256 _loanId,
         uint256 _repaidAmount, // amount paid to principal
         uint256 _numMissedPayments, // number of missed payments (number of payments since the last payment)
-        uint256 _lateFeesAccrued // any minimum payments to interest and or late fees
+        uint256 _paymentToInterest, // any minimum payments to interest
+        uint256 _lateFeesAccrued // any minimum payments to late fees
     ) external override {
         LoanLibrary.LoanData storage data = loans[_loanId];
         // Ensure valid initial loan state
         require(data.state == LoanLibrary.LoanState.Active, "LoanCore::repay: Invalid loan state");
         // transfer funds to LoanCore
-        uint256 paymentTotal = _repaidAmount + _lateFeesAccrued;
+        uint256 paymentTotal = _repaidAmount + _lateFeesAccrued + _paymentToInterest;
         //console.log("TOTAL PAID FROM BORROWER: ", paymentTotal);
         IERC20(data.terms.payableCurrency).transferFrom(msg.sender, address(this), paymentTotal);
         // use variable.

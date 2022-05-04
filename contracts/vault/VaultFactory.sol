@@ -49,19 +49,14 @@ contract VaultFactory is ERC721Enumerable, ERC721Permit, IVaultFactory {
     /**
      * @inheritdoc IVaultFactory
      */
-     function instanceAt(uint256 tokenId) external view override returns (address instance) {
-         // NOTE: CANNOT USE _exists(tokenId), this does not coencide with the correct info
-         //       we are checking. It only checks _owners[tokenId] != address(0)
-         // Recommendation: tokenByIndex(tokenId) must return a value > 0
-         console.log(address(uint160(tokenId)));
-         console.log(address(uint160(0)));
-         console.log(address(uint160(1)));
-         console.log(address(uint160(2)));
+    function instanceAt(uint256 tokenId) external view override returns (address instance) {
+        // NOTE: CANNOT USE _exists(tokenId), this does not coencide with the correct info
+        //       we are checking. It only checks _owners[tokenId] != address(0)
+        require(_exists(tokenId), "ERC721Enumerable: global index out of bounds");
 
-         require(_exists(tokenId), "ERC721Enumerable: global index out of bounds");
-         return address(uint160(tokenId));
-         //return address(uint160(tokenByIndex(tokenId)));
-     }
+        return address(uint160(tokenId));
+        //return address(uint160(tokenByIndex(tokenId)));
+    }
 
     /**
      * @dev Creates a new bundle token for `to`. Its token ID will be

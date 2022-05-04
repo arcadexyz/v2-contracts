@@ -31,10 +31,10 @@ library LoanLibrary {
         uint256 durationSecs;
         // The amount of principal in terms of the payableCurrency
         uint256 principal;
-        // Interest in terms of the payableCurrency current principal amount
-        // Expressed as a APR (rate), unlike V1 gross value
+        // Interest expressed as a rate, unlike V1 gross value.
         // Input conversion: 0.01% = (1 * 10**18) ,  10.00% = (1000 * 10**18)
-        uint256 interest;
+        // minAllowed: // MaxAllowed:
+        uint256 interestRate;
         // The tokenID of the address holding the collateral
         /// @dev Can be an AssetVault, or the NFT contract for unbundled collateral
         address collateralAddress;
@@ -58,7 +58,7 @@ library LoanLibrary {
         // The amount of principal in terms of the payableCurrency
         uint256 principal;
         // The amount of interest in terms of the payableCurrency
-        uint256 interest;
+        uint256 interestRate;
         // The tokenID of the address holding the collateral
         /// @dev Must be an AssetVault for LoanTermsWithItems
         address collateralAddress;
