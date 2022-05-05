@@ -59,7 +59,11 @@ export async function main(
 
     const RepaymentControllerFactory = await ethers.getContractFactory("RepaymentController");
     const repaymentController = <RepaymentController>(
-        await RepaymentControllerFactory.deploy(loanCore.address, borrowerNoteAddr, lenderNoteAddr)
+        await upgrades.deployProxy(RepaymentControllerFactory, [
+            loanCore.address,
+            borrowerNoteAddr,
+            lenderNoteAddr
+        ], { kind: 'uups' })
     );
     await repaymentController.deployed();
     const updateRepaymentControllerPermissions = await loanCore.grantRole(REPAYER_ROLE, repaymentController.address);

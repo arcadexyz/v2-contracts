@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+<<<<<<< HEAD
 
 pragma solidity 0.8.11;
 
@@ -16,9 +17,14 @@ pragma solidity 0.8.11;
  */
 
 import "@openzeppelin/contracts/utils/Context.sol";
-import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/introspection/IERC165Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import "hardhat/console.sol";
 
 import "./FullInterestAmountCalc.sol";
 import "./libraries/LoanLibrary.sol";
@@ -26,12 +32,15 @@ import "./interfaces/IPromissoryNote.sol";
 import "./interfaces/ILoanCore.sol";
 import "./interfaces/IRepaymentController.sol";
 
-contract RepaymentController is IRepaymentController, FullInterestAmountCalc, Context {
-    using SafeERC20 for IERC20;
+
+contract RepaymentController is IRepaymentController, Initializable, FullInterestAmountCalc, Context, AccessControlUpgradeable, UUPSUpgradeable {
+    using SafeMathUpgradeable for uint256;
+    using SafeERC20Upgradeable for IERC20Upgradeable;
 
     ILoanCore private loanCore;
     IPromissoryNote private borrowerNote;
     IPromissoryNote private lenderNote;
+
 
     // Interest rate parameter
     uint256 public constant INSTALLMENT_PERIOD_MULTIPLIER = 1_000_000;
@@ -41,18 +50,41 @@ contract RepaymentController is IRepaymentController, FullInterestAmountCalc, Co
     uint256 public constant GRACE_PERIOD = 604800; // 60*60*24*7 // 1 week
     uint256 public constant LATE_FEE = 50; // 50/BASIS_POINTS_DENOMINATOR = 0.5%
 
-    constructor(
+    // ========================================== CONSTRUCTOR ===========================================
+
+    /**
+     * @notice Runs the initializer function in an upgradeable contract.
+     *
+     *  @dev Add Unsafe-allow comment to notify upgrades plugin to accept the constructor.
+     */
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() initializer {}
+
+    // ========================================== INITIALIZER ===========================================
+
+    function initialize(
         ILoanCore _loanCore,
         IPromissoryNote _borrowerNote,
         IPromissoryNote _lenderNote
-    ) {
+    ) initializer public {
+        _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
         loanCore = _loanCore;
         borrowerNote = _borrowerNote;
         lenderNote = _lenderNote;
     }
 
-    // ============================= V1 FUNCTIONALITY ==================================
+    // ======================================= UPGRADE AUTHORIZATION ========================================
 
+    /**
+     * @notice Authorization function to define who should be allowed to upgrade the contract
+     *
+     * @param newImplementation           The address of the upgraded verion of this contract
+     */
+
+    function _authorizeUpgrade(address newImplementation) internal override onlyRole(DEFAULT_ADMIN_ROLE) {}
+
+
+    // ==================================== CONTROLLER OPERATIONS ======================================
     /**
      * @inheritdoc IRepaymentController
      */
@@ -67,8 +99,8 @@ contract RepaymentController is IRepaymentController, FullInterestAmountCalc, Co
         uint256 total = getFullInterestAmount(terms.principal, terms.interestRate);
         require(total > 0, "RepaymentCont::repay: No payment due.");
 
-        IERC20(terms.payableCurrency).safeTransferFrom(_msgSender(), address(this), total);
-        IERC20(terms.payableCurrency).approve(address(loanCore), total);
+        IERC20Upgradeable(terms.payableCurrency).safeTransferFrom(_msgSender(), address(this), total);
+        IERC20Upgradeable(terms.payableCurrency).approve(address(loanCore), total);
 
         // call repay function in loan core
         loanCore.repay(loanId);
@@ -326,9 +358,9 @@ contract RepaymentController is IRepaymentController, FullInterestAmountCalc, Co
         // load terms from loanId
         LoanLibrary.LoanData memory data = loanCore.getLoan(loanId);
         // gather minimum payment from _msgSender()
-        IERC20(data.terms.payableCurrency).safeTransferFrom(_msgSender(), address(this), _minAmount);
+        IERC20Upgradeable(data.terms.payableCurrency).safeTransferFrom(_msgSender(), address(this), _minAmount);
         // approve loanCore to take minBalanceDue
-        IERC20(data.terms.payableCurrency).approve(address(loanCore), _minAmount);
+         IERC20Upgradeable(data.terms.payableCurrency).approve(address(loanCore), _minAmount);
         // call repayPart function in loanCore
         loanCore.repayPart(loanId, numMissedPayments, 0, minBalanceDue, lateFees);
     }
@@ -361,9 +393,9 @@ contract RepaymentController is IRepaymentController, FullInterestAmountCalc, Co
         // calculate the payment to principal after subtracting (minBalanceDue + lateFees)
         uint256 _totalPaymentToPrincipal = amount - (_minAmount);
         // gather amount specified in function call params from _msgSender()
-        IERC20(data.terms.payableCurrency).safeTransferFrom(_msgSender(), address(this), amount);
+        IERC20Upgradeable(data.terms.payableCurrency).safeTransferFrom(_msgSender(), address(this), amount);
         // approve loanCore to take amount
-        IERC20(data.terms.payableCurrency).approve(address(loanCore), amount);
+        IERC20Upgradeable(data.terms.payableCurrency).approve(address(loanCore), amount);
         // call repayPart function in loanCore
         loanCore.repayPart(loanId, numMissedPayments, _totalPaymentToPrincipal, minBalanceDue, lateFees);
     }
@@ -388,9 +420,9 @@ contract RepaymentController is IRepaymentController, FullInterestAmountCalc, Co
         // total amount to close loan (remaining balance + current interest + late fees)
         uint256 _totalAmount = data.balance + minBalanceDue + lateFees;
         // gather amount specified in function call params from _msgSender()
-        IERC20(data.terms.payableCurrency).safeTransferFrom(_msgSender(), address(this), _totalAmount);
+        IERC20Upgradeable(data.terms.payableCurrency).safeTransferFrom(_msgSender(), address(this), _totalAmount);
         // approve loanCore to take minBalanceDue
-        IERC20(data.terms.payableCurrency).approve(address(loanCore), _totalAmount);
+        IERC20Upgradeable(data.terms.payableCurrency).approve(address(loanCore), _totalAmount);
         // Call repayPart function in loanCore.
         loanCore.repayPart(loanId, numMissedPayments, data.balance, minBalanceDue, lateFees);
     }
