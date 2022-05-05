@@ -17,6 +17,8 @@ import "./interfaces/ILoanCore.sol";
 import "./PromissoryNote.sol";
 import "./vault/OwnableERC721.sol";
 
+import "hardhat/console.sol";
+
 // TODO: Better natspec
 // TODO: Re-Entrancy mechanisms just for a safegaurd? - Kyle/Shipyard
 
@@ -81,7 +83,11 @@ contract LoanCore is ILoanCore, AccessControl, Pausable, ICallDelegator {
         onlyRole(ORIGINATOR_ROLE)
         returns (uint256 loanId)
     {
-        require(terms.durationSecs > 0, "LoanCore::create: Loan is already expired");
+        // loan duration must be greater than 1 hr and less than 3 years
+        require(
+            terms.durationSecs > 3600 && terms.durationSecs < 94608000,
+            "LoanCore::create: Loan is already expired"
+        );
         require(
             !collateralInUse[terms.collateralAddress][terms.collateralId],
             "LoanCore::create: Collateral token already in use"
@@ -96,7 +102,7 @@ contract LoanCore is ILoanCore, AccessControl, Pausable, ICallDelegator {
         // Number of installments must be an even number.
         require(
             terms.numInstallments % 2 == 0 && terms.numInstallments < 1000000,
-            "LoanCore::create: Even num of installments and must be < 1 mill"
+            "LoanCore::create: Even num of installments and must be < 1000000"
         );
 
         // get current loanId and increment for next function call

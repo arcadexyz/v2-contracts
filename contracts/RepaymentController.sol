@@ -25,6 +25,8 @@ import "./interfaces/IPromissoryNote.sol";
 import "./interfaces/ILoanCore.sol";
 import "./interfaces/IRepaymentController.sol";
 
+import "hardhat/console.sol";
+
 contract RepaymentController is IRepaymentController, Context {
     using SafeERC20 for IERC20;
 
@@ -163,7 +165,8 @@ contract RepaymentController is IRepaymentController, Context {
 
     /**
      * @notice Calulates and returns the minimum interest balance on loan, current late fees,
-     *         and the current number of payments missed.
+     *         and the current number of payments missed. If called twice in the same installment
+     *         period, will return all zeros the second call.
      *
      * @dev Get minimum installment payment due, any late fees accrued, and
      *      the number of missed payments since last installment payment.
@@ -198,41 +201,52 @@ contract RepaymentController is IRepaymentController, Context {
     {
         // *** Installment Time
         uint256 _installmentPeriod = currentInstallmentPeriod(startDate, durationSecs, numInstallments);
-        uint256 _installmentsMissed = _installmentPeriod - (numInstallmentsPaid + 1); // +1 for current install payment
 
-        // *** Installment Interest - using mulitpier of 1 million.
-        // There should not be loan with more than 1 million installment periods. Checked in LoanCore.
-        uint256 _interestRatePerInstallment = ((interestRate / INTEREST_RATE_DENOMINATOR) * 1000000) / numInstallments;
+        // *** Time related to number of installments paid
+        if (numInstallmentsPaid >= _installmentPeriod) {
+            // When numInstallmentsPaid is greater than or equal to the _installmentPeriod
+            // this indicates that the minimum interest for this installment period has alread been repaid.
+            return (0, 0, 0);
+        } else {
+            // +1 for current install payment
+            uint256 _installmentsMissed = _installmentPeriod - (numInstallmentsPaid + 1);
 
-        // *** Determine if late fees are added and if so, how much?
-        // Calulate number of payments missed based on _latePayment, _pastDueDate
+            // ** Installment Interest - using mulitpier of 1 million.
+            // There should not be loan with more than 1 million installment periods. Checked in LoanCore.
+            uint256 _interestRatePerInstallment = ((interestRate / INTEREST_RATE_DENOMINATOR) * 1000000) /
+                numInstallments;
 
-        // * If payment on time...
-        if (_installmentsMissed == 0) {
-            // Minimum balance due calculation. Based on interest per installment period
-            uint256 minBalDue = ((balance * _interestRatePerInstallment) / 1000000) / BASIS_POINTS_DENOMINATOR;
+            // ** Determine if late fees are added and if so, how much?
+            // Calulate number of payments missed based on _latePayment, _pastDueDate
 
-            return (minBalDue, 0, 0);
-        }
-        // * If payment is late, or past the loan duration...
-        else {
-            uint256 minInterestDue = 0; // initial state
-            uint256 currentBal = balance; // remaining principal
-            uint256 lateFees = 0; // initial state
-            // calculate the late fees based on number of installments missed
-            // late fees compound on any installment periods missed. For consecutive missed payments
-            // late fees of first installment missed are added to the principal of the next late fees calculation
-            for (uint256 i = 0; i < _installmentsMissed; i++) {
-                // interest due per period based on currentBal value
-                uint256 intDuePerPeriod = 0;
-                intDuePerPeriod = (((currentBal * _interestRatePerInstallment) / 1000000) / BASIS_POINTS_DENOMINATOR);
-                // update local state, next interest payment and late fee calculated off updated currentBal variable
-                minInterestDue = minInterestDue + intDuePerPeriod;
-                lateFees = lateFees + ((currentBal * LATE_FEE) / BASIS_POINTS_DENOMINATOR);
-                currentBal = currentBal + intDuePerPeriod + lateFees;
+            // * If payment on time...
+            if (_installmentsMissed == 0) {
+                // Minimum balance due calculation. Based on interest per installment period
+                uint256 minBalDue = ((balance * _interestRatePerInstallment) / 1000000) / BASIS_POINTS_DENOMINATOR;
+
+                return (minBalDue, 0, 0);
             }
+            // * If payment is late, or past the loan duration...
+            else {
+                uint256 minInterestDue = 0; // initial state
+                uint256 currentBal = balance; // remaining principal
+                uint256 lateFees = 0; // initial state
+                // calculate the late fees based on number of installments missed
+                // late fees compound on any installment periods missed. For consecutive missed payments
+                // late fees of first installment missed are added to the principal of the next late fees calculation
+                for (uint256 i = 0; i < _installmentsMissed; i++) {
+                    // interest due per period based on currentBal value
+                    uint256 intDuePerPeriod = 0;
+                    intDuePerPeriod = (((currentBal * _interestRatePerInstallment) / 1000000) /
+                        BASIS_POINTS_DENOMINATOR);
+                    // update local state, next interest payment and late fee calculated off updated currentBal variable
+                    minInterestDue = minInterestDue + intDuePerPeriod;
+                    lateFees = lateFees + ((currentBal * LATE_FEE) / BASIS_POINTS_DENOMINATOR);
+                    currentBal = currentBal + intDuePerPeriod + lateFees;
+                }
 
-            return (minInterestDue, lateFees, _installmentsMissed);
+                return (minInterestDue, lateFees, _installmentsMissed);
+            }
         }
     }
 
@@ -241,7 +255,7 @@ contract RepaymentController is IRepaymentController, Context {
      *         must be approved for the payment. Returns minimum balance due, late fees, and number
      *         of missed payments.
      *
-     * @dev Call _calcAmountsDue similar to repay, but do not call LoanCore.
+     * @dev Calls _calcAmountsDue similar to repayPart and repayPartMinimum, but does not call LoanCore.
      *
      * @param borrowerNoteId             Borrower note tokenId, used to locate loan terms
      */
@@ -328,12 +342,10 @@ contract RepaymentController is IRepaymentController, Context {
         );
         // total minimum amount due, interest amount plus any late fees
         uint256 _minAmount = minBalanceDue + lateFees;
-        // cannot call repayPartMinimum twice in the same installment period
-        require(_minAmount > 0, "No interest payment or late fees due.");
-        // load data from loanId
-        LoanLibrary.LoanData memory data = loanCore.getLoan(loanId);
         // require amount taken from the _msgSender() to be larger than or equal to minBalanceDue
         require(amount >= _minAmount, "Amount sent is less than the minimum amount due.");
+        // load data from loanId
+        LoanLibrary.LoanData memory data = loanCore.getLoan(loanId);
         // calculate the payment to principal after subtracting (minBalanceDue + lateFees)
         uint256 _totalPaymentToPrincipal = amount - (_minAmount);
         // gather amount specified in function call params from _msgSender()
@@ -342,5 +354,54 @@ contract RepaymentController is IRepaymentController, Context {
         IERC20(data.terms.payableCurrency).approve(address(loanCore), amount);
         // Call repayPart function in loanCore.
         loanCore.repayPart(loanId, _totalPaymentToPrincipal, numMissedPayments, minBalanceDue, lateFees);
+    }
+
+    /**
+     * @notice Called when the user wants to close an installment loan without neededing to deteremine the
+     *         amount to pass to the repayPart function. This is done by paying the remaining principal
+     *         and any interest or late fees due.
+     *
+     * @dev Pay off the current interest and, if applicable any late fees accrued, and the remaining principal
+     *      left on the loan.
+     *
+     * @param borrowerNoteId             Borrower note tokenId, used to locate loan terms
+     */
+    function closeLoan(uint256 borrowerNoteId) external override {
+        // get current minimum balance due for the installment repayment, based on specific loanId.
+        (uint256 loanId, uint256 minBalanceDue, uint256 lateFees, uint256 numMissedPayments) = getInstallmentMinPayment(
+            borrowerNoteId
+        );
+        // load data from loanId
+        LoanLibrary.LoanData memory data = loanCore.getLoan(loanId);
+        // total amount to close loan (remaining balance + current interest + late fees)
+        uint256 _totalAmount = data.balance + minBalanceDue + lateFees;
+        // gather amount specified in function call params from _msgSender()
+        IERC20(data.terms.payableCurrency).safeTransferFrom(_msgSender(), address(this), _totalAmount);
+        // approve loanCore to take minBalanceDue
+        IERC20(data.terms.payableCurrency).approve(address(loanCore), _totalAmount);
+        // Call repayPart function in loanCore.
+        loanCore.repayPart(loanId, data.balance, numMissedPayments, minBalanceDue, lateFees);
+    }
+
+    /**
+     * @notice Called when the user wants to close an installment loan without neededing to deteremine the
+     *         amount to pass to the repayPart function. This is done by paying the remaining principal
+     *         and any interest or late fees due.
+     *
+     * @dev Pay off the current interest and, if applicable any late fees accrued, and the remaining principal
+     *      left on the loan.
+     *
+     * @param borrowerNoteId             Borrower note tokenId, used to locate loan terms
+     */
+    function amountToCloseLoan(uint256 borrowerNoteId) external override returns (uint256, uint256) {
+        // get current minimum balance due for the installment repayment, based on specific loanId.
+        (uint256 loanId, uint256 minBalanceDue, uint256 lateFees, uint256 numMissedPayments) = getInstallmentMinPayment(
+            borrowerNoteId
+        );
+        // load data from loanId
+        LoanLibrary.LoanData memory data = loanCore.getLoan(loanId);
+
+        // the required total amount needed to close the loan (remaining balance + current interest + late fees)
+        return ((data.balance + minBalanceDue + lateFees), numMissedPayments);
     }
 }

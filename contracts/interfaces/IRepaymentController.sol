@@ -20,4 +20,8 @@ interface IRepaymentController {
     function repayPartMinimum(uint256 borrowerNoteId) external;
 
     function repayPart(uint256 borrowerNoteId, uint256 amount) external;
+
+    function closeLoan(uint256 borrowerNoteId) external;
+
+    function amountToCloseLoan(uint256 borrowerNoteId) external returns (uint256, uint256);
 }

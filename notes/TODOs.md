@@ -5,10 +5,10 @@ Evan:
 - Installments PR
 
   - (DONE) Update `installmentWizard` to `currentInstallmentPeriod`.
-  - RepaymentController and LoanCore
   - (DONE) Update `getFullTermInterest` to `getFullInterestAmount`.
+    - RepaymentController and LoanCore
   - (DONE) Update `calcInstallment` to `calcAmountsDue`.
-  - (DONE) Change variables from interest to interestRate.
+  - (DONE) Change variable names from "interest" to "interestRate".
     - roots: `LoanTerms`, `LoanTermsWithItems` -> OriginationController, LoanCore, RepaymentController
   - (DONE) Add `getInstallmentMinPayment` view function to `repayPartMinimum` and `repayPart` functions to reduce repetitive code.
     - Changed this function to return the `loanId` attached to the borrowerNote. This saves both `repayPart` and `repayPartMinimum` from loading it as a local variable.
@@ -17,9 +17,12 @@ Evan:
   - (DONE) Tests added for repaying minimum, waiting a while then repaying more.
   - (DONE) Removed all console logs from RepaymentController and LoanCore.
 
-  - Tune LoanTerms dials for what will be accepted. Test the boundaries of these parameters once implemented.
-  - Add `closeLoan` function for borrower with automatically calculates the amount necessary to close the loan.
+  - (IN PROGRESS)Tune LoanTerms dials for what will be accepted. Namely: `durationSeconds` and `numInstallments`.
+    - Test the boundaries of these parameters.
+  - (DONE) Add `closeLoan` function for borrower with automatically calculates the amount necessary to close the loan.
     - Corresponding view function.
+    - tests
+      - A scenario created here lead to finding the error with making a repayment in the same installment period
   - Implement `GRACE_PERIOD` into the repayment scheme.
     - tests
 
