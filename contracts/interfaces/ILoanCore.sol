@@ -44,6 +44,8 @@ interface ILoanCore {
      */
     event FeesClaimed(address token, address to, uint256 amount);
 
+    event NonceUsed(address indexed user, uint160 nonce);
+
     /**
      * @dev Get LoanData by loanId
      */
@@ -104,7 +106,9 @@ interface ILoanCore {
      */
     function claim(uint256 loanId) external;
 
-    function consumeNonce(address user, uint256 nonce) external;
+    function consumeNonce(address user, uint160 nonce) external;
+
+    function cancelNonce(uint160 nonce) external;
 
     /**
      * @dev Getters for integrated contracts

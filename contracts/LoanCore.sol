@@ -38,7 +38,7 @@ contract LoanCore is ILoanCore, FullInterestAmountCalc, AccessControl, Pausable,
 
     mapping(uint256 => LoanLibrary.LoanData) private loans;
     mapping(address => mapping(uint256 => bool)) private collateralInUse;
-    mapping(address => uint160) public lastUsedNonce;
+    mapping(address => mapping(uint160 => bool)) public usedNonces;
 
     IPromissoryNote public immutable override borrowerNote;
     IPromissoryNote public immutable override lenderNote;
@@ -384,7 +384,19 @@ contract LoanCore is ILoanCore, FullInterestAmountCalc, AccessControl, Pausable,
         return false;
     }
 
-    function consumeNonce(address user, uint256 nonce) external override whenNotPaused onlyRole(ORIGINATOR_ROLE) {
-        require(++lastUsedNonce[user] == nonce, "Invalid nonce");
+    function consumeNonce(address user, uint160 nonce) external override whenNotPaused onlyRole(ORIGINATOR_ROLE) {
+        _useNonce(user, nonce);
+    }
+
+    function cancelNonce(uint160 nonce) external override {
+        address user = _msgSender();
+        _useNonce(user, nonce);
+    }
+
+    function _useNonce(address user, uint160 nonce) internal {
+        require(!usedNonces[user][nonce], "Nonce used");
+        usedNonces[user][nonce] = true;
+
+        emit NonceUsed(user, nonce);
     }
 }

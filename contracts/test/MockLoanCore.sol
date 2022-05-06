@@ -25,7 +25,7 @@ contract MockLoanCore is ILoanCore {
     IFeeController public override feeController;
 
     mapping(uint256 => LoanLibrary.LoanData) public loans;
-    mapping(address => uint160) public lastUsedNonce;
+    mapping(address => mapping(uint160 => bool)) public usedNonces;
 
     constructor() {
         borrowerNote = new PromissoryNote("Mock BorrowerNote", "MB");
@@ -156,7 +156,19 @@ contract MockLoanCore is ILoanCore {
      */
     function claim(uint256 loanId) public override {}
 
-    function consumeNonce(address user, uint256 nonce) external override {
-        require(++lastUsedNonce[user] == nonce, "Invalid nonce");
+    function consumeNonce(address user, uint160 nonce) external override {
+        _useNonce(user, nonce);
+    }
+
+    function cancelNonce(uint160 nonce) external override {
+        address user = msg.sender;
+        _useNonce(user, nonce);
+    }
+
+    function _useNonce(address user, uint160 nonce) internal {
+        require(!usedNonces[user][nonce], "Nonce used");
+        usedNonces[user][nonce] = true;
+
+        emit NonceUsed(user, nonce);
     }
 }
