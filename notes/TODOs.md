@@ -12,6 +12,7 @@ Evan:
 🔑 For Installment tests, run `npx hardhat test test/Installments.ts`.
 
 📌 For Further Review Items:
+
 - Tune LoanTerms dials for what will be accepted. Namely: `durationSeconds` and `numInstallments`.
 - Global parameters, `LATE_FEE` and `GRACE_PERIOD`
 - `claim` functionality with installment loans, with grace period?
