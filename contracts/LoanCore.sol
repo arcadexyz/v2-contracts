@@ -13,7 +13,7 @@ import "./interfaces/IPromissoryNote.sol";
 import "./interfaces/IAssetVault.sol";
 import "./interfaces/IFeeController.sol";
 import "./interfaces/ILoanCore.sol";
-import "./interfaces/IFullInterestAmountCalculator.sol";
+import "./interfaces/IFullInterestAmountCalc.sol";
 import "./PromissoryNote.sol";
 import "./vault/OwnableERC721.sol";
 
@@ -23,7 +23,7 @@ import "./vault/OwnableERC721.sol";
 /**
  * @dev LoanCore contract - core contract for creating, repaying, and claiming collateral for PawnFi loans
  */
-contract LoanCore is ILoanCore, IFullInterestAmountCalculator, AccessControl, Pausable, ICallDelegator {
+contract LoanCore is ILoanCore, IFullInterestAmountCalc, AccessControl, Pausable, ICallDelegator {
     using Counters for Counters.Counter;
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
@@ -166,7 +166,7 @@ contract LoanCore is ILoanCore, IFullInterestAmountCalculator, AccessControl, Pa
     }
 
     /**
-     * @inheritdoc IFullInterestAmountCalculator
+     * @inheritdoc IFullInterestAmountCalc
      */
     function getFullInterestAmount(uint256 principal, uint256 interestRate)
         public

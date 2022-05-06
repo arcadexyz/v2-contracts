@@ -4,7 +4,7 @@ pragma solidity 0.8.11;
 /**
  * @dev Interface for a calculating the interest amount given a interest rate and principal amount.
  */
-interface IFullInterestAmountCalculator {
+interface IFullInterestAmountCalc {
     /**
      * @notice Calculate the interest due.
      *

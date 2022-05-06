@@ -24,9 +24,9 @@ import "./libraries/LoanLibrary.sol";
 import "./interfaces/IPromissoryNote.sol";
 import "./interfaces/ILoanCore.sol";
 import "./interfaces/IRepaymentController.sol";
-import "./interfaces/IFullInterestAmountCalculator.sol";
+import "./interfaces/IFullInterestAmountCalc.sol";
 
-contract RepaymentController is IRepaymentController, IFullInterestAmountCalculator, Context {
+contract RepaymentController is IRepaymentController, IFullInterestAmountCalc, Context {
     using SafeERC20 for IERC20;
 
     ILoanCore private loanCore;
@@ -56,7 +56,7 @@ contract RepaymentController is IRepaymentController, IFullInterestAmountCalcula
     // ========================= INTEREST RATE CALCULATION =============================
 
     /**
-     * @inheritdoc IFullInterestAmountCalculator
+     * @inheritdoc IFullInterestAmountCalc
      */
     function getFullInterestAmount(uint256 principal, uint256 interestRate)
         public
