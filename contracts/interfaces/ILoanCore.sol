@@ -88,10 +88,10 @@ interface ILoanCore {
      */
     function repayPart(
         uint256 _loanId,
-        uint256 _repaidAmount,
-        uint256 _numMissedPayments,
+        uint256 _currentMissedPayments,
+        uint256 _paymentToPrincipal,
         uint256 _paymentToInterest,
-        uint256 _lateFeesAccrued
+        uint256 _paymentToLateFees
     ) external;
 
     /**

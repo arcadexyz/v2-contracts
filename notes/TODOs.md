@@ -3,36 +3,19 @@
 Evan:
 
 - Installments PR
-
-  - (DONE) Update `installmentWizard` to `currentInstallmentPeriod`.
-  - (DONE) Update `getFullTermInterest` to `getFullInterestAmount`.
-    - RepaymentController and LoanCore
-  - (DONE) Update `calcInstallment` to `calcAmountsDue`.
-  - (DONE) Change variable names from "interest" to "interestRate".
-    - roots: `LoanTerms`, `LoanTermsWithItems` -> OriginationController, LoanCore, RepaymentController
-  - (DONE) Add `getInstallmentMinPayment` view function to `repayPartMinimum` and `repayPart` functions to reduce repetitive code.
-    - Changed this function to return the `loanId` attached to the borrowerNote. This saves both `repayPart` and `repayPartMinimum` from loading it as a local variable.
-  - (DONE) Updated for loop so `minBalDue` was not double accounted for.
-  - (DONE) Updated allowances in tests for late fee scenarios, all values here went down especially as the number of times compounded grew.
-  - (DONE) Tests added for repaying minimum, waiting a while then repaying more.
-  - (DONE) Removed all console logs from RepaymentController and LoanCore.
-
-  - (IN PROGRESS)Tune LoanTerms dials for what will be accepted. Namely: `durationSeconds` and `numInstallments`.
-    - Test the boundaries of these parameters.
   - (DONE) Add `closeLoan` function for borrower with automatically calculates the amount necessary to close the loan.
     - Corresponding view function.
     - tests
       - A scenario created here lead to finding the error with making a repayment in the same installment period
-  - Implement `GRACE_PERIOD` into the repayment scheme.
-    - tests
+  - (DONE) Add borrower and lenders balance before and after the loan in all tests to look for errors in the accounting code
 
 🔑 For Installment tests, run `npx hardhat test test/Installments.ts`.
 
 📌 For Further Review Items:
-
-- `createLoan` require statements that have been added
+- Tune LoanTerms dials for what will be accepted. Namely: `durationSeconds` and `numInstallments`.
 - Global parameters, `LATE_FEE` and `GRACE_PERIOD`
-- `claim` functionality with installment loans
+- `claim` functionality with installment loans, with grace period?
+- Custom Errors
 
 Mouzayan:
 
