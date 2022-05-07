@@ -20,22 +20,20 @@ import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
+import "./FullInterestAmountCalc.sol";
 import "./libraries/LoanLibrary.sol";
 import "./interfaces/IPromissoryNote.sol";
 import "./interfaces/ILoanCore.sol";
 import "./interfaces/IRepaymentController.sol";
-import "./interfaces/IFullInterestAmountCalc.sol";
 
-contract RepaymentController is IRepaymentController, IFullInterestAmountCalc, Context {
+contract RepaymentController is IRepaymentController, FullInterestAmountCalc, Context {
     using SafeERC20 for IERC20;
 
     ILoanCore private loanCore;
     IPromissoryNote private borrowerNote;
     IPromissoryNote private lenderNote;
 
-    // Interest rate parameters
-    uint256 public constant INTEREST_RATE_DENOMINATOR = 1e18;
-    uint256 public constant BASIS_POINTS_DENOMINATOR = 10_000;
+    // Interest rate parameter
     uint256 public constant INSTALLMENT_PERIOD_MULTIPLIER = 1_000_000;
 
     // Installment parameters
@@ -51,27 +49,6 @@ contract RepaymentController is IRepaymentController, IFullInterestAmountCalc, C
         loanCore = _loanCore;
         borrowerNote = _borrowerNote;
         lenderNote = _lenderNote;
-    }
-
-    // ========================= INTEREST RATE CALCULATION =============================
-
-    /**
-     * @inheritdoc IFullInterestAmountCalc
-     */
-    function getFullInterestAmount(uint256 principal, uint256 interestRate)
-        public
-        view
-        virtual
-        override
-        returns (uint256 totalInterestAmount)
-    {
-        // Interest rate to be greater than or equal to 0.01%
-        require(
-            interestRate / INTEREST_RATE_DENOMINATOR >= 1,
-            " RepaymentController: Interest must be greater than 0.01%."
-        );
-
-        return principal + ((principal * (interestRate / INTEREST_RATE_DENOMINATOR)) / BASIS_POINTS_DENOMINATOR);
     }
 
     // ============================= V1 FUNCTIONALITY ==================================

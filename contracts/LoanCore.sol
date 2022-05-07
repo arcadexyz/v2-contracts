@@ -8,12 +8,13 @@ import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
+
+import "./FullInterestAmountCalc.sol";
 import "./interfaces/ICallDelegator.sol";
 import "./interfaces/IPromissoryNote.sol";
 import "./interfaces/IAssetVault.sol";
 import "./interfaces/IFeeController.sol";
 import "./interfaces/ILoanCore.sol";
-import "./interfaces/IFullInterestAmountCalc.sol";
 import "./PromissoryNote.sol";
 import "./vault/OwnableERC721.sol";
 
@@ -23,7 +24,7 @@ import "./vault/OwnableERC721.sol";
 /**
  * @dev LoanCore contract - core contract for creating, repaying, and claiming collateral for PawnFi loans
  */
-contract LoanCore is ILoanCore, IFullInterestAmountCalc, AccessControl, Pausable, ICallDelegator {
+contract LoanCore is ILoanCore, FullInterestAmountCalc, AccessControl, Pausable, ICallDelegator {
     using Counters for Counters.Counter;
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
@@ -31,10 +32,6 @@ contract LoanCore is ILoanCore, IFullInterestAmountCalc, AccessControl, Pausable
     bytes32 public constant ORIGINATOR_ROLE = keccak256("ORIGINATOR_ROLE");
     bytes32 public constant REPAYER_ROLE = keccak256("REPAYER_ROLE");
     bytes32 public constant FEE_CLAIMER_ROLE = keccak256("FEE_CLAIMER_ROLE");
-
-    // Interest rate parameters
-    uint256 public constant INTEREST_RATE_DENOMINATOR = 1e18;
-    uint256 public constant BASIS_POINTS_DENOMINATOR = 10_000;
 
     Counters.Counter private loanIdTracker;
     mapping(uint256 => LoanLibrary.LoanData) private loans;
@@ -163,22 +160,6 @@ contract LoanCore is ILoanCore, IFullInterestAmountCalc, AccessControl, Pausable
         IERC20(data.terms.payableCurrency).safeTransfer(borrower, getPrincipalLessFees(data.terms.principal));
 
         emit LoanStarted(loanId, lender, borrower);
-    }
-
-    /**
-     * @inheritdoc IFullInterestAmountCalc
-     */
-    function getFullInterestAmount(uint256 principal, uint256 interestRate)
-        public
-        view
-        virtual
-        override
-        returns (uint256 totalInterestAmount)
-    {
-        // Interest rate to be greater than or equal to 0.01%
-        require(interestRate / INTEREST_RATE_DENOMINATOR >= 1, "Interest must be greater than 0.01%.");
-
-        return principal + ((principal * (interestRate / INTEREST_RATE_DENOMINATOR)) / BASIS_POINTS_DENOMINATOR);
     }
 
     /**
