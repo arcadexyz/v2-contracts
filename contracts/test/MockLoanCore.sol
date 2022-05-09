@@ -4,6 +4,7 @@ import "@openzeppelin/contracts/utils/Counters.sol";
 
 import "../interfaces/ILoanCore.sol";
 import "../interfaces/IPromissoryNote.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import "../PromissoryNote.sol";
 
@@ -43,10 +44,11 @@ contract MockLoanCore is ILoanCore {
         LoanLibrary.LoanTerms memory _loanTerms = LoanLibrary.LoanTerms(
             terms.durationSecs,
             terms.principal,
-            terms.interest,
+            terms.interestRate,
             terms.collateralAddress,
             terms.collateralId,
-            terms.payableCurrency
+            terms.payableCurrency,
+            terms.numInstallments
         );
 
         LoanLibrary.LoanData memory _loanData = LoanLibrary.LoanData(
@@ -54,7 +56,12 @@ contract MockLoanCore is ILoanCore {
             0,
             _loanTerms,
             LoanLibrary.LoanState.Created,
-            terms.durationSecs
+            terms.durationSecs,
+            block.timestamp,
+            terms.principal,
+            0,
+            0,
+            0
         );
 
         loanId = loanIdTracker.current();
@@ -89,7 +96,12 @@ contract MockLoanCore is ILoanCore {
             lenderNoteId,
             data.terms,
             LoanLibrary.LoanState.Active,
-            data.dueDate
+            data.dueDate,
+            data.startDate,
+            data.terms.principal,
+            0,
+            0,
+            0
         );
 
         emit LoanStarted(loanId, lender, borrower);
@@ -106,6 +118,27 @@ contract MockLoanCore is ILoanCore {
     function repay(uint256 loanId) public override {
         loans[loanId].state = LoanLibrary.LoanState.Repaid;
         emit LoanRepaid(loanId);
+    }
+
+    /**
+     * @dev * * * THIS FUNCTION IS NOT VALID SEE LOANCORE REPAYPART FUNCTION!!!
+     */
+    function repayPart(
+        uint256 _loanId,
+        uint256 _repaidAmount, // amount paid to principal
+        uint256 _numMissedPayments, // number of missed payments (number of payments since the last payment)
+        uint256 _paymentToInterest, // any minimum payments to interest
+        uint256 _lateFeesAccrued // any minimum payments to late fees
+    ) external override {
+        LoanLibrary.LoanData storage data = loans[_loanId];
+        // Ensure valid initial loan state
+        require(data.state == LoanLibrary.LoanState.Active, "LoanCore::repay: Invalid loan state");
+        // transfer funds to LoanCore
+        uint256 paymentTotal = _repaidAmount + _lateFeesAccrued + _paymentToInterest;
+        //console.log("TOTAL PAID FROM BORROWER: ", paymentTotal);
+        IERC20(data.terms.payableCurrency).transferFrom(msg.sender, address(this), paymentTotal);
+        // use variable.
+        data.numInstallmentsPaid = data.numInstallmentsPaid + _numMissedPayments + 1;
     }
 
     /**

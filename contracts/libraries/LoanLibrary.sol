@@ -27,11 +27,14 @@ library LoanLibrary {
      */
     struct LoanTerms {
         // The number of seconds representing relative due date of the loan
+        // *** TEST/ DISCUSSION: A loan of 0 duration has no due date - it is only governed by when the borrower repays?
         uint256 durationSecs;
         // The amount of principal in terms of the payableCurrency
         uint256 principal;
-        // The amount of interest in terms of the payableCurrency
-        uint256 interest;
+        // Interest expressed as a rate, unlike V1 gross value.
+        // Input conversion: 0.01% = (1 * 10**18) ,  10.00% = (1000 * 10**18)
+        // minAllowed: // MaxAllowed:
+        uint256 interestRate;
         // The tokenID of the address holding the collateral
         /// @dev Can be an AssetVault, or the NFT contract for unbundled collateral
         address collateralAddress;
@@ -39,6 +42,9 @@ library LoanLibrary {
         uint256 collateralId;
         // The payable currency for the loan principal and interest
         address payableCurrency;
+        // Installment loan specific
+        // Total number of installment periods within the loan duration
+        uint256 numInstallments;
     }
 
     /**
@@ -52,7 +58,7 @@ library LoanLibrary {
         // The amount of principal in terms of the payableCurrency
         uint256 principal;
         // The amount of interest in terms of the payableCurrency
-        uint256 interest;
+        uint256 interestRate;
         // The tokenID of the address holding the collateral
         /// @dev Must be an AssetVault for LoanTermsWithItems
         address collateralAddress;
@@ -60,6 +66,9 @@ library LoanLibrary {
         bytes items;
         // The payable currency for the loan principal and interest
         address payableCurrency;
+        // Installment loan specific
+        // Total number of installment periods within the loan duration
+        uint256 numInstallments;
     }
 
     /**
@@ -86,5 +95,17 @@ library LoanLibrary {
         LoanState state;
         // Timestamp representing absolute due date date of the loan
         uint256 dueDate;
+        // installment loan specific
+        // Start date of the loan, using block.timestamp - for determining installment period
+        uint256 startDate;
+        // Remaining balance of the loan. Starts as equal to principal. Can reduce based on
+        // payments made, can increased based on compounded interest from missed payments and late fees
+        uint256 balance;
+        // Amount paid in total by the borrower
+        uint256 balancePaid;
+        // Total amount of late fees accrued
+        uint256 lateFeesAccrued;
+        // Number of installment payments made on the loan
+        uint256 numInstallmentsPaid;
     }
 }

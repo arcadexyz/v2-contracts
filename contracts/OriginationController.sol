@@ -47,15 +47,15 @@ contract OriginationController is Context, IOriginationController, EIP712, Reent
     bytes32 private constant _TOKEN_ID_TYPEHASH =
         keccak256(
             // solhint-disable-next-line max-line-length
-            "LoanTerms(uint256 durationSecs,uint256 principal,uint256 interest,address collateralAddress,uint256 collateralId,address payableCurrency)"
+            "LoanTerms(uint256 durationSecs,uint256 principal,uint256 interestRate,address collateralAddress,uint256 collateralId,address payableCurrency,uint256 numInstallments)"
         );
 
     /// @notice EIP712 type hash for item-based signatures.
     bytes32 private constant _ITEMS_TYPEHASH =
         keccak256(
             // solhint-disable max-line-length
-            "LoanTermsWithItems(uint256 durationSecs,uint256 principal,uint256 interest,address collateralAddress,bytes32 itemsHash,address payableCurrency)"
-            // "LoanTermsWithItems(uint256 durationSecs,uint256 principal,uint256 interest,address collateralAddress,address payableCurrency)"
+            "LoanTermsWithItems(uint256 durationSecs,uint256 principal,uint256 interestRate,address collateralAddress,bytes32 itemsHash,address payableCurrency,uint256 numInstallments)"
+            // "LoanTermsWithItems(uint256 durationSecs,uint256 principal,uint256 interestRate,address collateralAddress,address payableCurrency)"
         );
 
     // ============= Global Immutable State ==============
@@ -293,10 +293,11 @@ contract OriginationController is Context, IOriginationController, EIP712, Reent
                 _TOKEN_ID_TYPEHASH,
                 loanTerms.durationSecs,
                 loanTerms.principal,
-                loanTerms.interest,
+                loanTerms.interestRate,
                 loanTerms.collateralAddress,
                 loanTerms.collateralId,
-                loanTerms.payableCurrency
+                loanTerms.payableCurrency,
+                loanTerms.numInstallments
             )
         );
 
@@ -325,10 +326,11 @@ contract OriginationController is Context, IOriginationController, EIP712, Reent
                 _ITEMS_TYPEHASH,
                 loanTerms.durationSecs,
                 loanTerms.principal,
-                loanTerms.interest,
+                loanTerms.interestRate,
                 loanTerms.collateralAddress,
                 itemsHash,
-                loanTerms.payableCurrency
+                loanTerms.payableCurrency,
+                loanTerms.numInstallments
             )
         );
 

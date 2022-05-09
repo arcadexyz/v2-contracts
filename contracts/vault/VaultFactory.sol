@@ -11,6 +11,9 @@ import "../interfaces/IAssetVault.sol";
 import "../interfaces/IVaultFactory.sol";
 import "../ERC721Permit.sol";
 
+// * * * * TESTING ONLY * * * *
+import "hardhat/console.sol";
+
 /** @title VaultFactory
  *   Factory for creating and registering AssetVaults
  *   Note: TokenId is simply a uint representation of the vault address
@@ -47,10 +50,12 @@ contract VaultFactory is ERC721Enumerable, ERC721Permit, IVaultFactory {
      * @inheritdoc IVaultFactory
      */
     function instanceAt(uint256 tokenId) external view override returns (address instance) {
-        require(_exists(tokenId), "Cannot find instance of nonexistent token");
+        // NOTE: CANNOT USE _exists(tokenId), this does not coencide with the correct info
+        //       we are checking. It only checks _owners[tokenId] != address(0)
+        require(_exists(tokenId), "ERC721Enumerable: global index out of bounds");
 
         return address(uint160(tokenId));
-        // return address(uint160(tokenByIndex(index)));
+        //return address(uint160(tokenByIndex(tokenId)));
     }
 
     /**

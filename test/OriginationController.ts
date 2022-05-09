@@ -18,6 +18,7 @@ import {
     PromissoryNote,
     MockLoanCore,
     ArcadeItemsVerifier,
+    FeeController,
 } from "../typechain";
 import { approve, mint, ZERO_ADDRESS } from "./utils/erc20";
 import { mint as mint721 } from "./utils/erc721";
@@ -86,6 +87,7 @@ const createLoanTerms = (
         principal = hre.ethers.utils.parseEther("100"),
         interest = hre.ethers.utils.parseEther("1"),
         collateralId = BigNumber.from("1"),
+        numInstallments = 0,
     }: Partial<LoanTerms> = {},
 ): LoanTerms => {
     return {
@@ -95,6 +97,7 @@ const createLoanTerms = (
         collateralId,
         collateralAddress,
         payableCurrency,
+        numInstallments,
     };
 };
 
@@ -227,7 +230,7 @@ describe("OriginationController", () => {
                     // sender is the borrower, signer is also the borrower
                     .connect(borrower)
                     .initializeLoan(loanTerms, await borrower.getAddress(), await lender.getAddress(), sig),
-            ).to.be.revertedWith("Origination: no counterparty signature");
+            ).to.be.revertedWith("Origination: approved own loan");
         });
 
         it("Reverts if signer is not a participant", async () => {

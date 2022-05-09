@@ -30,6 +30,11 @@ interface ILoanCore {
     event LoanRepaid(uint256 loanId);
 
     /**
+     * @dev Emitted when an installment payment is made that does not pay off the loan entirely
+     */
+    event InstallmentPaymentReceived(uint256 loanId, uint256 repaidAmount, uint256 remBalance);
+
+    /**
      * @dev Emitted when a loan collateral is claimed by the lender
      */
     event LoanClaimed(uint256 loanId);
@@ -72,6 +77,22 @@ interface ILoanCore {
      *  - The loan must be in state Active
      */
     function repay(uint256 loanId) external;
+
+    /**
+     * @dev Repay the given loan
+     *
+     * Requirements:
+     *  - The caller must be a holder of the borrowerNote
+     *  - The caller must send in at least minimum payment amount
+     *  - The loan must be in state Active and have number of Installments greater than 0
+     */
+    function repayPart(
+        uint256 _loanId,
+        uint256 _currentMissedPayments,
+        uint256 _paymentToPrincipal,
+        uint256 _paymentToInterest,
+        uint256 _paymentToLateFees
+    ) external;
 
     /**
      * @dev Claim the collateral of the given delinquent loan

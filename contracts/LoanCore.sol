@@ -8,21 +8,23 @@ import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
+
+import "./FullInterestAmountCalc.sol";
 import "./interfaces/ICallDelegator.sol";
 import "./interfaces/IPromissoryNote.sol";
 import "./interfaces/IAssetVault.sol";
 import "./interfaces/IFeeController.sol";
 import "./interfaces/ILoanCore.sol";
-
 import "./PromissoryNote.sol";
 import "./vault/OwnableERC721.sol";
 
 // TODO: Better natspec
+// TODO: Re-Entrancy mechanisms just for a safegaurd? - Kyle/Shipyard
 
 /**
  * @dev LoanCore contract - core contract for creating, repaying, and claiming collateral for PawnFi loans
  */
-contract LoanCore is ILoanCore, AccessControl, Pausable, ICallDelegator {
+contract LoanCore is ILoanCore, FullInterestAmountCalc, AccessControl, Pausable, ICallDelegator {
     using Counters for Counters.Counter;
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
@@ -38,8 +40,7 @@ contract LoanCore is ILoanCore, AccessControl, Pausable, ICallDelegator {
     IPromissoryNote public immutable override lenderNote;
     IFeeController public override feeController;
 
-    // 10k bps per whole
-    uint256 private constant BPS_DENOMINATOR = 10_000;
+    uint256 private constant BPS_DENOMINATOR = 10_000; // 10k bps per whole
 
     constructor(IFeeController _feeController) {
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
@@ -58,6 +59,8 @@ contract LoanCore is ILoanCore, AccessControl, Pausable, ICallDelegator {
         loanIdTracker.increment();
     }
 
+    // ============================= V1 FUNCTIONALITY ==================================
+
     /**
      * @inheritdoc ILoanCore
      */
@@ -75,23 +78,45 @@ contract LoanCore is ILoanCore, AccessControl, Pausable, ICallDelegator {
         onlyRole(ORIGINATOR_ROLE)
         returns (uint256 loanId)
     {
-        require(terms.durationSecs > 0, "LoanCore::create: Loan is already expired");
+        // loan duration must be greater than 1 hr and less than 3 years
+        require(
+            terms.durationSecs > 3600 && terms.durationSecs < 94608000,
+            "LoanCore::create: duration greater than 1hr and less than 3yrs"
+        );
         require(
             !collateralInUse[terms.collateralAddress][terms.collateralId],
             "LoanCore::create: Collateral token already in use"
         );
 
-        loanId = loanIdTracker.current();
-        loanIdTracker.increment();
-
-        loans[loanId] = LoanLibrary.LoanData(
-            0,
-            0,
-            terms,
-            LoanLibrary.LoanState.Created,
-            block.timestamp + terms.durationSecs
+        // Interest rate must be greater than or equal to 0.01%
+        require(
+            terms.interestRate / INTEREST_RATE_DENOMINATOR >= 1,
+            "LoanCore::create: Interest must be greater than 0.01%"
         );
 
+        // Number of installments must be an even number.
+        require(
+            terms.numInstallments % 2 == 0 && terms.numInstallments < 1000000,
+            "LoanCore::create: Even num of installments and must be < 1000000"
+        );
+
+        // get current loanId and increment for next function call
+        loanId = loanIdTracker.current();
+        loanIdTracker.increment();
+        // Using loanId, set inital LoanData state
+        loans[loanId] = LoanLibrary.LoanData({
+            borrowerNoteId: 0,
+            lenderNoteId: 0,
+            terms: terms,
+            state: LoanLibrary.LoanState.Created,
+            dueDate: block.timestamp + terms.durationSecs,
+            startDate: block.timestamp,
+            balance: terms.principal,
+            balancePaid: 0,
+            lateFeesAccrued: 0,
+            numInstallmentsPaid: 0
+        });
+        // set collateral to in use.
         collateralInUse[terms.collateralAddress][terms.collateralId] = true;
 
         emit LoanCreated(terms, loanId);
@@ -124,7 +149,12 @@ contract LoanCore is ILoanCore, AccessControl, Pausable, ICallDelegator {
             lenderNoteId,
             data.terms,
             LoanLibrary.LoanState.Active,
-            data.dueDate
+            data.dueDate,
+            data.startDate,
+            data.balance,
+            data.balancePaid,
+            data.lateFeesAccrued,
+            data.numInstallmentsPaid
         );
 
         IERC20(data.terms.payableCurrency).safeTransfer(borrower, getPrincipalLessFees(data.terms.principal));
@@ -141,7 +171,8 @@ contract LoanCore is ILoanCore, AccessControl, Pausable, ICallDelegator {
         require(data.state == LoanLibrary.LoanState.Active, "LoanCore::repay: Invalid loan state");
 
         // ensure repayment was valid
-        uint256 returnAmount = data.terms.principal.add(data.terms.interest);
+        uint256 returnAmount = getFullInterestAmount(data.terms.principal, data.terms.interestRate);
+        require(returnAmount > 0, "No payment due.");
         IERC20(data.terms.payableCurrency).safeTransferFrom(_msgSender(), address(this), returnAmount);
 
         address lender = lenderNote.ownerOf(data.lenderNoteId);
@@ -194,7 +225,89 @@ contract LoanCore is ILoanCore, AccessControl, Pausable, ICallDelegator {
         return principal.sub(principal.mul(feeController.getOriginationFee()).div(BPS_DENOMINATOR));
     }
 
-    // ADMIN FUNCTIONS
+    // ======================== INSTALLMENT SPECIFIC OPERATIONS =============================
+
+    /**
+     * @dev Called from RepaymentController when paying back an installment loan.
+     * New loan state parameters are calculated in the Repayment Controller.
+     * Based on if the _paymentToPrincipal is greater than the current balance
+     * the loan state is updated. (0 = minimum payment sent, > 0 pay down principal)
+     * The paymentTotal (_paymentToPrincipal + _paymentToLateFees) is always transferred to the lender.
+     *
+     * @param _loanId                       Used to get LoanData
+     * @param _paymentToPrincipal           Amount sent in addition to minimum amount due, used to pay down principal
+     * @param _currentMissedPayments        Number of payments missed since the last isntallment payment
+     * @param _paymentToLateFees            Amount due in only late fees.
+     */
+    function repayPart(
+        uint256 _loanId,
+        uint256 _currentMissedPayments,
+        uint256 _paymentToPrincipal,
+        uint256 _paymentToInterest,
+        uint256 _paymentToLateFees
+    ) external override onlyRole(REPAYER_ROLE) {
+        LoanLibrary.LoanData storage data = loans[_loanId];
+        // ensure valid initial loan state
+        require(data.state == LoanLibrary.LoanState.Active, "LoanCore::repay: Invalid loan state");
+        // calculate total sent by borrower and transferFrom repayment controller to this address
+        uint256 paymentTotal = _paymentToPrincipal + _paymentToLateFees + _paymentToInterest;
+        IERC20(data.terms.payableCurrency).safeTransferFrom(_msgSender(), address(this), paymentTotal);
+        // get the lender and borrower
+        address lender = lenderNote.ownerOf(data.lenderNoteId);
+        address borrower = borrowerNote.ownerOf(data.borrowerNoteId);
+        // update common state
+        data.lateFeesAccrued = data.lateFeesAccrued + _paymentToLateFees;
+        data.numInstallmentsPaid = data.numInstallmentsPaid + _currentMissedPayments + 1;
+
+        // * If payment sent is exact or extra than remaining principal
+        if (_paymentToPrincipal > data.balance || _paymentToPrincipal == data.balance) {
+            // set the loan state to repaid
+            data.state = LoanLibrary.LoanState.Repaid;
+            collateralInUse[data.terms.collateralAddress][data.terms.collateralId] = false;
+
+            // state changes and cleanup
+            lenderNote.burn(data.lenderNoteId);
+            borrowerNote.burn(data.borrowerNoteId);
+
+            // return the difference to borrower
+            if (_paymentToPrincipal > data.balance) {
+                uint256 diffAmount = _paymentToPrincipal - data.balance;
+                // update balance state balancePaid is the current principal
+                data.balance = 0;
+                data.balancePaid += paymentTotal - diffAmount;
+                // update paymentTotal since extra amount sent
+                IERC20(data.terms.payableCurrency).safeTransfer(borrower, diffAmount);
+                // Loan is fully repaid, redistribute asset and collateral.
+                IERC20(data.terms.payableCurrency).safeTransfer(lender, paymentTotal - diffAmount);
+                IERC721(data.terms.collateralAddress).transferFrom(address(this), borrower, data.terms.collateralId);
+            }
+            // exact amount sent, no difference calculation necessary
+            else {
+                // update balance
+                data.balance = 0;
+                data.balancePaid += paymentTotal;
+                // Loan is fully repaid, redistribute asset and collateral.
+                IERC20(data.terms.payableCurrency).safeTransfer(lender, paymentTotal);
+                IERC721(data.terms.collateralAddress).transferFrom(address(this), borrower, data.terms.collateralId);
+            }
+
+            emit LoanRepaid(_loanId);
+        }
+        // * Else, (mid loan payment)
+        else {
+            // update balance state
+            data.balance -= _paymentToPrincipal;
+            data.balancePaid += paymentTotal;
+
+            // Loan partial payment, redistribute asset to lender.
+            IERC20(data.terms.payableCurrency).safeTransfer(lender, paymentTotal);
+
+            // minimum repayment events will emit 0 and unchanged principal
+            emit InstallmentPaymentReceived(_loanId, _paymentToPrincipal, data.balance);
+        }
+    }
+
+    // ============================= ADMIN FUNCTIONS ==================================
 
     /**
      * @dev Set the fee controller to a new value
@@ -210,7 +323,7 @@ contract LoanCore is ILoanCore, AccessControl, Pausable, ICallDelegator {
     /**
      * @dev Claim the protocol fees for the given token
      *
-     * @param token The address of the ERC20 token to claim fees for
+     * @param token - The address of the ERC20 token to claim fees for
      *
      * Requirements:
      *

@@ -23,19 +23,21 @@ export interface ItemsPredicate {
 export interface LoanTerms {
     durationSecs: BigNumberish;
     principal: BigNumber;
-    interest: BigNumber;
+    interestRate: BigNumber;
     collateralAddress: string;
     collateralId: BigNumber;
     payableCurrency: string;
+    numInstallments: BigNumberish;
 }
 
 export interface ItemsPayload {
     durationSecs: BigNumberish;
     principal: BigNumber;
-    interest: BigNumber;
+    interestRate: BigNumber;
     collateralAddress: string;
     itemsHash: string;
     payableCurrency: string;
+    numInstallments: BigNumberish;
 }
 
 export interface LoanData {
@@ -44,4 +46,8 @@ export interface LoanData {
     lenderNoteId: BigNumber;
     state: LoanState;
     dueDate: BigNumberish;
+    startDate: BigNumberish;
+    balance: BigNumber;
+    balancePaid: BigNumber;
+    lateFeesAccrued: BigNumber;
 }

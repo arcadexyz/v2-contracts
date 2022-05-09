@@ -366,7 +366,7 @@ describe("AssetVault", () => {
             );
             if (!mintData || !mintData.data) throw new Error("Populate transaction failed");
 
-            // transfer the NFT to the call delegator (like using it as loan collateral)
+            // transfer the vault NFT to the call delegator (like using it as loan collateral)
             await nft.transferFrom(await user.getAddress(), await other.getAddress(), vault.address);
             await whitelist.add(mockERC20.address, selector);
 
