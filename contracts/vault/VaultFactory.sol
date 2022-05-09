@@ -13,6 +13,7 @@ import "../interfaces/IAssetVault.sol";
 import "../interfaces/IVaultFactory.sol";
 import "../ERC721PermitUpgradeable.sol";
 
+// AccessControlUpgradeable
 /** @title VaultFactory
  *   Factory for creating and registering AssetVaults
  *   Note: TokenId is simply a uint representation of the vault address

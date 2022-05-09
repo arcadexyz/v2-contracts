@@ -2,7 +2,10 @@
 
 pragma solidity ^0.8.11;
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 600c1e6c5734ea2738c0c87546e9f37c1292ed15
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
@@ -12,7 +15,10 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+<<<<<<< HEAD
 import "@openzeppelin/contracts/interfaces/IERC1271.sol";
+=======
+>>>>>>> 600c1e6c5734ea2738c0c87546e9f37c1292ed15
 
 import "./interfaces/IOriginationController.sol";
 import "./interfaces/ILoanCore.sol";
@@ -97,8 +103,12 @@ contract OriginationController is Initializable, ContextUpgradeable, IOriginatio
         __EIP712_init("OriginationController", "2");
         __Ownable_init_unchained();
         __UUPSUpgradeable_init_unchained();
+<<<<<<< HEAD
         if (_loanCore == address(0)) revert OC_ZeroAddress();
 
+=======
+        require(_loanCore != address(0), "Origination: loanCore not defined");
+>>>>>>> 600c1e6c5734ea2738c0c87546e9f37c1292ed15
         loanCore = _loanCore;
     }
 

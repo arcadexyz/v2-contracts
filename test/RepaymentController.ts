@@ -97,9 +97,16 @@ const fixture = async (): Promise<TestContext> => {
 
     const lenderNoteAddress = await loanCore.lenderNote();
     const lenderNote = <PromissoryNote>(await ethers.getContractFactory("PromissoryNote")).attach(lenderNoteAddress);
+
+    const RepaymentController = await hre.ethers.getContractFactory("RepaymentController");
     const repaymentController = <RepaymentController>(
-        await deploy("RepaymentController", admin, [loanCore.address, borrowerNoteAddress, lenderNoteAddress])
+    await upgrades.deployProxy(RepaymentController, [
+        mockLoanCore.address,
+        borrowerNoteAddress,
+        lenderNoteAddress,
+    ], { kind: 'uups' })
     );
+
     await repaymentController.deployed();
     const updateRepaymentControllerPermissions = await loanCore.grantRole(REPAYER_ROLE, repaymentController.address);
     await updateRepaymentControllerPermissions.wait();
@@ -381,6 +388,15 @@ describe("Legacy Repayments with interest parameter as a rate:", () => {
         await repaymentController.connect(borrower).repay(loanData.borrowerNoteId);
 
         expect(await mockERC20.balanceOf(borrower.address)).to.equal(0);
+    });
+});
+
+describe("RepaymentContV", () => {
+    it("Upgrades to v2", async () => {
+        const RepaymentContV2 = await hre.ethers.getContractFactory("RepaymentContV2");
+        const repaymentContV2 = <RepaymentContV2>(await hre.upgrades.upgradeProxy("0xdeaBbBe620EDF275F06E75E8fab18183389d606F", RepaymentContV2));
+
+        expect (await repaymentContV2.version()).to.equal("This is RepaymentController V2!");
     });
 });
 

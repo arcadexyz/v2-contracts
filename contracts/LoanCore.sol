@@ -15,7 +15,6 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeab
 import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol";
 
-
 import "./interfaces/ICallDelegator.sol";
 import "./interfaces/IPromissoryNote.sol";
 import "./interfaces/IAssetVault.sol";
@@ -50,7 +49,7 @@ contract LoanCore is ILoanCore, Initializable, FullInterestAmountCalc,  AccessCo
     IPromissoryNote public override lenderNote;
     IFeeController public override feeController;
 
-    // 10k bps per whole
+    // 10k bps per wholes
     uint256 private constant BPS_DENOMINATOR = 10_000;
 
     // ========================================== CONSTRUCTOR ===========================================
@@ -93,7 +92,6 @@ contract LoanCore is ILoanCore, Initializable, FullInterestAmountCalc,  AccessCo
     // Avoid having loanId = 0
     loanIdTracker.increment();
     }
-
 
     // ======================================= UPGRADE AUTHORIZATION ========================================
 
@@ -221,6 +219,7 @@ contract LoanCore is ILoanCore, Initializable, FullInterestAmountCalc,  AccessCo
         // ensure repayment was valid
         uint256 returnAmount = getFullInterestAmount(data.terms.principal, data.terms.interestRate);
         require(returnAmount > 0, "No payment due.");
+
         IERC20Upgradeable(data.terms.payableCurrency).safeTransferFrom(_msgSender(), address(this), returnAmount);
 
         address lender = lenderNote.ownerOf(data.lenderNoteId);
