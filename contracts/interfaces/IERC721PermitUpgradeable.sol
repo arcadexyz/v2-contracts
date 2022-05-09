@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721Upgradeable.sol";
 
 /**
  * @dev Interface for a permittable ERC721 contract
@@ -12,7 +12,8 @@ import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
  * presenting a message signed by the account. By not relying on {IERC721-approve}, the token holder account doesn't
  * need to send a transaction, and thus is not required to hold Ether at all.
  */
-interface IERC721Permit is IERC721 {
+interface IERC721PermitUpgradeable is IERC721Upgradeable {
+
     /**
      * @dev Allows `spender` to spend `tokenID` which is owned by`owner`,
      * given ``owner``'s signed approval.

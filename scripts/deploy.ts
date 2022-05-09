@@ -9,6 +9,8 @@ import {
     PromissoryNote,
     RepaymentController,
     OriginationController,
+    CallWhitelist,
+    VaultFactory
 } from "../typechain";
 export interface DeployedResources {
     assetVault: AssetVault;
@@ -18,6 +20,8 @@ export interface DeployedResources {
     lenderNote: PromissoryNote;
     repaymentController: RepaymentController;
     originationController: OriginationController;
+    whitelist: CallWhitelist;
+    vaultFactory: VaultFactory;
 }
 
 export async function main(
@@ -28,6 +32,8 @@ export async function main(
     // If this runs in a standalone fashion you may want to call compile manually
     // to make sure everything is compiled
     // await run("compile");
+    const CallWhiteListFactory = await ethers.getContractFactory("CallWhitelist");
+    const whitelist = <CallWhitelist>await CallWhiteListFactory.deploy();
 
     // We get the contract to deploy
     const AssetVaultFactory = await ethers.getContractFactory("AssetVault");
@@ -46,6 +52,7 @@ export async function main(
     const loanCore = <LoanCore>await upgrades.deployProxy(LoanCoreFactory, [feeController.address], { kind: 'uups' });
     await loanCore.deployed();
 
+    console.log("LoanCore deployed to:", loanCore.address);
 
     const promissoryNoteFactory = await ethers.getContractFactory("PromissoryNote");
     const borrowerNoteAddr = await loanCore.borrowerNote();
@@ -53,7 +60,6 @@ export async function main(
     const lenderNoteAddr = await loanCore.lenderNote();
     const lenderNote = <PromissoryNote>await promissoryNoteFactory.attach(lenderNoteAddr);
 
-    console.log("LoanCore deployed to:", loanCore.address);
     console.log("BorrowerNote deployed to:", borrowerNoteAddr);
     console.log("LenderNote deployed to:", lenderNoteAddr);
 
@@ -85,6 +91,12 @@ export async function main(
 
     console.log("OriginationController deployed to:", originationController.address);
 
+    const VaultFactoryFactory = await ethers.getContractFactory("VaultFactory");
+    // console.log("VaultFactory deployed to:", VaultFactoryFactory)
+    const vaultFactory = <VaultFactory>(await upgrades.deployProxy(VaultFactoryFactory, [assetVault.address, whitelist.address], { kind: 'uups', initializer: "initialize(address, address)" })
+    );
+    console.log("VaultFactory deployed to:", vaultFactory.address)
+
     return {
         assetVault,
         feeController,
@@ -93,6 +105,8 @@ export async function main(
         lenderNote,
         repaymentController,
         originationController,
+        whitelist,
+        vaultFactory
     };
 }
 

@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import hre, { ethers, waffle } from "hardhat";
+import hre, { ethers, waffle, upgrades } from "hardhat";
 const { loadFixture } = waffle;
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
 import { BigNumber } from "ethers";
@@ -14,8 +14,11 @@ import {
     CallWhitelist,
     VaultFactory,
     FeeController,
+    MockLoanCore,
+    RepaymentContV2
 } from "../typechain";
 import { BlockchainTime } from "./utils/time";
+import { utils, Signer, BigNumber } from "ethers";
 import { deploy } from "./utils/contracts";
 import { approve, mint } from "./utils/erc20";
 import { LoanTerms, LoanData } from "./utils/types";
@@ -251,7 +254,8 @@ describe("Legacy Repayments with interest parameter as a rate:", () => {
             hre.ethers.utils.parseEther("10"), // principal
             hre.ethers.utils.parseEther("750"), // interest
             0, // numInstallments
-        );
+        )
+
         // total repayment amount
         const total = ethers.utils.parseEther("10.75");
         const repayAdditionalAmount = total.sub(await mockERC20.balanceOf(borrower.address));
@@ -378,5 +382,14 @@ describe("Legacy Repayments with interest parameter as a rate:", () => {
         await repaymentController.connect(borrower).repay(loanData.borrowerNoteId);
 
         expect(await mockERC20.balanceOf(borrower.address)).to.equal(0);
+    });
+});
+
+describe("RepaymentContV", () => {
+    it("Upgrades to v2", async () => {
+        const RepaymentContV2 = await hre.ethers.getContractFactory("RepaymentContV2");
+        const repaymentContV2 = <RepaymentContV2>(await hre.upgrades.upgradeProxy("0xdeaBbBe620EDF275F06E75E8fab18183389d606F", RepaymentContV2));
+
+        expect (await repaymentContV2.version()).to.equal("This is RepaymentController V2!");
     });
 });
