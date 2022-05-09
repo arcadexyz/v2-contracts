@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.11;
+
+pragma solidity ^0.8.11;
 
 /** V2 Notes
  * Interest input as a rate/ percent value.
