@@ -1,6 +1,4 @@
 // SPDX-License-Identifier: MIT
-<<<<<<< HEAD
-
 pragma solidity 0.8.11;
 
 /** V2 Notes
@@ -32,7 +30,7 @@ import "./interfaces/ILoanCore.sol";
 import "./interfaces/IRepaymentController.sol";
 
 
-contract RepaymentController is IRepaymentController, Initializable, FullInterestAmountCalc, Context, AccessControlUpgradeable, UUPSUpgradeable {
+contract RepaymentController is IRepaymentController, Initializable, FullInterestAmountCalc, AccessControlUpgradeable, UUPSUpgradeable {
     using SafeMathUpgradeable for uint256;
     using SafeERC20Upgradeable for IERC20Upgradeable;
 

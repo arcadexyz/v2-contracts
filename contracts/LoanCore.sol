@@ -221,7 +221,7 @@ contract LoanCore is ILoanCore, Initializable, FullInterestAmountCalc,  AccessCo
         // ensure repayment was valid
         uint256 returnAmount = getFullInterestAmount(data.terms.principal, data.terms.interestRate);
         require(returnAmount > 0, "No payment due.");
-        IERC20(data.terms.payableCurrency).safeTransferFrom(_msgSender(), address(this), returnAmount);
+        IERC20Upgradeable(data.terms.payableCurrency).safeTransferFrom(_msgSender(), address(this), returnAmount);
 
         address lender = lenderNote.ownerOf(data.lenderNoteId);
         address borrower = borrowerNote.ownerOf(data.borrowerNoteId);
@@ -300,7 +300,7 @@ contract LoanCore is ILoanCore, Initializable, FullInterestAmountCalc,  AccessCo
         require(data.state == LoanLibrary.LoanState.Active, "LoanCore::repay: Invalid loan state");
         // calculate total sent by borrower and transferFrom repayment controller to this address
         uint256 paymentTotal = _paymentToPrincipal + _paymentToLateFees + _paymentToInterest;
-        IERC20(data.terms.payableCurrency).safeTransferFrom(_msgSender(), address(this), paymentTotal);
+        IERC20Upgradeable(data.terms.payableCurrency).safeTransferFrom(_msgSender(), address(this), paymentTotal);
         // get the lender and borrower
         address lender = lenderNote.ownerOf(data.lenderNoteId);
         address borrower = borrowerNote.ownerOf(data.borrowerNoteId);
@@ -325,9 +325,9 @@ contract LoanCore is ILoanCore, Initializable, FullInterestAmountCalc,  AccessCo
                 data.balance = 0;
                 data.balancePaid += paymentTotal - diffAmount;
                 // update paymentTotal since extra amount sent
-                IERC20(data.terms.payableCurrency).safeTransfer(borrower, diffAmount);
+                IERC20Upgradeable(data.terms.payableCurrency).safeTransfer(borrower, diffAmount);
                 // Loan is fully repaid, redistribute asset and collateral.
-                IERC20(data.terms.payableCurrency).safeTransfer(lender, paymentTotal - diffAmount);
+                IERC20Upgradeable(data.terms.payableCurrency).safeTransfer(lender, paymentTotal - diffAmount);
                 IERC721(data.terms.collateralAddress).transferFrom(address(this), borrower, data.terms.collateralId);
             }
             // exact amount sent, no difference calculation necessary
@@ -336,7 +336,7 @@ contract LoanCore is ILoanCore, Initializable, FullInterestAmountCalc,  AccessCo
                 data.balance = 0;
                 data.balancePaid += paymentTotal;
                 // Loan is fully repaid, redistribute asset and collateral.
-                IERC20(data.terms.payableCurrency).safeTransfer(lender, paymentTotal);
+                IERC20Upgradeable(data.terms.payableCurrency).safeTransfer(lender, paymentTotal);
                 IERC721(data.terms.collateralAddress).transferFrom(address(this), borrower, data.terms.collateralId);
             }
 
@@ -349,7 +349,7 @@ contract LoanCore is ILoanCore, Initializable, FullInterestAmountCalc,  AccessCo
             data.balancePaid += paymentTotal;
 
             // Loan partial payment, redistribute asset to lender.
-            IERC20(data.terms.payableCurrency).safeTransfer(lender, paymentTotal);
+            IERC20Upgradeable(data.terms.payableCurrency).safeTransfer(lender, paymentTotal);
 
             // minimum repayment events will emit 0 and unchanged principal
             emit InstallmentPaymentReceived(_loanId, _paymentToPrincipal, data.balance);

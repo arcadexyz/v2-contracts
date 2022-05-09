@@ -19,7 +19,7 @@ import {
     MockLoanCore,
     ArcadeItemsVerifier,
     FeeController,
-    ERC1271LenderMock
+    ERC1271LenderMock,
     MockOriginationController,
 } from "../typechain";
 import { approve, mint, ZERO_ADDRESS } from "./utils/erc20";
@@ -93,7 +93,7 @@ const createLoanTerms = (
     {
         durationSecs = BigNumber.from(360000),
         principal = hre.ethers.utils.parseEther("100"),
-        interest = hre.ethers.utils.parseEther("1"),
+        interestRate = hre.ethers.utils.parseEther("1"),
         collateralId = BigNumber.from("1"),
         numInstallments = 0,
     }: Partial<LoanTerms> = {},
@@ -101,7 +101,7 @@ const createLoanTerms = (
     return {
         durationSecs,
         principal,
-        interest,
+        interestRate,
         collateralId,
         collateralAddress,
         payableCurrency,
@@ -131,7 +131,7 @@ describe("OriginationController", () => {
             expect(await originationController.loanCore()).to.equal(loanCore.address);
         });
     });
-
+});
     describe("initializeLoan", () => {
         let ctx: TestContext;
 
@@ -1506,4 +1506,3 @@ describe("MockOriginationController", () => {
         expect (await mockOriginationController.version()).to.equal("This is OriginationController V2!");
     });
 });
-
