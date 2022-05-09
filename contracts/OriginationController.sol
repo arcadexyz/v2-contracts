@@ -91,6 +91,7 @@ contract OriginationController is Initializable, ContextUpgradeable, IOriginatio
      *
      * @param _loanCore                     The address of the loan core logic of the protocol.
      */
+
     function initialize(address _loanCore) initializer public {
         __EIP712_init("OriginationController", "2");
         __Ownable_init_unchained();

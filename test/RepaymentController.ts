@@ -1,9 +1,9 @@
 import { expect } from "chai";
-import hre, { ethers, waffle } from "hardhat";
+import hre, { ethers, waffle, upgrades } from "hardhat";
 const { loadFixture } = waffle;
 import { utils, Signer, BigNumber } from "ethers";
 
-import { MockLoanCore, MockERC20, MockERC721, RepaymentController } from "../typechain";
+import { MockLoanCore, MockERC20, MockERC721, RepaymentController, RepaymentContV2 } from "../typechain";
 import { deploy } from "./utils/contracts";
 
 interface TestContext {
@@ -49,12 +49,21 @@ describe("RepaymentController", () => {
             utils.parseEther((TEST_LOAN_PRINCIPAL + TEST_LOAN_INTEREST).toString()),
         );
 
+        // const repaymentController = <RepaymentController>(
+        //     await deploy("RepaymentController", deployer, [
+        //         mockLoanCore.address,
+        //         borrowerNoteAddress,
+        //         lenderNoteAddress,
+        //     ])
+        // );
+
+        const RepaymentController = await hre.ethers.getContractFactory("RepaymentController");
         const repaymentController = <RepaymentController>(
-            await deploy("RepaymentController", deployer, [
+            await upgrades.deployProxy(RepaymentController, [
                 mockLoanCore.address,
                 borrowerNoteAddress,
                 lenderNoteAddress,
-            ])
+            ], { kind: 'uups' })
         );
 
         // Mint collateral token from asset wrapper
@@ -62,14 +71,18 @@ describe("RepaymentController", () => {
         await collateralMintTx.wait();
 
         // token Id is 0 since it's the first one minted
-        const collateralTokenId = 0;
+        const collateralId = 0;
+
+        // this is a dummy address because the repayment controller logic is out of date
+        const collateralAddress= '0xf91e3017c894e9a240972fcb7a771c355b7d2b16';
 
         const durationSecs = 60 * 60 * 24 * 14;
         const terms = {
             durationSecs: durationSecs,
             principal: utils.parseEther(TEST_LOAN_PRINCIPAL.toString()),
             interest: utils.parseEther(TEST_LOAN_INTEREST.toString()),
-            collateralTokenId,
+            collateralId,
+            collateralAddress,
             payableCurrency: mockERC20.address,
         };
 
@@ -209,5 +222,14 @@ describe("RepaymentController", () => {
 
             // Not reverted - correct loan state and disbursement should be updated in LoanCore
         });
+    });
+});
+
+describe("RepaymentContV", () => {
+    it("Upgrades to v2", async () => {
+        const RepaymentContV2 = await hre.ethers.getContractFactory("RepaymentContV2");
+        const repaymentContV2 = <RepaymentContV2>(await hre.upgrades.upgradeProxy("0xdeaBbBe620EDF275F06E75E8fab18183389d606F", RepaymentContV2));
+
+        expect (await repaymentContV2.version()).to.equal("This is RepaymentController V2!");
     });
 });

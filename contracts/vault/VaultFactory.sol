@@ -1,33 +1,60 @@
 // SPDX-License-Identifier: GPL-3.0-only
+pragma solidity ^0.8.0;
 
-pragma solidity ^0.8.11;
-
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
-import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC1155/IERC1155Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts/proxy/Clones.sol";
+
+import "hardhat/console.sol";
 
 import "../interfaces/IAssetVault.sol";
 import "../interfaces/IVaultFactory.sol";
-import "../ERC721Permit.sol";
+import "../ERC721PermitUpgradeable.sol";
 
+// AccessControlUpgradeable
 /** @title VaultFactory
  *   Factory for creating and registering AssetVaults
  *   Note: TokenId is simply a uint representation of the vault address
  *   To enable simple lookups from vault <-> tokenId
  */
-contract VaultFactory is ERC721Enumerable, ERC721Permit, IVaultFactory {
-    address public immutable template;
-    address public immutable whitelist;
+contract VaultFactory is ERC721EnumerableUpgradeable, ERC721PermitUpgradeable, IVaultFactory {
+    address public template;
+    address public whitelist;
 
-    constructor(address _template, address _whitelist)
-        ERC721("Asset Wrapper V2", "AW-V2")
-        ERC721Permit("Asset Wrapper V2")
-    {
+    // ========================================== CONSTRUCTOR ===========================================
+
+    /**
+     * @notice Runs the initializer function in an upgradeable contract.
+     *
+     *  @dev Add Unsafe-allow comment to notify upgrades plugin to accept the constructor.
+     */
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() initializer {}
+
+    // ========================================== INITIALIZER ===========================================
+
+    function initialize(address _template, address _whitelist) initializer public {
+        __ERC721_init("Asset Wrapper V2", "AW-V2");
+        __ERC721PermitUpgradeable_init("Asset Wrapper V2");
+        _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
         require(_template != address(0), "VaultFactory: invalid template");
         template = _template;
         whitelist = _whitelist;
     }
+
+    // ======================================= UPGRADE AUTHORIZATION ========================================
+
+    /**
+     * @notice Authorization function to define who should be allowed to upgrade the contract
+     *
+     * @param newImplementation    The address of the upgraded version of this contract
+     */
+
+    function _authorizeUpgrade(address newImplementation) internal override onlyRole(DEFAULT_ADMIN_ROLE) {}
+
+    // ==================================== VAULTFACTORY OPERATIONS =========================================
 
     /**
      * @inheritdoc IVaultFactory
@@ -47,10 +74,15 @@ contract VaultFactory is ERC721Enumerable, ERC721Permit, IVaultFactory {
      * @inheritdoc IVaultFactory
      */
     function instanceAt(uint256 tokenId) external view override returns (address instance) {
-        require(_exists(tokenId), "Cannot find instance of nonexistent token");
-
-        return address(uint160(tokenId));
-        // return address(uint160(tokenByIndex(index)));
+        console.log("77 ADDRESS 78: ---------------------" , address(uint160(tokenByIndex(tokenId))));
+        console.log("78 TOKEN ID 77: --------------------", address(uint160(tokenId)));
+        // convTokenId = uint256(uint160(tokenId));
+        // console.log("79 tokenId: -----------------", convTokenId);
+        console.log("79 tokenId: -----------------", tokenId);
+        console.log("80 -------------------------", _exists(tokenId));
+        console.log("ADDRESS 81: ---------------------" , address(uint160(tokenByIndex(tokenId))));
+       require(_exists(tokenId), "Cannot find instance of nonexistent token");
+        return address(uint160(tokenByIndex(tokenId)));
     }
 
     /**
@@ -88,7 +120,7 @@ contract VaultFactory is ERC721Enumerable, ERC721Permit, IVaultFactory {
         address from,
         address to,
         uint256 tokenId
-    ) internal virtual override(ERC721, ERC721Enumerable) {
+    ) internal virtual override(ERC721Upgradeable, ERC721EnumerableUpgradeable) {
         IAssetVault vault = IAssetVault(address(uint160(tokenId)));
         require(!vault.withdrawEnabled(), "cannot transfer with withdraw enabled");
 
@@ -102,10 +134,9 @@ contract VaultFactory is ERC721Enumerable, ERC721Permit, IVaultFactory {
         public
         view
         virtual
-        override(ERC721, ERC721Enumerable)
+        override(ERC721PermitUpgradeable, ERC721EnumerableUpgradeable)
         returns (bool)
     {
         return super.supportsInterface(interfaceId);
     }
-
 }

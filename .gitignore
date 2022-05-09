@@ -25,3 +25,6 @@ yarn-error.log*
 gas_report.log
 .env
 cargs.js
+
+# OpenZeppelin
+.openzeppelin/unknown-*.json

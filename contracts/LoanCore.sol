@@ -24,6 +24,7 @@ import "./vault/OwnableERC721.sol";
 
 /**
  * @dev LoanCore contract - core contract for creating, repaying, and claiming collateral for PawnFi loans
+
  */
 contract LoanCore is ILoanCore, Initializable, AccessControlUpgradeable, PausableUpgradeable, ICallDelegator, UUPSUpgradeable {
     using CountersUpgradeable for CountersUpgradeable.Counter;
@@ -44,7 +45,7 @@ contract LoanCore is ILoanCore, Initializable, AccessControlUpgradeable, Pausabl
     // 10k bps per wholes
     uint256 private constant BPS_DENOMINATOR = 10_000;
 
-       // ========================================== CONSTRUCTOR ===========================================
+    // ========================================== CONSTRUCTOR ===========================================
 
     /**
      * @notice Runs the initializer function in an upgradeable contract.
@@ -70,6 +71,8 @@ contract LoanCore is ILoanCore, Initializable, AccessControlUpgradeable, Pausabl
     _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
     _setupRole(FEE_CLAIMER_ROLE, _msgSender());
     // only those with FEE_CLAIMER_ROLE can update or grant FEE_CLAIMER_ROLE
+    __AccessControl_init();
+    __UUPSUpgradeable_init_unchained();
     _setRoleAdmin(FEE_CLAIMER_ROLE, FEE_CLAIMER_ROLE);
 
     feeController = _feeController;

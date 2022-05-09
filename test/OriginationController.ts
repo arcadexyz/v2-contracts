@@ -25,7 +25,6 @@ import { mint as mint721 } from "./utils/erc721";
 import { ItemsPredicate, LoanTerms, SignatureItem } from "./utils/types";
 import { createLoanTermsSignature, createLoanItemsSignature, createPermitSignature } from "./utils/eip712";
 import { encodePredicates, encodeSignatureItems, initializeBundle } from "./utils/loans";
-import { toNamespacedPath } from "path";
 
 type Signer = SignerWithAddress;
 
@@ -90,7 +89,7 @@ const createLoanTerms = (
     payableCurrency: string,
     collateralAddress: string,
     {
-        durationSecs = 360000,
+        durationSecs = BigNumber.from(360000),
         principal = hre.ethers.utils.parseEther("100"),
         interest = hre.ethers.utils.parseEther("1"),
         collateralId = BigNumber.from("1"),

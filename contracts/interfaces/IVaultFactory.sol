@@ -23,7 +23,7 @@ interface IVaultFactory {
     function instanceCount() external view returns (uint256);
 
     /**
-     * @dev Return the instance at the given index
+     * @dev return the address of the instance at the given index
      * @dev allows for enumeration over all instances
      * @param index the index to return instance at
      */
