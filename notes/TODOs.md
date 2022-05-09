@@ -1,5 +1,24 @@
 ## TODOs
 
+MAY 9 WHATS LEFT:
+
+Safety/Robustness:
+- Merge upgradeability
+- Fix test suite and ensure 100% coverage or as close as possible
+
+Refactoring:
+- Split LoanCore into separate files (contract too big)
+- Custom errors
+- Make sure all files use 0.8.11 compiler
+- Consistent documentation - move to implementation
+
+Features:
+- Installment Claim
+- Signature expiry
+- Move origination fee to fee controller
+- Native rollovers
+
+
 Evan:
 
 - Installments PR
