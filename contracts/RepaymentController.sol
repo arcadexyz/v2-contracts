@@ -62,7 +62,7 @@ contract RepaymentController is IRepaymentController, Initializable, FullInteres
         ILoanCore _loanCore,
         IPromissoryNote _borrowerNote,
         IPromissoryNote _lenderNote
-    ) initializer public {
+    ) public initializer {
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
         loanCore = _loanCore;
         borrowerNote = _borrowerNote;

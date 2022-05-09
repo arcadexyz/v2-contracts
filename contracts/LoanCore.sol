@@ -49,7 +49,7 @@ contract LoanCore is ILoanCore, Initializable, FullInterestAmountCalc,  AccessCo
     IPromissoryNote public override lenderNote;
     IFeeController public override feeController;
 
-    // 10k bps per wholes
+    // 10k bps per whole
     uint256 private constant BPS_DENOMINATOR = 10_000;
 
     // ========================================== CONSTRUCTOR ===========================================
@@ -74,23 +74,23 @@ contract LoanCore is ILoanCore, Initializable, FullInterestAmountCalc,  AccessCo
      * @param _feeController      The address of the origination fee contract of the protocol.
      */
 
-    function initialize(IFeeController _feeController) initializer public {
-    _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
-    _setupRole(FEE_CLAIMER_ROLE, _msgSender());
-    // only those with FEE_CLAIMER_ROLE can update or grant FEE_CLAIMER_ROLE
-    __AccessControl_init();
-    __UUPSUpgradeable_init_unchained();
-    _setRoleAdmin(FEE_CLAIMER_ROLE, FEE_CLAIMER_ROLE);
+    function initialize(IFeeController _feeController) public initializer {
+        // only those with FEE_CLAIMER_ROLE can update or grant FEE_CLAIMER_ROLE
+        __AccessControl_init();
+        __UUPSUpgradeable_init_unchained();
+        _setRoleAdmin(FEE_CLAIMER_ROLE, FEE_CLAIMER_ROLE);
+        _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
+        _setupRole(FEE_CLAIMER_ROLE, _msgSender());
 
-    feeController = _feeController;
+        feeController = _feeController;
 
-    // TODO: Why are these deployed? Can these be provided beforehand?
-    //       Even updatable with note addresses going in LoanData?
-    borrowerNote = new PromissoryNote("PawnFi Borrower Note", "pBN");
-    lenderNote = new PromissoryNote("PawnFi Lender Note", "pLN");
+        // TODO: Why are these deployed? Can these be provided beforehand?
+        //       Even updatable with note addresses going in LoanData?
+        borrowerNote = new PromissoryNote("PawnFi Borrower Note", "pBN");
+        lenderNote = new PromissoryNote("PawnFi Lender Note", "pLN");
 
-    // Avoid having loanId = 0
-    loanIdTracker.increment();
+        // Avoid having loanId = 0
+        loanIdTracker.increment();
     }
 
     // ======================================= UPGRADE AUTHORIZATION ========================================

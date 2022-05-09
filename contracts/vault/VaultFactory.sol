@@ -7,8 +7,6 @@ import "@openzeppelin/contracts-upgradeable/token/ERC1155/IERC1155Upgradeable.so
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts/proxy/Clones.sol";
 
-import "hardhat/console.sol";
-
 import "../interfaces/IAssetVault.sol";
 import "../interfaces/IVaultFactory.sol";
 import "../ERC721PermitUpgradeable.sol";
@@ -35,7 +33,7 @@ contract VaultFactory is ERC721EnumerableUpgradeable, ERC721PermitUpgradeable, I
 
     // ========================================== INITIALIZER ===========================================
 
-    function initialize(address _template, address _whitelist) initializer public {
+    function initialize(address _template, address _whitelist) public initializer {
         __ERC721_init("Asset Wrapper V2", "AW-V2");
         __ERC721PermitUpgradeable_init("Asset Wrapper V2");
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());

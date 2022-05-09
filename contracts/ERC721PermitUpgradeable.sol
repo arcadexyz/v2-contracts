@@ -29,7 +29,7 @@ abstract contract ERC721PermitUpgradeable is ERC721Upgradeable, IERC721PermitUpg
     mapping(address => CountersUpgradeable.Counter) private _nonces;
 
     // solhint-disable-next-line var-name-mixedcase
-    bytes32 private _PERMIT_TYPEHASH;
+    bytes32 private constant _PERMIT_TYPEHASH = keccak256("Permit(address owner,address spender,uint256 tokenId,uint256 nonce,uint256 deadline)");
 
 
     // ========================================== INITIALIZER ===========================================
@@ -45,8 +45,6 @@ abstract contract ERC721PermitUpgradeable is ERC721Upgradeable, IERC721PermitUpg
         __AccessControl_init();
         __UUPSUpgradeable_init();
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
-        _PERMIT_TYPEHASH =
-        keccak256("Permit(address owner,address spender,uint256 tokenId,uint256 nonce,uint256 deadline)");
     }
 
     // ======================================= UPGRADE AUTHORIZATION ========================================

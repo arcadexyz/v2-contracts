@@ -161,7 +161,7 @@ contract OriginationController is Initializable, ContextUpgradeable, IOriginatio
      * @param nonce                         The signature nonce.
      * @param itemPredicates                The predicate rules for the items in the bundle.
      *
-     * @return loanId                      The unique ID of the new loan.
+     * @return loanId                       The unique ID of the new loan.
      */
     function initializeLoanWithItems(
         LoanLibrary.LoanTerms calldata loanTerms,
