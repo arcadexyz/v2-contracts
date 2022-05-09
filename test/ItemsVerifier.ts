@@ -94,6 +94,105 @@ describe("ItemsVerifier", () => {
             await expect(verifier.verifyPredicates(encodeSignatureItems(signatureItems), bundleAddress)).to.be.reverted;
         });
 
+        it("fails if a signature item is missing an address", async () => {
+            const { vaultFactory, user, mockERC721, verifier } = ctx;
+
+            const bundleId = await initializeBundle(vaultFactory, user);
+            const bundleAddress = await vaultFactory.instanceAt(bundleId);
+            const tokenId = await mint721(mockERC721, user);
+            await mockERC721.connect(user).transferFrom(user.address, bundleAddress, tokenId);
+
+            // Create predicate for a single ID
+            const signatureItems: SignatureItem[] = [
+                {
+                    cType: 0,
+                    asset: "0x0000000000000000000000000000000000000000",
+                    tokenId,
+                    amount: 0, // not used for 721
+                },
+            ];
+
+            // Will revert because 4 can't be parsed as an enum
+            await expect(
+                verifier.verifyPredicates(encodeSignatureItems(signatureItems), bundleAddress),
+            ).to.be.revertedWith("IV_ItemMissingAddress");
+        });
+
+        it("fails if an ERC1155 item has a non-positive required amount", async () => {
+            const { vaultFactory, user, mockERC1155, verifier } = ctx;
+
+            const bundleId = await initializeBundle(vaultFactory, user);
+            const bundleAddress = await vaultFactory.instanceAt(bundleId);
+            const tokenId = await mint1155(mockERC1155, user, BigNumber.from(10));
+
+            await mockERC1155.connect(user).safeTransferFrom(user.address, bundleAddress, tokenId, 10, Buffer.from(""));
+
+            // Create predicate for a single ID
+            const signatureItems: SignatureItem[] = [
+                {
+                    cType: 1,
+                    asset: mockERC1155.address,
+                    tokenId,
+                    amount: 0, // invalid for 1155
+                },
+            ];
+
+            // Will revert because 4 can't be parsed as an enum
+            await expect(
+                verifier.verifyPredicates(encodeSignatureItems(signatureItems), bundleAddress),
+            ).to.be.revertedWith("IV_NonPositiveAmount1155");
+        });
+
+        it("fails if an ERC1155 item has a an invalid token ID", async () => {
+            const { vaultFactory, user, mockERC1155, verifier } = ctx;
+
+            const bundleId = await initializeBundle(vaultFactory, user);
+            const bundleAddress = await vaultFactory.instanceAt(bundleId);
+            const tokenId = await mint1155(mockERC1155, user, BigNumber.from(10));
+
+            await mockERC1155.connect(user).safeTransferFrom(user.address, bundleAddress, tokenId, 10, Buffer.from(""));
+
+            // Create predicate for a single ID
+            const signatureItems: SignatureItem[] = [
+                {
+                    cType: 1,
+                    asset: mockERC1155.address,
+                    tokenId: -1, // invalid for 1155
+                    amount: 5,
+                },
+            ];
+
+            // Will revert because 4 can't be parsed as an enum
+            await expect(
+                verifier.verifyPredicates(encodeSignatureItems(signatureItems), bundleAddress),
+            ).to.be.revertedWith("IV_InvalidTokenId1155");
+        });
+
+        it("fails if an ERC20 item has a non-positive required amount", async () => {
+            const { vaultFactory, user, mockERC20, verifier } = ctx;
+
+            const bundleId = await initializeBundle(vaultFactory, user);
+            const bundleAddress = await vaultFactory.instanceAt(bundleId);
+
+            await mint20(mockERC20, user, BigNumber.from(1000));
+            await mockERC20.connect(user).transfer(bundleAddress, 1000);
+
+            // Create predicate for a single ID
+            const signatureItems: SignatureItem[] = [
+                {
+                    cType: 2,
+                    asset: mockERC20.address,
+                    tokenId: 0,
+                    amount: 0, // invalid for 20
+                },
+            ];
+
+            // Will revert because 4 can't be parsed as an enum
+            await expect(
+                verifier.verifyPredicates(encodeSignatureItems(signatureItems), bundleAddress),
+            ).to.be.revertedWith("IV_NonPositiveAmount20");
+        });
+
         it("verifies a specific ERC721 and token id", async () => {
             const { vaultFactory, user, mockERC721, verifier } = ctx;
 

@@ -15,7 +15,9 @@ interface IOriginationController {
 
     // ================ Events =================
 
-    event Approval(address indexed owner, address indexed signer);
+    event Approval(address indexed owner, address indexed signer, bool isApproved);
+
+    event SetAllowedVerifier(address indexed verifier, bool isAllowed);
 
     // ============== Origination Operations ==============
 
@@ -23,7 +25,8 @@ interface IOriginationController {
         LoanLibrary.LoanTerms calldata loanTerms,
         address borrower,
         address lender,
-        Signature calldata sig
+        Signature calldata sig,
+        uint160 nonce
     ) external returns (uint256 loanId);
 
     function initializeLoanWithItems(
@@ -31,6 +34,7 @@ interface IOriginationController {
         address borrower,
         address lender,
         Signature calldata sig,
+        uint160 nonce,
         LoanLibrary.Predicate[] calldata itemPredicates
     ) external returns (uint256 loanId);
 
@@ -39,6 +43,7 @@ interface IOriginationController {
         address borrower,
         address lender,
         Signature calldata sig,
+        uint160 nonce,
         Signature calldata collateralSig,
         uint256 permitDeadline
     ) external returns (uint256 loanId);
@@ -48,6 +53,7 @@ interface IOriginationController {
         address borrower,
         address lender,
         Signature calldata sig,
+        uint160 nonce,
         Signature calldata collateralSig,
         uint256 permitDeadline,
         LoanLibrary.Predicate[] calldata itemPredicates
@@ -61,16 +67,32 @@ interface IOriginationController {
 
     function isSelfOrApproved(address target, address signer) external returns (bool);
 
+    function isApprovedForContract(
+        address target,
+        Signature calldata sig,
+        bytes32 sighash
+    ) external returns (bool);
+
     // ============== Signature Verification ==============
 
-    function recoverTokenSignature(LoanLibrary.LoanTerms calldata loanTerms, Signature calldata sig)
-        external
-        view
-        returns (address signer);
+    function recoverTokenSignature(
+        LoanLibrary.LoanTerms calldata loanTerms,
+        Signature calldata sig,
+        uint160 nonce
+    ) external view returns (bytes32 sighash, address signer);
 
     function recoverItemsSignature(
         LoanLibrary.LoanTerms calldata loanTerms,
         Signature calldata sig,
+        uint160 nonce,
         bytes32 itemsHash
-    ) external view returns (address signer);
+    ) external view returns (bytes32 sighash, address signer);
+
+    // ============== Admin Operations ==============
+
+    function setAllowedVerifier(address verifier, bool isAllowed) external;
+
+    function setAllowedVerifierBatch(address[] calldata verifiers, bool[] calldata isAllowed) external;
+
+    function isAllowedVerifier(address verifier) external view returns (bool);
 }

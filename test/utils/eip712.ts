@@ -10,7 +10,6 @@ interface TypeData {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     primaryType: any;
 }
-
 export interface PermitData {
     owner: string;
     spender: string;
@@ -42,6 +41,7 @@ const typedLoanTermsData: TypeData = {
             { name: "collateralId", type: "uint256" },
             { name: "payableCurrency", type: "address" },
             { name: "numInstallments", type: "uint256" },
+            { name: "nonce", type: "uint160" },
         ],
     },
     primaryType: "LoanTerms" as const,
@@ -57,6 +57,7 @@ const typedLoanItemsData: TypeData = {
             { name: "itemsHash", type: "bytes32" },
             { name: "payableCurrency", type: "address" },
             { name: "numInstallments", type: "uint256" },
+            { name: "nonce", type: "uint160" }
         ],
     },
     primaryType: "LoanTermsWithItems" as const,
@@ -83,6 +84,8 @@ const buildData = (verifyingContract: string, name: string, version: string, mes
  * @param name The name of the contract that will be verifying this signature
  * @param terms the LoanTerms object to sign
  * @param signer The EOA to create the signature
+ * @param version The EIP712 version of the contract to use
+ * @param nonce The signature nonce
  */
 export async function createLoanTermsSignature(
     verifyingContract: string,
@@ -90,8 +93,9 @@ export async function createLoanTermsSignature(
     terms: LoanTerms,
     signer: SignerWithAddress,
     version = "1",
+    nonce = "1",
 ): Promise<ECDSASignature> {
-    const data = buildData(verifyingContract, name, version, terms, typedLoanTermsData);
+    const data = buildData(verifyingContract, name, version, { ...terms, nonce }, typedLoanTermsData);
     const signature = await signer._signTypedData(data.domain, data.types, data.message);
 
     return fromRpcSig(signature);
@@ -103,6 +107,8 @@ export async function createLoanTermsSignature(
  * @param name The name of the contract that will be verifying this signature
  * @param terms the LoanTerms object to sign
  * @param signer The EOA to create the signature
+ * @param version The EIP712 version of the contract to use
+ * @param nonce The signature nonce
  */
 export async function createLoanItemsSignature(
     verifyingContract: string,
@@ -111,6 +117,7 @@ export async function createLoanItemsSignature(
     itemsHash: string,
     signer: SignerWithAddress,
     version = "1",
+    nonce = "1",
 ): Promise<ECDSASignature> {
     const message: ItemsPayload = {
         durationSecs: terms.durationSecs,
@@ -120,6 +127,7 @@ export async function createLoanItemsSignature(
         itemsHash,
         payableCurrency: terms.payableCurrency,
         numInstallments: terms.numInstallments,
+        nonce
     };
 
     const data = buildData(verifyingContract, name, version, message, typedLoanItemsData);

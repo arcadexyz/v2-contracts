@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+
 pragma solidity ^0.8.11;
 
 import "@openzeppelin/contracts/security/Pausable.sol";
@@ -19,7 +20,7 @@ import "./PromissoryNote.sol";
 import "./vault/OwnableERC721.sol";
 
 // TODO: Better natspec
-// TODO: Re-Entrancy mechanisms just for a safegaurd? - Kyle/Shipyard
+// TODO: Custom errors
 
 /**
  * @dev LoanCore contract - core contract for creating, repaying, and claiming collateral for PawnFi loans
@@ -34,8 +35,11 @@ contract LoanCore is ILoanCore, FullInterestAmountCalc, AccessControl, Pausable,
     bytes32 public constant FEE_CLAIMER_ROLE = keccak256("FEE_CLAIMER_ROLE");
 
     Counters.Counter private loanIdTracker;
+
     mapping(uint256 => LoanLibrary.LoanData) private loans;
     mapping(address => mapping(uint256 => bool)) private collateralInUse;
+    mapping(address => mapping(uint160 => bool)) public usedNonces;
+
     IPromissoryNote public immutable override borrowerNote;
     IPromissoryNote public immutable override lenderNote;
     IFeeController public override feeController;
@@ -378,5 +382,21 @@ contract LoanCore is ILoanCore, FullInterestAmountCalc, AccessControl, Pausable,
         }
 
         return false;
+    }
+
+    function consumeNonce(address user, uint160 nonce) external override whenNotPaused onlyRole(ORIGINATOR_ROLE) {
+        _useNonce(user, nonce);
+    }
+
+    function cancelNonce(uint160 nonce) external override {
+        address user = _msgSender();
+        _useNonce(user, nonce);
+    }
+
+    function _useNonce(address user, uint160 nonce) internal {
+        require(!usedNonces[user][nonce], "Nonce used");
+        usedNonces[user][nonce] = true;
+
+        emit NonceUsed(user, nonce);
     }
 }

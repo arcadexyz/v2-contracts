@@ -1289,4 +1289,25 @@ describe("LoanCore", () => {
             expect(await loanCore.canCallOn(await lender.getAddress(), vault.address)).to.be.false;
         });
     });
+
+    describe.only("Nonce management", () => {
+        let context: TestContext;
+
+        beforeEach(async () => {
+            context = await loadFixture(fixture);
+        });
+
+        it("does not let a nonce be consumed by a non-originator", async () => {
+            const { loanCore, other, user } = context;
+
+            await expect(
+                loanCore.connect(other).consumeNonce(user, 10)
+            ).to.be.revertedWith("AC");
+        });
+
+        it("reverts if attempting to use a nonce that has already been consumed");
+        it("consumes a nonce");
+        it("reverts if attempting to use a nonce that has already been cancelled");
+        it("cancels a nonce");
+    });
 });
