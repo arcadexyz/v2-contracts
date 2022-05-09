@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: MIT
-<<<<<<< HEAD
 pragma solidity 0.8.11;
 
 /** V2 Notes
@@ -16,10 +15,6 @@ pragma solidity 0.8.11;
  */
 
 import "@openzeppelin/contracts/utils/Context.sol";
-=======
-pragma solidity ^0.8.0;
-
->>>>>>> 600c1e6c5734ea2738c0c87546e9f37c1292ed15
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
@@ -86,10 +81,6 @@ contract RepaymentController is IRepaymentController, Initializable, FullInteres
 
 
     // ==================================== CONTROLLER OPERATIONS ======================================
-<<<<<<< HEAD
-=======
-
->>>>>>> 600c1e6c5734ea2738c0c87546e9f37c1292ed15
     /**
      * @inheritdoc IRepaymentController
      */
@@ -104,13 +95,8 @@ contract RepaymentController is IRepaymentController, Initializable, FullInteres
         uint256 total = getFullInterestAmount(terms.principal, terms.interestRate);
         require(total > 0, "RepaymentCont::repay: No payment due.");
 
-<<<<<<< HEAD
         IERC20Upgradeable(terms.payableCurrency).safeTransferFrom(_msgSender(), address(this), total);
         IERC20Upgradeable(terms.payableCurrency).approve(address(loanCore), total);
-=======
-        IERC20Upgradeable(terms.payableCurrency).safeTransferFrom(msg.sender, address(this), terms.principal.add(terms.interest));
-        IERC20Upgradeable(terms.payableCurrency).approve(address(loanCore), terms.principal.add(terms.interest));
->>>>>>> 600c1e6c5734ea2738c0c87546e9f37c1292ed15
 
         // call repay function in loan core
         loanCore.repay(loanId);

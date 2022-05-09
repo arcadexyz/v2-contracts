@@ -42,6 +42,7 @@ interface TestContext {
     admin: SignerWithAddress;
     currentTimestamp: number;
     blockchainTime: BlockchainTime;
+    mockLoanCore: MockLoanCore;
 }
 
 /**
@@ -98,6 +99,8 @@ const fixture = async (): Promise<TestContext> => {
     const lenderNoteAddress = await loanCore.lenderNote();
     const lenderNote = <PromissoryNote>(await ethers.getContractFactory("PromissoryNote")).attach(lenderNoteAddress);
 
+    const mockLoanCore = <MockLoanCore>await deploy("MockLoanCore", admin, [feeController.address]);
+
     const RepaymentController = await hre.ethers.getContractFactory("RepaymentController");
     const repaymentController = <RepaymentController>(
     await upgrades.deployProxy(RepaymentController, [
@@ -131,6 +134,7 @@ const fixture = async (): Promise<TestContext> => {
         admin,
         currentTimestamp,
         blockchainTime,
+        mockLoanCore
     };
 };
 

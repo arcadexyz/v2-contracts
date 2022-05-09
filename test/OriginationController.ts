@@ -18,11 +18,8 @@ import {
     PromissoryNote,
     MockLoanCore,
     ArcadeItemsVerifier,
-<<<<<<< HEAD
     FeeController,
     ERC1271LenderMock,
-=======
->>>>>>> 600c1e6c5734ea2738c0c87546e9f37c1292ed15
     MockOriginationController,
 } from "../typechain";
 import { approve, mint, ZERO_ADDRESS } from "./utils/erc20";
@@ -118,16 +115,9 @@ describe("OriginationController", () => {
     describe("initializer", () => {
         it("Reverts if _loanCore address is not provided", async () => {
 
-<<<<<<< HEAD
 
             const OriginationController = await hre.ethers.getContractFactory("OriginationController");
             await expect(upgrades.deployProxy(OriginationController, [ZERO_ADDRESS])).to.be.revertedWith("OC_ZeroAddress");
-=======
-            const OriginationController = await hre.ethers.getContractFactory("OriginationController");
-            await expect(upgrades.deployProxy(OriginationController, [ZERO_ADDRESS])).to.be.revertedWith(
-                "Origination: loanCore not defined",
-            );
->>>>>>> 600c1e6c5734ea2738c0c87546e9f37c1292ed15
         });
 
         it("Instantiates the OriginationController", async () => {
@@ -1513,9 +1503,4 @@ describe("MockOriginationController", () => {
 
         expect (await mockOriginationController.version()).to.equal("This is OriginationController V2!");
     });
-<<<<<<< HEAD
 });
-=======
-});
-
->>>>>>> 600c1e6c5734ea2738c0c87546e9f37c1292ed15
