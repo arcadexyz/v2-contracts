@@ -26,6 +26,8 @@ import "./interfaces/IPromissoryNote.sol";
 import "./interfaces/ILoanCore.sol";
 import "./interfaces/IRepaymentController.sol";
 
+import { RC_CannotDereference, RC_NoPaymentDue, RC_OnlyLender, RC_BeforeStartDate, RC_NoInstallments, RC_NoMinPaymentDue, RC_RepayPartGTZero, RC_RepayPartGTMin } from "./errors/Lending.sol";
+
 contract RepaymentController is IRepaymentController, FullInterestAmountCalc, Context {
     using SafeERC20 for IERC20;
 
@@ -59,13 +61,13 @@ contract RepaymentController is IRepaymentController, FullInterestAmountCalc, Co
     function repay(uint256 borrowerNoteId) external override {
         // get loan from borrower note
         uint256 loanId = borrowerNote.loanIdByNoteId(borrowerNoteId);
-        require(loanId != 0, "RepaymentCont::repay: repay could not dereference loan");
+        if(loanId != 0) revert RC_CannotDereference(loanId);
 
         LoanLibrary.LoanTerms memory terms = loanCore.getLoan(loanId).terms;
 
         // withdraw principal plus interest from borrower and send to loan core
         uint256 total = getFullInterestAmount(terms.principal, terms.interestRate);
-        require(total > 0, "RepaymentCont::repay: No payment due.");
+        if(total > 0) revert RC_NoPaymentDue(total);
 
         IERC20(terms.payableCurrency).safeTransferFrom(_msgSender(), address(this), total);
         IERC20(terms.payableCurrency).approve(address(loanCore), total);
@@ -80,11 +82,11 @@ contract RepaymentController is IRepaymentController, FullInterestAmountCalc, Co
     function claim(uint256 lenderNoteId) external override {
         // make sure that caller owns lender note
         address lender = lenderNote.ownerOf(lenderNoteId);
-        require(lender == msg.sender, "RepaymentCont::claim: not owner of lender note");
+        if(lender == msg.sender) revert RC_OnlyLender(msg.sender);
 
         // get loan from lender note
         uint256 loanId = lenderNote.loanIdByNoteId(lenderNoteId);
-        require(loanId != 0, "RepaymentCont::claim: could not dereference loan");
+        if(loanId != 0) revert RC_CannotDereference(loanId);
 
         // call claim function in loan core
         loanCore.claim(loanId);
@@ -282,15 +284,15 @@ contract RepaymentController is IRepaymentController, FullInterestAmountCalc, Co
     {
         // get loan from borrower note
         uint256 loanId = borrowerNote.loanIdByNoteId(borrowerNoteId);
-        require(loanId != 0, "RepaymentCont::minPayment: Repay could not dereference loan");
+        if(loanId != 0) revert RC_CannotDereference(loanId);
         // load terms from loanId
         LoanLibrary.LoanData memory data = loanCore.getLoan(loanId);
 
         // local variables
         uint256 startDate = data.startDate;
-        require(startDate < block.timestamp, "RepaymentCont::claim: Loan has not started yet");
+        if(startDate < block.timestamp) revert RC_BeforeStartDate(startDate);
         uint256 installments = data.terms.numInstallments;
-        require(installments > 0, "RepaymentCont::minPayment: Loan does not have any installments");
+        if(installments > 0) revert RC_NoInstallments(installments);
 
         // get the current minimum balance due for the installment
         (uint256 minInterestDue, uint256 lateFees, uint256 numMissedPayments) = _calcAmountsDue(
@@ -322,7 +324,7 @@ contract RepaymentController is IRepaymentController, FullInterestAmountCalc, Co
         // total amount due, interest amount plus any late fees
         uint256 _minAmount = minBalanceDue + lateFees;
         // cannot call repayPartMinimum twice in the same installment period
-        require(_minAmount > 0, "RepaymentCont::repayMin: No interest payment or late fees due");
+        if(_minAmount > 0) revert RC_NoMinPaymentDue(_minAmount);
         // load terms from loanId
         LoanLibrary.LoanData memory data = loanCore.getLoan(loanId);
         // gather minimum payment from _msgSender()
@@ -352,10 +354,10 @@ contract RepaymentController is IRepaymentController, FullInterestAmountCalc, Co
         );
         // total minimum amount due, interest amount plus any late fees
         uint256 _minAmount = minBalanceDue + lateFees;
-        // require amount sent to be larger than 0
-        require(amount > 0, "RepaymentCont::repayPart: Repaid amount must be larger than 0");
-        // require amount taken from the _msgSender() to be larger than or equal to minBalanceDue
-        require(amount >= _minAmount, "RepaymentCont::repayPart: Amount less than the min amount due");
+        // revert if amount parameter is not greater than zero.
+        if(amount > 0) revert RC_RepayPartGTZero(amount);
+        // revert if amount parameter is not greater than or equal to _minAmount
+        if(amount >= _minAmount) revert RC_RepayPartGTMin(amount);
         // load data from loanId
         LoanLibrary.LoanData memory data = loanCore.getLoan(loanId);
         // calculate the payment to principal after subtracting (minBalanceDue + lateFees)

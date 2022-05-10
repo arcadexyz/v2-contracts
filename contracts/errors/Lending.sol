@@ -81,7 +81,7 @@ error IV_ItemMissingAddress();
  * @notice Provided SignatureItem has an invalid collateral type.
  * @dev    Should never actually fire, since cType is defined by an enum, so will fail on decode.
  *
- * @param asset                         The NFT contract being checked.
+ * @param asset                        The NFT contract being checked.
  * @param cType                        The collateralTytpe provided.
  */
 error IV_InvalidCollateralType(address asset, uint256 cType);
@@ -98,7 +98,7 @@ error IV_NonPositiveAmount1155(address asset, uint256 amount);
  * @notice Provided ERC1155 signature item is requiring an invalid token ID.
  *
  * @param asset                         The NFT contract being checked.
- * @param tokenId                        The token ID provided.
+ * @param tokenId                       The token ID provided.
  */
 error IV_InvalidTokenId1155(address asset, int256 tokenId);
 
@@ -109,3 +109,64 @@ error IV_InvalidTokenId1155(address asset, int256 tokenId);
  * @param amount                        The amount provided (should be 0).
  */
 error IV_NonPositiveAmount20(address asset, uint256 amount);
+
+
+// ==================================== REPAYMENT CONTROLLER ======================================
+/// @notice All errors prefixed with RC_, to separate from other contracts in the protocol.
+
+/**
+ * @notice Could not dereference loan from borrowerNoteId.
+ *
+ * @param target                     The loanId being checked.
+ */
+error RC_CannotDereference(uint256 target);
+
+/**
+ * @notice Repayment has already been completed for this loan without installments.
+ *
+ * @param amount                     Balance returned after calculating amount due.
+ */
+error RC_NoPaymentDue(uint256 amount);
+
+/**
+ * @notice Caller is not the owner of lender note.
+ *
+ * @param caller                     Msg.sender of the function call.
+ */
+error RC_OnlyLender(address caller);
+
+/**
+ * @notice Loan has not started yet.
+ *
+ * @param startDate                 block timestamp of the startDate of loan stored in LoanData.
+ */
+error RC_BeforeStartDate(uint256 startDate);
+
+/**
+ * @notice Loan does not have any installments.
+ *
+ * @param numInstallments           Number of installments returned from LoanTerms.
+ */
+error RC_NoInstallments(uint256 numInstallments);
+
+/**
+ * @notice No interest payment or late fees due.
+ *
+ * @param amount                    Minimum interest plus late fee amount returned
+ *                                  from minimum payment calculation.
+ */
+error RC_NoMinPaymentDue(uint256 amount);
+
+/**
+ * @notice Repaid amount must be larger than zero.
+ *
+ * @param amount                    Amount function call parameter.
+ */
+error RC_RepayPartGTZero(uint256 amount);
+
+/**
+ * @notice Amount paramater less than the minimum amount due.
+ *
+ * @param amount                    Amount function call parameter.
+ */
+error RC_RepayPartGTMin(uint256 amount);
