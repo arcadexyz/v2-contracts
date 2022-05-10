@@ -38,6 +38,7 @@ interface TestContext {
     signers: Signer[];
     currentTimestamp: number;
     blockchainTime: BlockchainTime;
+    loanCoreV2Mock:  LoanCoreV2Mock;
 }
 
 describe("LoanCore", () => {
@@ -108,6 +109,9 @@ describe("LoanCore", () => {
             await upgrades.deployProxy(LoanCoreFactory, [feeController.address], { kind: 'uups' })
         );
 
+        const LoanCoreV2Mock = await hre.ethers.getContractFactory("LoanCoreV2Mock");
+        const loanCoreV2Mock = <LoanCoreV2Mock>(await hre.upgrades.upgradeProxy(loanCore.address, LoanCoreV2Mock));
+
         await loanCore.connect(signers[0]).grantRole(ORIGINATOR_ROLE, await originator.getAddress());
         await loanCore.connect(signers[0]).grantRole(REPAYER_ROLE, await repayer.getAddress());
 
@@ -137,6 +141,7 @@ describe("LoanCore", () => {
             signers: signers.slice(2),
             currentTimestamp,
             blockchainTime,
+            loanCoreV2Mock
         };
     };
 
@@ -566,7 +571,6 @@ describe("LoanCore", () => {
                 .connect(borrower)
                 .transferFrom(await borrower.getAddress(), await borrower.getAddress(), collateralId);
             await vaultFactory.connect(borrower).approve(loanCore.address, collateralId);
-
             await mockERC20.connect(lender).mint(await lender.getAddress(), principal);
             await mockERC20.connect(lender).transfer(await borrower.getAddress(), principal);
             await mockERC20.connect(borrower).approve(loanCore.address, principal);
@@ -1237,7 +1241,6 @@ describe("LoanCore", () => {
             loanCore.connect(borrower).startLoan(await lender.getAddress(), await borrower.getAddress(), loanId))
             .to.emit(loanCore, "LoanStarted")
             .withArgs(loanId, await lender.getAddress(), await borrower.getAddress());
-
             expect(await loanCore.canCallOn(await borrower.getAddress(), vault.address)).to.be.true;
 
             expect(await loanCore.canCallOn(await borrower.getAddress(), collateralId.toString())).to.be.true;
@@ -1372,6 +1375,49 @@ describe("LoanCore", () => {
                 .withArgs(loanId, await lender.getAddress(), await borrower.getAddress());
             expect(await loanCore.canCallOn(await lender.getAddress(), collateralId.toString())).to.be.false;
         });
+
+        describe("Upgradeable", async () => {
+        let context: TestContext;
+        beforeEach(async () => {
+            context = await loadFixture(fixture);
+        });
+            it("maintains state: confirms that v1 loans still exist after upgrading to v2", async () => {
+                const { loanCoreV2Mock } = context;
+                const {
+                    vaultFactory,
+                    loanCore,
+                    mockERC20,
+                    loanId,
+                    terms: { collateralId, principal },
+                    borrower,
+                    lender,
+                } = await setupLoan();
+                await vaultFactory
+                    .connect(borrower)
+                    .transferFrom(await borrower.getAddress(), await borrower.getAddress(), collateralId);
+                await vaultFactory.connect(borrower).approve(loanCore.address, collateralId);
+
+                await mockERC20.connect(lender).mint(await lender.getAddress(), principal);
+                await mockERC20.connect(lender).transfer(await borrower.getAddress(), principal);
+                await mockERC20.connect(borrower).approve(loanCore.address, principal);
+
+                await expect(
+                    loanCore.connect(borrower).startLoan(await lender.getAddress(), await borrower.getAddress(), loanId),
+                )
+                    .to.emit(loanCore, "LoanStarted")
+                    .withArgs(loanId, await lender.getAddress(), await borrower.getAddress());
+                    const storedLoanData = await loanCore.getLoan(loanId);
+                    expect(storedLoanData.state).to.equal(LoanState.Active);
+
+                // UPGRADES TO V2 (loanCoreV2Mock) /////////////////////////////
+                expect (await loanCoreV2Mock.version()).to.equal("This is LoanCore V2!");
+
+                // READS LOAN STATE FROM V2 (loanCoreV2Mock) ////////////
+                const v2StoredLoanData = await loanCoreV2Mock.getLoan(loanId);
+                expect(v2StoredLoanData.state).to.equal(LoanState.Active);
+                });
+        });
+
     });
 
     describe("Nonce management", () => {
@@ -1383,30 +1429,15 @@ describe("LoanCore", () => {
 
         it("does not let a nonce be consumed by a non-originator", async () => {
             const { loanCore, other, user } = context;
-
             await expect(
                 loanCore.connect(other).consumeNonce(await user.getAddress(), 10)
-            ).to.be.revertedWith("AC");
+            ).to.be.revertedWith(`AccessControl: account 0x88cde74d0d35369cf2253ef8353581f750b49f1f is missing role ${ORIGINATOR_ROLE}`);
         });
 
         it("reverts if attempting to use a nonce that has already been consumed");
         it("consumes a nonce");
         it("reverts if attempting to use a nonce that has already been cancelled");
         it("cancels a nonce");
-    });
-
-    describe("Upgradeable", async () => {
-        let context: TestContext;
-        beforeEach(async () => {
-            context = await loadFixture(fixture);
-        });
-         it("upgrades to v2", async () => {
-            const { loanCore } = context;
-            const LoanCoreV2Mock = await hre.ethers.getContractFactory("LoanCoreV2Mock");
-            const loanCoreV2Mock = <LoanCoreV2Mock>(await hre.upgrades.upgradeProxy(loanCore.address, LoanCoreV2Mock));
-
-            expect (await loanCoreV2Mock.version()).to.equal("This is LoanCore V2!");
-        });
     });
 });
 

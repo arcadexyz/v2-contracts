@@ -58,7 +58,6 @@ describe("VaultFactory", () => {
         if (!vault) {
             throw new Error("Unable to create new vault");
         }
-        console.log(vault.address);
         return vault;
     };
 
@@ -118,9 +117,7 @@ describe("VaultFactory", () => {
             const vault1 = await createVault(factory, user);
             const vault2 = await createVault(factory, user);
             const vault3 = await createVault(factory, user);
-            console.log('121 tst-------------------------', (await factory.instanceAt(1)))
-            console.log('120 tst-------------------------', vault1.address)
-            console.log('121 tst-------------------------', (await factory.instanceAt(1)))
+
             //expect(await factory.instanceAt(0)).to.equal(vault1.address);
             expect(await factory.instanceAt(1)).to.be.true;
             expect(await factory.instanceAt(1)).to.equal(vault2.address);
@@ -529,13 +526,15 @@ describe("VaultFactory", () => {
             });
         });
     });
-});
 
-describe("VaultFactoryV2", () => {
-    it("Upgrades to v2", async () => {
-        const VaultFactoryV2 = await hre.ethers.getContractFactory("VaultFactoryV2");
-        const vaultFactoryV2 = <VaultFactoryV2>(await hre.upgrades.upgradeProxy("0x3A54241cB7801BDea625565AAcb0e873e79C0649", VaultFactoryV2));
 
-        expect (await vaultFactoryV2.version()).to.equal("This is VaultFactory V2!");
+    describe("Upgradeable", () => {
+            it("Upgrades to v2", async () => {
+                const { factory } = await loadFixture(fixture);
+                const VaultFactoryV2 = await hre.ethers.getContractFactory("VaultFactoryV2");
+                const vaultFactoryV2 = <VaultFactoryV2>(await hre.upgrades.upgradeProxy(factory.address, VaultFactoryV2));
+
+                expect (await vaultFactoryV2.version()).to.equal("This is VaultFactory V2!");
+            });
     });
 });
