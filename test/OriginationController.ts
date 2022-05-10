@@ -41,7 +41,6 @@ interface TestContext {
     user: Signer;
     other: Signer;
     signers: Signer[];
-    mockOriginationController: MockOriginationController;
 }
 
 const fixture = async (): Promise<TestContext> => {
@@ -62,8 +61,8 @@ const fixture = async (): Promise<TestContext> => {
         await upgrades.deployProxy(OriginationController, [loanCore.address], { kind: 'uups' })
     );
 
-    const MockOriginationController = await hre.ethers.getContractFactory("MockOriginationController");
-    const mockOriginationController = <MockOriginationController>(await hre.upgrades.upgradeProxy("0x0A5eCAC03ACB40206AbBB8E7238AAf491375923C", MockOriginationController));
+    // const MockOriginationController = await hre.ethers.getContractFactory("MockOriginationController");
+    // const mockOriginationController = <MockOriginationController>(await hre.upgrades.upgradeProxy("0x0A5eCAC03ACB40206AbBB8E7238AAf491375923C", MockOriginationController));
 
     const borrowerNoteAddress = await loanCore.borrowerNote();
     const lenderNoteAddress = await loanCore.lenderNote();
@@ -83,7 +82,6 @@ const fixture = async (): Promise<TestContext> => {
         user: deployer,
         other: signers[1],
         signers: signers.slice(2),
-        mockOriginationController
     };
 };
 
@@ -114,8 +112,6 @@ const maxDeadline = hre.ethers.constants.MaxUint256;
 describe("OriginationController", () => {
     describe("initializer", () => {
         it("Reverts if _loanCore address is not provided", async () => {
-
-
             const OriginationController = await hre.ethers.getContractFactory("OriginationController");
             await expect(upgrades.deployProxy(OriginationController, [ZERO_ADDRESS])).to.be.revertedWith("OC_ZeroAddress");
         });
@@ -129,6 +125,20 @@ describe("OriginationController", () => {
             const originationController = await upgrades.deployProxy(OriginationController, [loanCore.address]);
 
             expect(await originationController.loanCore()).to.equal(loanCore.address);
+        });
+    });
+    describe("Upgradeable", async () => {
+        it("upgrades to v2", async () => {
+        const signers: Signer[] = await hre.ethers.getSigners();
+        const [deployer] = signers;
+
+        const loanCore = <MockLoanCore>await deploy("MockLoanCore", deployer, []);
+        const OriginationController = await hre.ethers.getContractFactory("OriginationController");
+        const originationController = await upgrades.deployProxy(OriginationController, [loanCore.address]);
+
+        const MockOriginationController = await hre.ethers.getContractFactory("MockOriginationController");
+        const mockOriginationController = <MockOriginationController>(await hre.upgrades.upgradeProxy(originationController.address, MockOriginationController));
+        expect (await mockOriginationController.version()).to.equal("This is OriginationController V2!");
         });
     });
 });
@@ -1494,13 +1504,5 @@ describe("OriginationController", () => {
             ).to.be.revertedWith("OC_ApprovedOwnLoan");
         });
     });
-});
 
-describe("MockOriginationController", () => {
-    it("Upgrades to v2", async () => {
-        const MockOriginationController = await hre.ethers.getContractFactory("MockOriginationController");
-        const mockOriginationController = <MockOriginationController>(await hre.upgrades.upgradeProxy("0x0A5eCAC03ACB40206AbBB8E7238AAf491375923C", MockOriginationController));
-
-        expect (await mockOriginationController.version()).to.equal("This is OriginationController V2!");
-    });
 });

@@ -92,8 +92,10 @@ describe("LoanCore", () => {
 
         const whitelist = <CallWhitelist>await deploy("CallWhitelist", signers[0], []);
         const vaultTemplate = <AssetVault>await deploy("AssetVault", signers[0], []);
-        const vaultFactory = <VaultFactory>(
-            await deploy("VaultFactory", signers[0], [vaultTemplate.address, whitelist.address])
+
+
+        const VaultFactoryFactory = await hre.ethers.getContractFactory("VaultFactory");
+        const vaultFactory = <VaultFactory>(await upgrades.deployProxy(VaultFactoryFactory, [vaultTemplate.address, whitelist.address], { kind: 'uups', initializer: "initialize(address, address)" })
         );
 
         const feeController = <FeeController>await deploy("FeeController", signers[0], []);
@@ -254,7 +256,7 @@ describe("LoanCore", () => {
             });
 
             await expect(createLoan(loanCore, user, terms)).to.be.revertedWith(
-                "LoanCore::create: Loan is already expired",
+                "LoanCore::create: duration greater than 1hr and less than 3yrs",
             );
         });
 
@@ -289,7 +291,7 @@ describe("LoanCore", () => {
             const receipt = await tx.wait();
             const gasUsed = receipt.gasUsed;
 
-            expect(gasUsed.toString()).to.equal("245965");
+            expect(gasUsed.toString()).to.equal("300000");
 
         });
     });
@@ -717,7 +719,7 @@ describe("LoanCore", () => {
                 .startLoan(await lender.getAddress(), await borrower.getAddress(), loanId);
             const receipt = await tx.wait();
             const gasUsed = receipt.gasUsed;
-            expect(gasUsed.toString()).to.equal("531843");
+            expect(gasUsed.toString()).to.equal("550557");
         });
     });
 
@@ -874,7 +876,7 @@ describe("LoanCore", () => {
             const tx = await loanCore.connect(borrower).repay(loanId);
             const receipt = await tx.wait();
             const gasUsed = receipt.gasUsed;
-            expect(gasUsed.toString()).to.equal("242003");
+            expect(gasUsed.toString()).to.equal("256432");
         });
     });
 
@@ -1053,7 +1055,7 @@ describe("LoanCore", () => {
             const tx = await loanCore.connect(borrower).claim(loanId);
             const receipt = await tx.wait();
             const gasUsed = receipt.gasUsed;
-            expect(gasUsed.toString()).to.equal("201732");
+            expect(gasUsed.toString()).to.equal("215916");
         });
     });
 
@@ -1392,14 +1394,19 @@ describe("LoanCore", () => {
         it("reverts if attempting to use a nonce that has already been cancelled");
         it("cancels a nonce");
     });
-});
 
-describe("LoanCoreV2Mock", () => {
-    it("Upgrades to v2", async () => {
-        const LoanCoreV2Mock = await hre.ethers.getContractFactory("LoanCoreV2Mock");
-        const loanCoreV2Mock = <LoanCoreV2Mock>(await hre.upgrades.upgradeProxy("0xE4a1917Ebe8fd2CAFD79799C82aDAa7E81AC6D47", LoanCoreV2Mock));
+    describe("Upgradeable", async () => {
+        let context: TestContext;
+        beforeEach(async () => {
+            context = await loadFixture(fixture);
+        });
+         it("upgrades to v2", async () => {
+            const { loanCore } = context;
+            const LoanCoreV2Mock = await hre.ethers.getContractFactory("LoanCoreV2Mock");
+            const loanCoreV2Mock = <LoanCoreV2Mock>(await hre.upgrades.upgradeProxy(loanCore.address, LoanCoreV2Mock));
 
-        expect (await loanCoreV2Mock.version()).to.equal("This is LoanCore V2!");
+            expect (await loanCoreV2Mock.version()).to.equal("This is LoanCore V2!");
+        });
     });
 });
 
