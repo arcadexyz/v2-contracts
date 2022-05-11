@@ -17,50 +17,60 @@ import "./OwnableERC721.sol";
 
 import { AV_WithdrawsDisabled, AV_WithdrawsEnabled, AV_AlreadyInitialized, AV_CallDisallowed, AV_NonWhitelistedCall } from "../errors/Vault.sol";
 
-/// @title AssetVault
-/// @notice Vault for isolated storage of collateral tokens
-/// @dev Note this is a one-time use vault.
-///  It starts in a deposit-only state. Funds cannot be withdrawn at this point
-///  When the owner calls "enableWithdraw()", the state is set to a withdrawEnabled state
-///  Withdraws cannot be disabled once enabled
-///  This restriction protects integrations and purchasers of AssetVaults from unexpected withdrawal
-///  I.e. Someone buys an AV assuming it contains token X, but I withdraw token X right before the sale concludes
-/// @dev note that there is an arbitrary external call which can be made by either:
-///     - the current owner of the vault
-///     - someone who the current owner "delegates" through the ICallDelegator interface
-///  This is to enable airdrop claims by borrowers during loans.
+/**
+ * @title AssetVault
+ * @author Non-Fungible Technologies, Inc.
+
+ * The Asset Vault is a vault for the storage of collateralized assets.
+ * Designed for one-time use, like a piggy bank. Once withdrawals are enabled,
+ * and the bank is broken, the vault can no longer be used or transferred.
+ *
+ * It starts in a deposit-only state. Funds cannot be withdrawn at this point. When
+ * the owner calls "enableWithdraw()", the state is set to a withdrawEnabled state.
+ * Withdraws cannot be disabled once enabled. This restriction protects integrations
+ * and purchasers of AssetVaults from unexpected withdrawal and frontrunning attacks.
+ * For exampple: someone buys an AV assuming it contains token X, but I withdraw token X
+ * immediately before the sale concludes.
+ *
+ * @dev Asset Vaults support arbitrary external calls by either:
+ *     - the current owner of the vault
+ *     - someone who the current owner "delegates" through the ICallDelegator interface
+ *
+ * This is to enable airdrop claims by borrowers during loans and other forms of NFT utility.
+ * In practice, LoanCore delegates to the borrower during the period of an open loan.
+ * Arcade.xyz maintains an allowed and restricted list of calls to balance between utility and security.
+ */
 contract AssetVault is IAssetVault, OwnableERC721, Initializable, ERC1155Holder, ERC721Holder, ReentrancyGuard {
     using Address for address;
     using Address for address payable;
     using SafeERC20 for IERC20;
 
-    // True if withdrawals are allowed out of this vault
-    // Note once set to true, it cannot be reverted back to false
+    // ============================================ STATE ==============================================
+
+    /// @notice True if withdrawals are allowed out of this vault.
+    /// @dev Note once set to true, it cannot be reverted back to false.
     bool public override withdrawEnabled;
 
-    // Whitelist contract to determine if a given external call is allowed
+    /// @notice Whitelist contract to determine if a given external call is allowed.
     ICallWhitelist public override whitelist;
 
-    modifier onlyWithdrawEnabled() {
-        if (withdrawEnabled == false) revert AV_WithdrawsDisabled();
-        _;
-    }
-
-    modifier onlyWithdrawDisabled() {
-        if (withdrawEnabled == true) revert AV_WithdrawsEnabled();
-        _;
-    }
+    // ========================================== CONSTRUCTOR ===========================================
 
     /**
-     * @dev initialize values so initialize cannot be called on template
+     * @dev Initializes values so initialize cannot be called on template.
      */
     constructor() {
         withdrawEnabled = true;
         OwnableERC721._setNFT(msg.sender);
     }
 
+    // ========================================== INITIALIZER ===========================================
+
     /**
-     * @dev Function to initialize the contract
+     * @notice Initializes the contract, used on clone deployments.
+     *
+     * @param _whitelist            The contract maintaing the whitelist of allowed
+     *                              arbitrary calls.
      */
     function initialize(address _whitelist) external override initializer {
         if (withdrawEnabled == true || ownershipToken != address(0)) revert AV_AlreadyInitialized(ownershipToken);
@@ -71,7 +81,7 @@ contract AssetVault is IAssetVault, OwnableERC721, Initializable, ERC1155Holder,
         whitelist = ICallWhitelist(_whitelist);
     }
 
-    receive() external payable {}
+    // ========================================= VIEW FUNCTIONS =========================================
 
     /**
      * @inheritdoc OwnableERC721
@@ -80,18 +90,28 @@ contract AssetVault is IAssetVault, OwnableERC721, Initializable, ERC1155Holder,
         return OwnableERC721.owner();
     }
 
+    // ===================================== WITHDRAWAL OPERATIONS ======================================
+
     /**
-     * @inheritdoc IAssetVault
+     * @notice Enables withdrawals on the vault. Irreversible. Caller must be the
+     *         owner of the underlying ownership NFT.
+     *
+     * @dev Any integration should be aware that a withdraw-enabled vault cannot
+     *      be transferred (will revert).
+     *
      */
     function enableWithdraw() external override onlyOwner onlyWithdrawDisabled {
         withdrawEnabled = true;
         emit WithdrawEnabled(msg.sender);
     }
 
-    /** Withdrawal functions */
-
     /**
-     * @inheritdoc IAssetVault
+     * @notice Withdraw entire balance of a given ERC20 token from the vault.
+     *         The vault must be in a "withdrawEnabled" state (non-transferrable),
+     *         and the caller must be the owner.
+     *
+     * @param token                 The ERC20 token to withdraw.
+     * @param to                    The recipient of the withdrawn funds.
      */
     function withdrawERC20(address token, address to) external override onlyOwner onlyWithdrawEnabled {
         uint256 balance = IERC20(token).balanceOf(address(this));
@@ -100,7 +120,15 @@ contract AssetVault is IAssetVault, OwnableERC721, Initializable, ERC1155Holder,
     }
 
     /**
-     * @inheritdoc IAssetVault
+     * @notice Withdraw entire balance of a given ERC20 token from the vault.
+     *         The vault must be in a "withdrawEnabled" state (non-transferrable),
+     *         and the caller must be the owner. The specified token must
+     *         exist and be owned by this contract.
+     *
+     * @param token                 The token to withdraw.
+     * @param tokenId               The ID of the NFT to withdraw.
+     * @param to                    The recipient of the withdrawn token.
+     *
      */
     function withdrawERC721(
         address token,
@@ -112,7 +140,13 @@ contract AssetVault is IAssetVault, OwnableERC721, Initializable, ERC1155Holder,
     }
 
     /**
-     * @inheritdoc IAssetVault
+     * @notice Withdraw entire balance of a given ERC1155 token from the vault.
+     *         The vault must be in a "withdrawEnabled" state (non-transferrable),
+     *         and the caller must be the owner.
+     *
+     * @param token                 The ERC1155 token to withdraw.
+     * @param tokenId               The ID of the token to withdraw.
+     * @param to                    The recipient of the withdrawn funds.
      */
     function withdrawERC1155(
         address token,
@@ -125,7 +159,11 @@ contract AssetVault is IAssetVault, OwnableERC721, Initializable, ERC1155Holder,
     }
 
     /**
-     * @inheritdoc IAssetVault
+     * @notice Withdraw entire balance of ETH from the vault.
+     *         The vault must be in a "withdrawEnabled" state (non-transferrable),
+     *         and the caller must be the owner.
+     *
+     * @param to                    The recipient of the withdrawn funds.
      */
     function withdrawETH(address to) external override onlyOwner onlyWithdrawEnabled nonReentrant {
         // perform transfer
@@ -134,8 +172,17 @@ contract AssetVault is IAssetVault, OwnableERC721, Initializable, ERC1155Holder,
         emit WithdrawETH(msg.sender, to, balance);
     }
 
+    // ====================================== UTILITY OPERATIONS ========================================
+
     /**
-     * @inheritdoc IAssetVault
+     * @notice Call a function on an external contract. Intended for claiming airdrops
+     *         and other forms of NFT utility. All allowed calls are whitelist by the
+     *         "whitelist" contract. The vault must have withdrawals disabled, and the caller
+     *         must either be the owner, or the owner must have explicitly
+     *         delegated this ability to the caller through ICallDelegator interface.
+     *
+     * @param to The contract address to call.
+     * @param data The data to call the contract with.
      */
     function call(address to, bytes calldata data) external override onlyWithdrawDisabled nonReentrant {
         if (msg.sender != owner() && !ICallDelegator(owner()).canCallOn(msg.sender, address(this)))
@@ -146,4 +193,29 @@ contract AssetVault is IAssetVault, OwnableERC721, Initializable, ERC1155Holder,
         to.functionCall(data);
         emit Call(msg.sender, to, data);
     }
+
+    // ============================================ HELPERS =============================================
+
+    /**
+     * @dev For methods only callable with withdraws enabled (all withdrawal operations).
+     */
+    modifier onlyWithdrawEnabled() {
+        if (withdrawEnabled == false) revert AV_WithdrawsDisabled();
+        _;
+    }
+
+    /**
+     * @dev For methods only callable with withdraws disabled (call operations and enabling withdraws).
+     */
+    modifier onlyWithdrawDisabled() {
+        if (withdrawEnabled == true) revert AV_WithdrawsEnabled();
+        _;
+    }
+
+    /**
+     * @dev Fallback "receive Ether" function. Contract can hold Ether
+     *      which can be accessed using withdrawETH.
+     */
+    receive() external payable {}
+
 }

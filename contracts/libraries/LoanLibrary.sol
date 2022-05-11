@@ -2,12 +2,18 @@
 
 pragma solidity ^0.8.11;
 
+/**
+ * @title LoanLibrary
+ * @author Non-Fungible Technologies, Inc.
+ *
+ * Contains all data types used across Arcade lending contracts.
+ */
 library LoanLibrary {
     /**
-     * @dev Enum describing the current state of a loan
+     * @dev Enum describing the current state of a loan.
      * State change flow:
-     *  Created -> Active -> Repaid
-     *                    -> Defaulted
+     * Created -> Active -> Repaid
+     *                   -> Defaulted
      */
     enum LoanState {
         // We need a default that is not 'Created' - this is the zero value
@@ -23,27 +29,26 @@ library LoanLibrary {
     }
 
     /**
-     * @dev The raw terms of a loan
+     * @dev The raw terms of a loan.
      */
     struct LoanTerms {
-        // The number of seconds representing relative due date of the loan
-        // *** TEST/ DISCUSSION: A loan of 0 duration has no due date - it is only governed by when the borrower repays?
+        // The number of seconds representing relative due date of the loan.
         uint256 durationSecs;
-        // The amount of principal in terms of the payableCurrency
+        // The amount of principal in terms of the payableCurrency.
         uint256 principal;
         // Interest expressed as a rate, unlike V1 gross value.
         // Input conversion: 0.01% = (1 * 10**18) ,  10.00% = (1000 * 10**18)
-        // minAllowed: // MaxAllowed:
+        // This represents the rate over the lifetime of the loan, not APR.
+        // 0.01% is the minimum interest rate allowed by the protocol.
         uint256 interestRate;
-        // The tokenID of the address holding the collateral
+        // The token ID of the address holding the collateral.
         /// @dev Can be an AssetVault, or the NFT contract for unbundled collateral
         address collateralAddress;
-        // The tokenID of the collateral
+        // The token ID of the collateral.
         uint256 collateralId;
-        // The payable currency for the loan principal and interest
+        // The payable currency for the loan principal and interest.
         address payableCurrency;
-        // Installment loan specific
-        // Total number of installment periods within the loan duration
+        // Total number of installment periods within the loan duration.
         uint256 numInstallments;
     }
 

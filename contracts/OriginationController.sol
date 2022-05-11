@@ -35,7 +35,6 @@ import { OC_ZeroAddress, OC_InvalidVerifier, OC_BatchLengthMismatch, OC_Predicat
  * takes place in this contract. To originate a loan, the controller
  * also takes custody of both the collateral and loan principal.
  */
-
 contract OriginationController is
     Initializable,
     ContextUpgradeable,
