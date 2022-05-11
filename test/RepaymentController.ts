@@ -14,7 +14,7 @@ import {
     VaultFactory,
     FeeController,
     MockLoanCore,
-    RepaymentContV2
+    RepaymentContV2,
 } from "../typechain";
 import { BlockchainTime } from "./utils/time";
 import { utils, Signer, BigNumber } from "ethers";
@@ -103,11 +103,11 @@ const fixture = async (): Promise<TestContext> => {
 
     const RepaymentController = await hre.ethers.getContractFactory("RepaymentController");
     const repaymentController = <RepaymentController>(
-    await upgrades.deployProxy(RepaymentController, [
-        mockLoanCore.address,
-        borrowerNoteAddress,
-        lenderNoteAddress,
-    ], { kind: 'uups' })
+        await upgrades.deployProxy(
+            RepaymentController,
+            [mockLoanCore.address, borrowerNoteAddress, lenderNoteAddress],
+            { kind: "uups" },
+        )
     );
 
     await repaymentController.deployed();
@@ -134,7 +134,7 @@ const fixture = async (): Promise<TestContext> => {
         admin,
         currentTimestamp,
         blockchainTime,
-        mockLoanCore
+        mockLoanCore,
     };
 };
 
@@ -264,7 +264,7 @@ describe("Legacy Repayments with interest parameter as a rate:", () => {
             hre.ethers.utils.parseEther("10"), // principal
             hre.ethers.utils.parseEther("750"), // interest
             0, // numInstallments
-        )
+        );
 
         // total repayment amount
         const total = ethers.utils.parseEther("10.75");
@@ -398,17 +398,21 @@ describe("Legacy Repayments with interest parameter as a rate:", () => {
 describe("RepaymentContV", () => {
     it("Upgrades to v2", async () => {
         const RepaymentContV2 = await hre.ethers.getContractFactory("RepaymentContV2");
-        const repaymentContV2 = <RepaymentContV2>(await hre.upgrades.upgradeProxy("0xdeaBbBe620EDF275F06E75E8fab18183389d606F", RepaymentContV2));
+        const repaymentContV2 = <RepaymentContV2>(
+            await hre.upgrades.upgradeProxy("0xdeaBbBe620EDF275F06E75E8fab18183389d606F", RepaymentContV2)
+        );
 
-        expect (await repaymentContV2.version()).to.equal("This is RepaymentController V2!");
+        expect(await repaymentContV2.version()).to.equal("This is RepaymentController V2!");
     });
 });
 
 describe("RepaymentContV", () => {
     it("Upgrades to v2", async () => {
         const RepaymentContV2 = await hre.ethers.getContractFactory("RepaymentContV2");
-        const repaymentContV2 = <RepaymentContV2>(await hre.upgrades.upgradeProxy("0xdeaBbBe620EDF275F06E75E8fab18183389d606F", RepaymentContV2));
+        const repaymentContV2 = <RepaymentContV2>(
+            await hre.upgrades.upgradeProxy("0xdeaBbBe620EDF275F06E75E8fab18183389d606F", RepaymentContV2)
+        );
 
-        expect (await repaymentContV2.version()).to.equal("This is RepaymentController V2!");
+        expect(await repaymentContV2.version()).to.equal("This is RepaymentController V2!");
     });
 });

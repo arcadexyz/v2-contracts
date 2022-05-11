@@ -36,9 +36,16 @@ import { OC_ZeroAddress, OC_InvalidVerifier, OC_BatchLengthMismatch, OC_Predicat
  * also takes custody of both the collateral and loan principal.
  */
 
-contract OriginationController is Initializable, ContextUpgradeable, IOriginationController, EIP712Upgradeable, ReentrancyGuardUpgradeable, OwnableUpgradeable, UUPSUpgradeable {
+contract OriginationController is
+    Initializable,
+    ContextUpgradeable,
+    IOriginationController,
+    EIP712Upgradeable,
+    ReentrancyGuardUpgradeable,
+    OwnableUpgradeable,
+    UUPSUpgradeable
+{
     using SafeERC20Upgradeable for IERC20Upgradeable;
-
 
     // ============================================ STATE ==============================================
 
@@ -92,7 +99,7 @@ contract OriginationController is Initializable, ContextUpgradeable, IOriginatio
      * @param _loanCore                     The address of the loan core logic of the protocol.
      */
 
-    function initialize(address _loanCore) initializer public {
+    function initialize(address _loanCore) public initializer {
         __EIP712_init("OriginationController", "2");
         __Ownable_init_unchained();
         __UUPSUpgradeable_init_unchained();
@@ -110,7 +117,6 @@ contract OriginationController is Initializable, ContextUpgradeable, IOriginatio
      */
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
-
 
     // ==================================== ORIGINATION OPERATIONS ======================================
 
@@ -535,4 +541,3 @@ contract OriginationController is Initializable, ContextUpgradeable, IOriginatio
         ILoanCore(loanCore).startLoan(lender, borrower, loanId);
     }
 }
-

@@ -12,6 +12,8 @@ import "@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol";
 
 import "./interfaces/IERC721PermitUpgradeable.sol";
 
+import { ERC721PU_DeadlineExpired, ERC721PU_NotTokenOwner, ERC721PU_InvalidSignature } from "./errors/LendingUtils.sol";
+
 /**
  * @dev Implementation of the ERC721 Permit extension allowing approvals to be made via signatures, as defined in
  * https://eips.ethereum.org/EIPS/eip-2612[EIP-2612].
@@ -24,14 +26,20 @@ import "./interfaces/IERC721PermitUpgradeable.sol";
  *
  * _Available since v3.4._
  */
-abstract contract ERC721PermitUpgradeable is ERC721Upgradeable, IERC721PermitUpgradeable, AccessControlUpgradeable, EIP712Upgradeable, UUPSUpgradeable {
+abstract contract ERC721PermitUpgradeable is
+    ERC721Upgradeable,
+    IERC721PermitUpgradeable,
+    AccessControlUpgradeable,
+    EIP712Upgradeable,
+    UUPSUpgradeable
+{
     using CountersUpgradeable for CountersUpgradeable.Counter;
 
     mapping(address => CountersUpgradeable.Counter) private _nonces;
 
     // solhint-disable-next-line var-name-mixedcase
-    bytes32 private constant _PERMIT_TYPEHASH = keccak256("Permit(address owner,address spender,uint256 tokenId,uint256 nonce,uint256 deadline)");
-
+    bytes32 private constant _PERMIT_TYPEHASH =
+        keccak256("Permit(address owner,address spender,uint256 tokenId,uint256 nonce,uint256 deadline)");
 
     // ========================================== INITIALIZER ===========================================
 
@@ -56,8 +64,7 @@ abstract contract ERC721PermitUpgradeable is ERC721Upgradeable, IERC721PermitUpg
      * @param newImplementation           The address of the upgraded verion of this contract
      */
 
-    function _authorizeUpgrade(address newImplementation) internal override virtual onlyRole(DEFAULT_ADMIN_ROLE) {}
-
+    function _authorizeUpgrade(address newImplementation) internal virtual override onlyRole(DEFAULT_ADMIN_ROLE) {}
 
     // ==================================== ERC721PERMIT OPERATIONS ======================================
 
@@ -73,8 +80,8 @@ abstract contract ERC721PermitUpgradeable is ERC721Upgradeable, IERC721PermitUpg
         bytes32 r,
         bytes32 s
     ) public virtual override {
-        require(block.timestamp <= deadline, "ERC721Permit: expired deadline");
-        require(owner == ERC721Upgradeable.ownerOf(tokenId), "ERC721Permit: not owner");
+        if (block.timestamp > deadline) revert ERC721PU_DeadlineExpired(deadline);
+        if (owner != ERC721Upgradeable.ownerOf(tokenId)) revert ERC721PU_NotTokenOwner(owner);
 
         bytes32 structHash = keccak256(
             abi.encode(_PERMIT_TYPEHASH, owner, spender, tokenId, _useNonce(owner), deadline)
@@ -83,7 +90,7 @@ abstract contract ERC721PermitUpgradeable is ERC721Upgradeable, IERC721PermitUpg
         bytes32 hash = _hashTypedDataV4(structHash);
 
         address signer = ECDSAUpgradeable.recover(hash, v, r, s);
-        require(signer == owner, "ERC721Permit: invalid signature");
+        if (signer != owner) revert ERC721PU_InvalidSignature(signer);
 
         _approve(spender, tokenId);
     }
@@ -114,7 +121,7 @@ abstract contract ERC721PermitUpgradeable is ERC721Upgradeable, IERC721PermitUpg
         nonce.increment();
     }
 
-        /**
+    /**
      * @dev See {IERC165-supportsInterface}.
      */
     function supportsInterface(bytes4 interfaceId)

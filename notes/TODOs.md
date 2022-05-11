@@ -3,24 +3,27 @@
 MAY 9 WHATS LEFT:
 
 Safety/Robustness:
+
 - Merge upgradeability
 - Fix test suite and ensure 100% coverage or as close as possible
 
 Refactoring:
+
 - Split LoanCore into separate files (contract too big)
 - Custom errors
 - Consistent documentation - move to implementation
 
 Features:
+
 - Installment Claim
 - Signature expiry
 - Move origination fee to fee controller
 - Native rollovers
 
-
 Evan:
 
 V2 Progress:
+
 - (Ready for Review) Custom Errors
   - (DONE) OC - Kevin
   - (DONE) RC
@@ -31,6 +34,7 @@ V2 Progress:
   - (DONE) PunkRouter
 
 📌 For Further Review Items:
+
 - Tune LoanTerms dials for what will be accepted. Namely: `durationSeconds` and `numInstallments`.
 - Global parameters, `LATE_FEE` and `GRACE_PERIOD`
 - `claim` functionality with installment loans, with grace period?

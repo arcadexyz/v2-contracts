@@ -72,8 +72,8 @@ function createHardhatConfig(): HardhatNetworkUserConfig {
             disambiguatePaths: false,
             runOnCompile: true,
             strict: true,
-            only: [':ERC20$'],
-    }
+            only: [":ERC20$"],
+        },
     };
 
     if (forkMainnet) {
@@ -159,7 +159,7 @@ const config: HardhatUserConfig = {
     },
     etherscan: {
         apiKey: process.env.ETHERSCAN_API_KEY,
-    }
+    },
 };
 
 export default config;

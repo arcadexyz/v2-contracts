@@ -112,7 +112,6 @@ error IV_InvalidTokenId1155(address asset, int256 tokenId);
  */
 error IV_NonPositiveAmount20(address asset, uint256 amount);
 
-
 // ==================================== REPAYMENT CONTROLLER ======================================
 /// @notice All errors prefixed with RC_, to separate from other contracts in the protocol.
 
@@ -244,7 +243,6 @@ error LC_NonceUsed(address user, uint160 nonce);
  */
 error FIAC_InterestRate(uint256 interestRate);
 
-
 // ==================================== Promissory Note ======================================
 /// @notice All errors prefixed with PN_, to separate from other contracts in the protocol.
 
@@ -261,8 +259,6 @@ error PN_MintingRole(address caller);
  * @param caller                        Address of the function caller.
  */
 error PN_BurningRole(address caller);
-
-
 
 /**
  * @notice No token transfers while contract is in paused state.

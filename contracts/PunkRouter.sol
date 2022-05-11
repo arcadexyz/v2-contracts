@@ -46,7 +46,7 @@ contract PunkRouter is ERC721Holder, Ownable {
     function depositPunk(uint256 punkIndex, uint256 bundleId) external {
         IWrappedPunks _wrappedPunks = wrappedPunks;
         address punkOwner = punks.punkIndexToAddress(punkIndex);
-        if(punkOwner != msg.sender) revert PR_NotOwner(msg.sender);
+        if (punkOwner != msg.sender) revert PR_NotOwner(msg.sender);
         punks.buyPunk(punkIndex);
         punks.transferPunk(proxy, punkIndex);
 

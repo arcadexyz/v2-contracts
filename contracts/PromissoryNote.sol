@@ -80,7 +80,7 @@ contract PromissoryNote is
      * - the caller must have the `MINTER_ROLE`.
      */
     function mint(address to, uint256 loanId) external override returns (uint256) {
-        if(hasRole(MINTER_ROLE, _msgSender()) == false) revert PN_MintingRole(_msgSender());
+        if (hasRole(MINTER_ROLE, _msgSender()) == false) revert PN_MintingRole(_msgSender());
 
         uint256 currentTokenId = _tokenIdTracker.current();
         _mint(to, currentTokenId);
@@ -103,7 +103,7 @@ contract PromissoryNote is
      *
      */
     function burn(uint256 tokenId) external override {
-        if(hasRole(BURNER_ROLE, _msgSender()) == false) revert PN_BurningRole(_msgSender());
+        if (hasRole(BURNER_ROLE, _msgSender()) == false) revert PN_BurningRole(_msgSender());
         _burn(tokenId);
         loanIdByNoteId[tokenId] = 0;
     }
@@ -131,7 +131,6 @@ contract PromissoryNote is
     ) internal virtual override(ERC721, ERC721Enumerable, ERC721Pausable) {
         super._beforeTokenTransfer(from, to, amount);
 
-        if(paused() == true) revert PN_ContractPaused();
+        if (paused() == true) revert PN_ContractPaused();
     }
 }
-

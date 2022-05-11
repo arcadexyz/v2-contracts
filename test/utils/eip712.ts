@@ -57,7 +57,7 @@ const typedLoanItemsData: TypeData = {
             { name: "itemsHash", type: "bytes32" },
             { name: "payableCurrency", type: "address" },
             { name: "numInstallments", type: "uint256" },
-            { name: "nonce", type: "uint160" }
+            { name: "nonce", type: "uint160" },
         ],
     },
     primaryType: "LoanTermsWithItems" as const,
@@ -127,7 +127,7 @@ export async function createLoanItemsSignature(
         itemsHash,
         payableCurrency: terms.payableCurrency,
         numInstallments: terms.numInstallments,
-        nonce
+        nonce,
     };
 
     const data = buildData(verifyingContract, name, version, message, typedLoanItemsData);

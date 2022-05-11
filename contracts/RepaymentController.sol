@@ -32,14 +32,19 @@ import "./interfaces/IRepaymentController.sol";
 
 import { RC_CannotDereference, RC_NoPaymentDue, RC_OnlyLender, RC_BeforeStartDate, RC_NoInstallments, RC_NoMinPaymentDue, RC_RepayPartGTZero, RC_RepayPartGTMin } from "./errors/Lending.sol";
 
-contract RepaymentController is IRepaymentController, Initializable, FullInterestAmountCalc, AccessControlUpgradeable, UUPSUpgradeable {
+contract RepaymentController is
+    IRepaymentController,
+    Initializable,
+    FullInterestAmountCalc,
+    AccessControlUpgradeable,
+    UUPSUpgradeable
+{
     using SafeMathUpgradeable for uint256;
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     ILoanCore private loanCore;
     IPromissoryNote private borrowerNote;
     IPromissoryNote private lenderNote;
-
 
     // Interest rate parameter
     uint256 public constant INSTALLMENT_PERIOD_MULTIPLIER = 1_000_000;
@@ -82,7 +87,6 @@ contract RepaymentController is IRepaymentController, Initializable, FullInteres
 
     function _authorizeUpgrade(address newImplementation) internal override onlyRole(DEFAULT_ADMIN_ROLE) {}
 
-
     // ==================================== CONTROLLER OPERATIONS ======================================
     /**
      * @inheritdoc IRepaymentController
@@ -90,13 +94,13 @@ contract RepaymentController is IRepaymentController, Initializable, FullInteres
     function repay(uint256 borrowerNoteId) external override {
         // get loan from borrower note
         uint256 loanId = borrowerNote.loanIdByNoteId(borrowerNoteId);
-        if(loanId != 0) revert RC_CannotDereference(loanId);
+        if (loanId != 0) revert RC_CannotDereference(loanId);
 
         LoanLibrary.LoanTerms memory terms = loanCore.getLoan(loanId).terms;
 
         // withdraw principal plus interest from borrower and send to loan core
         uint256 total = getFullInterestAmount(terms.principal, terms.interestRate);
-        if(total > 0) revert RC_NoPaymentDue(total);
+        if (total > 0) revert RC_NoPaymentDue(total);
 
         IERC20Upgradeable(terms.payableCurrency).safeTransferFrom(_msgSender(), address(this), total);
         IERC20Upgradeable(terms.payableCurrency).approve(address(loanCore), total);
@@ -111,11 +115,11 @@ contract RepaymentController is IRepaymentController, Initializable, FullInteres
     function claim(uint256 lenderNoteId) external override {
         // make sure that caller owns lender note
         address lender = lenderNote.ownerOf(lenderNoteId);
-        if(lender == msg.sender) revert RC_OnlyLender(msg.sender);
+        if (lender == msg.sender) revert RC_OnlyLender(msg.sender);
 
         // get loan from lender note
         uint256 loanId = lenderNote.loanIdByNoteId(lenderNoteId);
-        if(loanId != 0) revert RC_CannotDereference(loanId);
+        if (loanId != 0) revert RC_CannotDereference(loanId);
 
         // call claim function in loan core
         loanCore.claim(loanId);
@@ -313,15 +317,15 @@ contract RepaymentController is IRepaymentController, Initializable, FullInteres
     {
         // get loan from borrower note
         uint256 loanId = borrowerNote.loanIdByNoteId(borrowerNoteId);
-        if(loanId != 0) revert RC_CannotDereference(loanId);
+        if (loanId != 0) revert RC_CannotDereference(loanId);
         // load terms from loanId
         LoanLibrary.LoanData memory data = loanCore.getLoan(loanId);
 
         // local variables
         uint256 startDate = data.startDate;
-        if(startDate < block.timestamp) revert RC_BeforeStartDate(startDate);
+        if (startDate < block.timestamp) revert RC_BeforeStartDate(startDate);
         uint256 installments = data.terms.numInstallments;
-        if(installments > 0) revert RC_NoInstallments(installments);
+        if (installments > 0) revert RC_NoInstallments(installments);
 
         // get the current minimum balance due for the installment
         (uint256 minInterestDue, uint256 lateFees, uint256 numMissedPayments) = _calcAmountsDue(
@@ -353,13 +357,13 @@ contract RepaymentController is IRepaymentController, Initializable, FullInteres
         // total amount due, interest amount plus any late fees
         uint256 _minAmount = minBalanceDue + lateFees;
         // cannot call repayPartMinimum twice in the same installment period
-        if(_minAmount > 0) revert RC_NoMinPaymentDue(_minAmount);
+        if (_minAmount > 0) revert RC_NoMinPaymentDue(_minAmount);
         // load terms from loanId
         LoanLibrary.LoanData memory data = loanCore.getLoan(loanId);
         // gather minimum payment from _msgSender()
         IERC20Upgradeable(data.terms.payableCurrency).safeTransferFrom(_msgSender(), address(this), _minAmount);
         // approve loanCore to take minBalanceDue
-         IERC20Upgradeable(data.terms.payableCurrency).approve(address(loanCore), _minAmount);
+        IERC20Upgradeable(data.terms.payableCurrency).approve(address(loanCore), _minAmount);
         // call repayPart function in loanCore
         loanCore.repayPart(loanId, numMissedPayments, 0, minBalanceDue, lateFees);
     }
@@ -384,9 +388,9 @@ contract RepaymentController is IRepaymentController, Initializable, FullInteres
         // total minimum amount due, interest amount plus any late fees
         uint256 _minAmount = minBalanceDue + lateFees;
         // revert if amount parameter is not greater than zero.
-        if(amount > 0) revert RC_RepayPartGTZero(amount);
+        if (amount > 0) revert RC_RepayPartGTZero(amount);
         // revert if amount parameter is not greater than or equal to _minAmount
-        if(amount >= _minAmount) revert RC_RepayPartGTMin(amount);
+        if (amount >= _minAmount) revert RC_RepayPartGTMin(amount);
         // load data from loanId
         LoanLibrary.LoanData memory data = loanCore.getLoan(loanId);
         // calculate the payment to principal after subtracting (minBalanceDue + lateFees)

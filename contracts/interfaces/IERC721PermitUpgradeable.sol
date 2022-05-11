@@ -13,7 +13,6 @@ import "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721Upgradeable.sol"
  * need to send a transaction, and thus is not required to hold Ether at all.
  */
 interface IERC721PermitUpgradeable is IERC721Upgradeable {
-
     /**
      * @dev Allows `spender` to spend `tokenID` which is owned by`owner`,
      * given ``owner``'s signed approval.
@@ -57,5 +56,4 @@ interface IERC721PermitUpgradeable is IERC721Upgradeable {
      */
     // solhint-disable-next-line func-name-mixedcase
     function DOMAIN_SEPARATOR() external view returns (bytes32);
-
 }
