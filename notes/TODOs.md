@@ -21,21 +21,20 @@ Features:
 
 Evan:
 
-- Installments PR
-  - (DONE) Add `closeLoan` function for borrower with auto calculate the amount necessary to close the loan.
-    - Corresponding view function.
-    - Tests -> A scenario here lead to finding the error with making a repayment in the same installment period
-  - (DONE) Add borrower and lenders balance before and after the loan in all tests to look for errors in the accounting code
-  - (DONE) Add abstract contract for calculating the total interest amount based on a given principal and interest.
-  - (DONE) Add args emitted from event to all installment tests where there is an event emitted.
-
-🔑 For Installment tests, run `npx hardhat test test/Installments.ts`.
+V2 Progress:
+- (Ready for Review) Custom Errors
+  - (DONE) OC - Kevin
+  - (DONE) RC
+  - (DONE) LC
+  - (DONE) FILC
+  - (DONE) PN
+  - (DONE) ERC721P
+  - (DONE) PunkRouter
 
 📌 For Further Review Items:
 - Tune LoanTerms dials for what will be accepted. Namely: `durationSeconds` and `numInstallments`.
 - Global parameters, `LATE_FEE` and `GRACE_PERIOD`
 - `claim` functionality with installment loans, with grace period?
-- Custom Errors
 
 Mouzayan:
 
