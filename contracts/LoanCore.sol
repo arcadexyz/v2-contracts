@@ -2,8 +2,6 @@
 
 pragma solidity ^0.8.11;
 
-import "./FullInterestAmountCalc.sol";
-
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
@@ -19,19 +17,25 @@ import "./interfaces/IPromissoryNote.sol";
 import "./interfaces/IAssetVault.sol";
 import "./interfaces/IFeeController.sol";
 import "./interfaces/ILoanCore.sol";
+
+import "./FullInterestAmountCalc.sol";
 import "./PromissoryNote.sol";
 import "./vault/OwnableERC721.sol";
 
 import { LC_LoanDuration, LC_CollateralInUse, LC_InterestRate, LC_NumberInstallments, LC_StartInvalidState, LC_NotExpired, LC_BalanceGTZero, LC_NonceUsed } from "./errors/Lending.sol";
 
-// TODO: Better natspec
-// TODO: Custom errors
-
 /**
- * @dev LoanCore contract - core contract for creating, repaying, and claiming collateral for PawnFi loans
-
+ * @title LoanCore
+ * @author Non-Fungible Technologies, Inc.
+ *
+ * The LoanCore lending contract is the heart of the Arcade.xyz lending protocol.
+ * It stores and maintains loan state, enforces loan lifecycle invariants, takes
+ * escrow of assets during an active loans, governs the release of collateral on
+ * repayment or default, and tracks signature nonces for loan consent.
+ *
+ * Also contains logic for approving Asset Vault calls using the
+ * ICallDelegator interface.
  */
-
 contract LoanCore is
     ILoanCore,
     Initializable,
@@ -45,27 +49,36 @@ contract LoanCore is
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using SafeMathUpgradeable for uint256;
 
+    // ============================================ STATE ==============================================
+
+    // =================== Constants =====================
+
     bytes32 public constant ORIGINATOR_ROLE = keccak256("ORIGINATOR_ROLE");
     bytes32 public constant REPAYER_ROLE = keccak256("REPAYER_ROLE");
     bytes32 public constant FEE_CLAIMER_ROLE = keccak256("FEE_CLAIMER_ROLE");
+
+    // 10k bps per whole
+    uint256 private constant BPS_DENOMINATOR = 10_000;
+
+    // =============== Contract References ================
+
+    IPromissoryNote public override borrowerNote;
+    IPromissoryNote public override lenderNote;
+    IFeeController public override feeController;
+
+    // =================== Loan State =====================
 
     CountersUpgradeable.Counter private loanIdTracker;
     mapping(uint256 => LoanLibrary.LoanData) private loans;
     mapping(address => mapping(uint256 => bool)) private collateralInUse;
     mapping(address => mapping(uint160 => bool)) public usedNonces;
-    IPromissoryNote public override borrowerNote;
-    IPromissoryNote public override lenderNote;
-    IFeeController public override feeController;
-
-    // 10k bps per whole
-    uint256 private constant BPS_DENOMINATOR = 10_000;
 
     // ========================================== CONSTRUCTOR ===========================================
 
     /**
      * @notice Runs the initializer function in an upgradeable contract.
      *
-     *  @dev Add Unsafe-allow comment to notify upgrades plugin to accept the constructor.
+     * @dev Add Unsafe-allow comment to notify upgrades plugin to accept the constructor.
      */
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
@@ -73,22 +86,19 @@ contract LoanCore is
     // ========================================== INITIALIZER ===========================================
 
     /**
-     * @notice Creates a new origination controller contract, also initializing
-     * the parent signature verifier.
+     * @notice Initializes tehe loan core contract, by initializing parent
+     *         contracts, setting up roles, and setting up contract references.
      *
-     * @dev For this controller to work, it needs to be granted the ORIGINATOR_ROLE
-     *      in loan core after deployment.
-     *
-     * @param _feeController      The address of the origination fee contract of the protocol.
+     * @param _feeController      The address of the contract governing protocol fees.
      */
-
     function initialize(IFeeController _feeController) public initializer {
         // only those with FEE_CLAIMER_ROLE can update or grant FEE_CLAIMER_ROLE
         __AccessControl_init();
         __UUPSUpgradeable_init_unchained();
-        _setRoleAdmin(FEE_CLAIMER_ROLE, FEE_CLAIMER_ROLE);
+
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
         _setupRole(FEE_CLAIMER_ROLE, _msgSender());
+        _setRoleAdmin(FEE_CLAIMER_ROLE, FEE_CLAIMER_ROLE);
 
         feeController = _feeController;
 
@@ -101,27 +111,25 @@ contract LoanCore is
         loanIdTracker.increment();
     }
 
-    // ======================================= UPGRADE AUTHORIZATION ========================================
+    // ===================================== UPGRADE AUTHORIZATION ======================================
 
     /**
-     * @notice Authorization function to define who should be allowed to upgrade the contract
+     * @notice Authorization function to define whether a contract upgrade should be allowed.
      *
-     * @param newImplementation           The address of the upgraded verion of this contract
+     * @param newImplementation     The address of the upgraded verion of this contract.
      */
-
     function _authorizeUpgrade(address newImplementation) internal override onlyRole(DEFAULT_ADMIN_ROLE) {}
 
-    // ==================================== LOANCORE OPERATIONS ======================================
+    // ====================================== LIFECYCLE OPERATIONS ======================================
 
     /**
-     * @inheritdoc ILoanCore
-     */
-    function getLoan(uint256 loanId) external view override returns (LoanLibrary.LoanData memory loanData) {
-        return loans[loanId];
-    }
-
-    /**
-     * @inheritdoc ILoanCore
+     * @notice Create and store a loan object with the given terms.
+     *         Performs check on terms validity and creates a LoanData
+     *         struct in storage.
+     *
+     * @param terms                 The terms of the loan.
+     *
+     * @return loanId               The ID of the newly created loan.
      */
     function createLoan(LoanLibrary.LoanTerms calldata terms)
         external
@@ -164,7 +172,14 @@ contract LoanCore is
     }
 
     /**
-     * @inheritdoc ILoanCore
+     * @notice Start a loan, matching a stored set of terms, with a given
+     *         lender and borrower. Collects collateral and distributes
+     *         principal, along with collecting an origination fee for the
+     *         protocol. Can only be called by OriginationController.
+     *
+     * @param lender                The lender for the loan.
+     * @param borrower              The borrower for the loan.
+     * @param loanId                The ID of the loan to start.
      */
     function startLoan(
         address lender,
@@ -211,7 +226,13 @@ contract LoanCore is
     }
 
     /**
-     * @inheritdoc ILoanCore
+     * @notice Repay the given loan. Can only be called by RepaymentController,
+     *         which verifies repayment conditions. This method will calculate
+     *         the total interest due, collect it from the borrower, and redistribute
+     *         principal + interest to he lender, and collateral to the borrower.
+     *         All promissory notes will be burned and the loan will be marked as complete.
+     *
+     * @param loanId                The ID of the loan to repay.
      */
     function repay(uint256 loanId) external override onlyRole(REPAYER_ROLE) {
         LoanLibrary.LoanData memory data = loans[loanId];
@@ -244,7 +265,12 @@ contract LoanCore is
     }
 
     /**
-     * @inheritdoc ILoanCore
+     * @notice Claim collateral on a given loan. Can only be called by RepaymentController,
+     *         which verifies claim conditions. This method validate that the loan's due
+     *         date has passed, and then distribute collateral to the lender. All promissory
+     *         notes will be burned and the loan will be marked as complete.
+     *
+     * @param loanId                The ID of the loan to claim.
      */
     function claim(uint256 loanId) external override whenNotPaused onlyRole(REPAYER_ROLE) {
         LoanLibrary.LoanData memory data = loans[loanId];
@@ -268,26 +294,19 @@ contract LoanCore is
         emit LoanClaimed(loanId);
     }
 
-    /**
-
-     * Take a principal value and return the amount less protocol fees
-     */
-    function getPrincipalLessFees(uint256 principal) internal view returns (uint256) {
-        return principal.sub(principal.mul(feeController.getOriginationFee()).div(BPS_DENOMINATOR));
-    }
-
-    // ======================== INSTALLMENT SPECIFIC OPERATIONS =============================
+    // ===================================== INSTALLMENT OPERATIONS =====================================
 
     /**
-     * @dev Called from RepaymentController when paying back an installment loan.
-     * New loan state parameters are calculated in the Repayment Controller.
-     * Based on if the _paymentToPrincipal is greater than the current balance
-     * the loan state is updated. (0 = minimum payment sent, > 0 pay down principal)
-     * The paymentTotal (_paymentToPrincipal + _paymentToLateFees) is always transferred to the lender.
+     * @notice Called from RepaymentController when paying back an installment loan.
+     *         New loan state parameters are calculated in the Repayment Controller.
+     *         Based on if the _paymentToPrincipal is greater than the current balance,
+     *         the loan state is updated. (0 = minimum payment sent, > 0 pay down principal).
+     *         The paymentTotal (_paymentToPrincipal + _paymentToLateFees) is always transferred to the lender.
      *
-     * @param _loanId                       Used to get LoanData
-     * @param _paymentToPrincipal           Amount sent in addition to minimum amount due, used to pay down principal
-     * @param _currentMissedPayments        Number of payments missed since the last isntallment payment
+     * @param _loanId                       The ID of the loan..
+     * @param _currentMissedPayments        Number of payments missed since the last isntallment payment.
+     * @param _paymentToPrincipal           Amount sent in addition to minimum amount due, used to pay down principal.
+     * @param _paymentToInterest            Amount due in interest.
      * @param _paymentToLateFees            Amount due in only late fees.
      */
     function repayPart(
@@ -360,59 +379,55 @@ contract LoanCore is
         }
     }
 
-    // ============================= ADMIN FUNCTIONS ==================================
+    // ======================================== NONCE MANAGEMENT ========================================
 
     /**
-     * @dev Set the fee controller to a new value
+     * @notice Mark a nonce as used in the context of starting a loan. Reverts if
+     *         nonce has already been used. Can only be called by Origination Controller.
      *
-     * Requirements:
-     *
-     * - Must be called by the owner of this contract
+     * @param user                  The user for whom to consume a nonce.
+     * @param nonce                 The nonce to consume.
      */
-    function setFeeController(IFeeController _newController) external onlyRole(FEE_CLAIMER_ROLE) {
-        feeController = _newController;
+    function consumeNonce(address user, uint160 nonce) external override whenNotPaused onlyRole(ORIGINATOR_ROLE) {
+        _useNonce(user, nonce);
     }
 
     /**
-     * @dev Claim the protocol fees for the given token
+     * @notice Mark a nonce as used in order to invalidate signatures with the nonce.
+     *         Does not allow specifying the user, and automatically consumes the nonce
+     *         of the caller.
      *
-     * @param token - The address of the ERC20 token to claim fees for
-     *
-     * Requirements:
-     *
-     * - Must be called by the owner of this contract
+     * @param nonce                 The nonce to consume.
      */
-    function claimFees(IERC20Upgradeable token) external onlyRole(FEE_CLAIMER_ROLE) {
-        // any token balances remaining on this contract are fees owned by the protocol
-        uint256 amount = token.balanceOf(address(this));
-        token.safeTransfer(_msgSender(), amount);
-        emit FeesClaimed(address(token), _msgSender(), amount);
+    function cancelNonce(uint160 nonce) external override {
+        address user = _msgSender();
+        _useNonce(user, nonce);
+    }
+
+    // ========================================= VIEW FUNCTIONS =========================================
+
+    /**
+     * @notice Returns the LoanData struct for the specified loan ID.
+     *
+     * @param loanId                The ID of the given loan.
+     *
+     * @return loanData             The struct containing loan state and terms.
+     */
+    function getLoan(uint256 loanId) external view override returns (LoanLibrary.LoanData memory loanData) {
+        return loans[loanId];
     }
 
     /**
-     * @dev Triggers stopped state.
+     * @notice Reports if the caller is allowed to call functions on the given vault.
+     *         Determined by if they are the borrower for the loan, defined by ownership
+     *         of the relevant BorrowerNote.
      *
-     * Requirements:
+     * @dev Implemented as part of the ICallDelegator interface.
      *
-     * - The contract must not be paused.
-     */
-    function pause() external onlyRole(DEFAULT_ADMIN_ROLE) {
-        _pause();
-    }
-
-    /**
-     * @dev Returns to normal state.
+     * @param caller                The user that wants to call a function.
+     * @param vault                 The vault that the caller wants to call a function on.
      *
-     * Requirements:
-     *
-     * - The contract must be paused.
-     */
-    function unpause() external onlyRole(DEFAULT_ADMIN_ROLE) {
-        _unpause();
-    }
-
-    /**
-     * @inheritdoc ICallDelegator
+     * @return allowed              True if the caller is allowed to call on the vault.
      */
     function canCallOn(address caller, address vault) external view override returns (bool) {
         // if the collateral is not currently being used in a loan, disallow
@@ -432,15 +447,70 @@ contract LoanCore is
         return false;
     }
 
-    function consumeNonce(address user, uint160 nonce) external override whenNotPaused onlyRole(ORIGINATOR_ROLE) {
-        _useNonce(user, nonce);
+    // ======================================== ADMIN FUNCTIONS =========================================
+
+    /**
+     * @notice Sets the fee controller to a new address. It must implement the
+     *         IFeeController interface. Can only be called by the contract owner.
+     *
+     * @param _newController        The new fee controller contract.
+     */
+    function setFeeController(IFeeController _newController) external onlyRole(FEE_CLAIMER_ROLE) {
+        feeController = _newController;
     }
 
-    function cancelNonce(uint160 nonce) external override {
-        address user = _msgSender();
-        _useNonce(user, nonce);
+    /**
+     * @notice Claim the protocol fees for the given token. Any token used as principal
+     *         for a loan will have accumulated fees. Must be called by contract owner.
+     *
+     * @param token                 The contract address of the token to claim fees for.
+     */
+    function claimFees(IERC20Upgradeable token) external onlyRole(FEE_CLAIMER_ROLE) {
+        // any token balances remaining on this contract are fees owned by the protocol
+        uint256 amount = token.balanceOf(address(this));
+        token.safeTransfer(_msgSender(), amount);
+        emit FeesClaimed(address(token), _msgSender(), amount);
     }
 
+    /**
+     * @notice Pauses the contract, preventing loan lifecyle operations.
+     *         Should only be used in case of emergency. Can only be called
+     *         by contract owner.
+     */
+    function pause() external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _pause();
+    }
+
+    /**
+     * @notice Unpauses the contract, enabling loan lifecyle operations.
+     *         Can be used after pausing due to emergency or during contract
+     *         upgrade. Can only be called by contract owner.
+     */
+    function unpause() external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _unpause();
+    }
+
+    // ============================================= HELPERS ============================================
+
+    /**
+     * @dev Takes a principal value and returns the amount that will be distributed
+     *      to the borrower after fees.
+     *
+     * @param principal             The principal amount.
+     *
+     * @return principalLessFees    The amount after fees.
+     */
+    function getPrincipalLessFees(uint256 principal) internal view returns (uint256) {
+        return principal.sub(principal.mul(feeController.getOriginationFee()).div(BPS_DENOMINATOR));
+    }
+
+    /**
+     * @dev Consume a nonce, by marking it as used for that user. Reverts if the nonce
+     *      has already been used.
+     *
+     * @param user                  The user for whom to consume a nonce.
+     * @param nonce                 The nonce to consume.
+     */
     function _useNonce(address user, uint160 nonce) internal {
         if (usedNonces[user][nonce] == true) revert LC_NonceUsed(user, nonce);
         // set nonce to used
