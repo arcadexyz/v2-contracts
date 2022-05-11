@@ -4,14 +4,12 @@ MAY 9 WHATS LEFT:
 
 Safety/Robustness:
 
-- Merge upgradeability
 - Fix test suite and ensure 100% coverage or as close as possible
 
 Refactoring:
 
 - Split LoanCore into separate files (contract too big)
 - Custom errors
-- Consistent documentation - move to implementation
 
 Features:
 
