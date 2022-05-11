@@ -25,13 +25,21 @@ Evan:
 V2 Progress:
 
 - (Ready for Review) Custom Errors
-  - (DONE) OC - Kevin
-  - (DONE) RC
-  - (DONE) LC
-  - (DONE) FILC
-  - (DONE) PN
-  - (DONE) ERC721P
-  - (DONE) PunkRouter
+  - Lending.sol
+    - (DONE) OC - Kevin
+    - (DONE) IV - Kevin
+    - (DONE) RC
+    - (DONE) LC
+    - (DONE) FILC
+    - (DONE) PN
+  - LendingUtils.sol
+    - (DONE) ERC721P
+    - (DONE) ERC721PU
+    - (DONE) PunkRouter
+  - Vault.sol
+    - (DONE) AssetVault
+    - (DONE) OwnableERC721
+    - (DONE) VaultFactory
 
 📌 For Further Review Items:
 

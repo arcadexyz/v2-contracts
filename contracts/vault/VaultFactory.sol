@@ -12,6 +12,8 @@ import "../interfaces/IAssetVault.sol";
 import "../interfaces/IVaultFactory.sol";
 import "../ERC721PermitUpgradeable.sol";
 
+import { VF_InvalidTemplate, VF_TokenIdOutOfBounds, VF_NoTransferWithdrawEnabled } from "../errors/Vault.sol";
+
 // AccessControlUpgradeable
 /** @title VaultFactory
  *   Factory for creating and registering AssetVaults
@@ -38,7 +40,7 @@ contract VaultFactory is ERC721EnumerableUpgradeable, ERC721PermitUpgradeable, I
         __ERC721_init("Asset Wrapper V2", "AW-V2");
         __ERC721PermitUpgradeable_init("Asset Wrapper V2");
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
-        require(_template != address(0), "VaultFactory: invalid template");
+        if (_template == address(0)) revert VF_InvalidTemplate(_template);
         template = _template;
         whitelist = _whitelist;
     }
@@ -73,9 +75,8 @@ contract VaultFactory is ERC721EnumerableUpgradeable, ERC721PermitUpgradeable, I
      * @inheritdoc IVaultFactory
      */
     function instanceAt(uint256 tokenId) external view override returns (address instance) {
-        // NOTE: CANNOT USE _exists(tokenId), this does not coencide with the correct info
-        //       we are checking. It only checks _owners[tokenId] != address(0)
-        require(_exists(tokenId), "ERC721Enumerable: global index out of bounds");
+        // check _owners[tokenId] != address(0)
+        if (_exists(tokenId) == false) revert VF_TokenIdOutOfBounds(tokenId);
 
         return address(uint160(tokenId));
         //return address(uint160(tokenByIndex(tokenId)));
@@ -118,7 +119,7 @@ contract VaultFactory is ERC721EnumerableUpgradeable, ERC721PermitUpgradeable, I
         uint256 tokenId
     ) internal virtual override(ERC721Upgradeable, ERC721EnumerableUpgradeable) {
         IAssetVault vault = IAssetVault(address(uint160(tokenId)));
-        require(!vault.withdrawEnabled(), "cannot transfer with withdraw enabled");
+        if (vault.withdrawEnabled() == true) revert VF_NoTransferWithdrawEnabled(tokenId);
 
         super._beforeTokenTransfer(from, to, tokenId);
     }
