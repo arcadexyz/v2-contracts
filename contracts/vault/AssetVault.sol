@@ -20,7 +20,7 @@ import { AV_WithdrawsDisabled, AV_WithdrawsEnabled, AV_AlreadyInitialized, AV_Ca
 /**
  * @title AssetVault
  * @author Non-Fungible Technologies, Inc.
-
+ *
  * The Asset Vault is a vault for the storage of collateralized assets.
  * Designed for one-time use, like a piggy bank. Once withdrawals are enabled,
  * and the bank is broken, the vault can no longer be used or transferred.
