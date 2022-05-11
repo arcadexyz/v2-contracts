@@ -2,6 +2,8 @@
 
 pragma solidity ^0.8.11;
 
+import "../libraries/LoanLibrary.sol";
+
 /**
  * @title LendingErrors
  * @author Non-Fungible Technologies, Inc.
@@ -170,3 +172,99 @@ error RC_RepayPartGTZero(uint256 amount);
  * @param amount                    Amount function call parameter.
  */
 error RC_RepayPartGTMin(uint256 amount);
+
+// ==================================== Loan Core ======================================
+/// @notice All errors prefixed with LC_, to separate from other contracts in the protocol.
+
+/**
+ * @notice Loan duration must be greater than 1hr and less than 3yrs.
+ *
+ * @param durationSecs                 Total amount of time in seconds.
+ */
+error LC_LoanDuration(uint256 durationSecs);
+
+/**
+ * @notice Check collateral is not already used in a active loan.
+ *
+ * @param collateralAddress             Address of the collateral.
+ * @param collateralId                  ID of the collateral token.
+ */
+error LC_CollateralInUse(address collateralAddress, uint256 collateralId);
+
+/**
+ * @notice Interest must be greater than 0.01%. (interestRate / 1e18 >= 1)
+ *
+ * @param interestRate                  InterestRate with 1e18 multiplier.
+ */
+error LC_InterestRate(uint256 interestRate);
+
+/**
+ * @notice Loan terms must have even number of installments and intallment periods must be < 1000000.
+ *
+ * @param numInstallments               Number of installment periods in loan.
+ */
+error LC_NumberInstallments(uint256 numInstallments);
+
+/**
+ * @notice Ensure valid initial loan state when starting loan.
+ *
+ * @param state                         Current state of a loan according to LoanState enum.
+ */
+error LC_StartInvalidState(LoanLibrary.LoanState state);
+
+/**
+ * @notice Loan duration has not expired.
+ *
+ * @param dueDate                       Timestamp of the end of the loan duration.
+ */
+error LC_NotExpired(uint256 dueDate);
+
+/**
+ * @notice Loan duration has not expired.
+ *
+ * @param returnAmount                  Total amount due for entire loan repayment.
+ */
+error LC_BalanceGTZero(uint256 returnAmount);
+
+/**
+ * @notice Loan duration has not expired.
+ *
+ * @param user                          Address of collateral owner.
+ * @param nonce                         Represents the number of transactions sent by address.
+ */
+error LC_NonceUsed(address user, uint160 nonce);
+
+// ================================== Full Insterest Amount Calc ====================================
+/// @notice All errors prefixed with FIAC_, to separate from other contracts in the protocol.
+
+/**
+ * @notice Interest must be greater than 0.01%. (interestRate / 1e18 >= 1)
+ *
+ * @param interestRate                  InterestRate with 1e18 multiplier.
+ */
+error FIAC_InterestRate(uint256 interestRate);
+
+
+// ==================================== Promissory Note ======================================
+/// @notice All errors prefixed with PN_, to separate from other contracts in the protocol.
+
+/**
+ * @notice Caller of mint function must have the MINTER_ROLE in AccessControl.
+ *
+ * @param caller                        Address of the function caller.
+ */
+error PN_MintingRole(address caller);
+
+/**
+ * @notice Caller of burn function must have the BURNER_ROLE in AccessControl.
+ *
+ * @param caller                        Address of the function caller.
+ */
+error PN_BurningRole(address caller);
+
+
+
+/**
+ * @notice No token transfers while contract is in paused state.
+ */
+error PN_ContractPaused();

@@ -23,6 +23,9 @@ import "./interfaces/ILoanCore.sol";
 import "./PromissoryNote.sol";
 import "./vault/OwnableERC721.sol";
 
+import { LC_LoanDuration, LC_CollateralInUse, LC_InterestRate, LC_NumberInstallments, LC_StartInvalidState, LC_NotExpired, LC_BalanceGTZero, LC_NonceUsed } from "./errors/Lending.sol";
+
+
 // TODO: Better natspec
 // TODO: Custom errors
 
@@ -125,26 +128,13 @@ contract LoanCore is ILoanCore, Initializable, FullInterestAmountCalc,  AccessCo
         returns (uint256 loanId)
     {
         // loan duration must be greater than 1 hr and less than 3 years
-        require(
-            terms.durationSecs > 3600 && terms.durationSecs < 94608000,
-            "LoanCore::create: duration greater than 1hr and less than 3yrs"
-        );
-        require(
-            !collateralInUse[terms.collateralAddress][terms.collateralId],
-            "LoanCore::create: Collateral token already in use"
-        );
-
-        // Interest rate must be greater than or equal to 0.01%
-        require(
-            terms.interestRate / INTEREST_RATE_DENOMINATOR >= 1,
-            "LoanCore::create: Interest must be greater than 0.01%"
-        );
-
-        // Number of installments must be an even number.
-        require(
-            terms.numInstallments % 2 == 0 && terms.numInstallments < 1000000,
-            "LoanCore::create: Even num of installments and must be < 1000000"
-        );
+        if(terms.durationSecs < 3600 || terms.durationSecs > 94608000) revert LC_LoanDuration(terms.durationSecs);
+        // check collateral is not already used in a loan.
+        if(collateralInUse[terms.collateralAddress][terms.collateralId] == true ) revert LC_CollateralInUse(terms.collateralAddress, terms.collateralId);
+        // interest rate must be greater than or equal to 0.01%
+        if(terms.interestRate / INTEREST_RATE_DENOMINATOR < 1) revert LC_InterestRate(terms.interestRate);
+        // number of installments must be an even number.
+        if(terms.numInstallments % 2 != 0 || terms.numInstallments > 1000000) revert LC_NumberInstallments(terms.numInstallments);
 
         // get current loanId and increment for next function call
         loanId = loanIdTracker.current();
@@ -179,13 +169,13 @@ contract LoanCore is ILoanCore, Initializable, FullInterestAmountCalc,  AccessCo
         LoanLibrary.LoanData memory data = loans[loanId];
 
         // Ensure valid initial loan state
-        require(data.state == LoanLibrary.LoanState.Created, "LoanCore::start: Invalid loan state");
+        if(data.state != LoanLibrary.LoanState.Created) revert LC_StartInvalidState(data.state);
 
         // Pull collateral token and principal
         IERC721(data.terms.collateralAddress).transferFrom(_msgSender(), address(this), data.terms.collateralId);
         IERC20Upgradeable(data.terms.payableCurrency).safeTransferFrom(_msgSender(), address(this), data.terms.principal);
 
-        // Distribute notes and principal
+        // Distribute notes and principal, initiate loan state
         loans[loanId].state = LoanLibrary.LoanState.Active;
         uint256 borrowerNoteId = borrowerNote.mint(borrower, loanId);
         uint256 lenderNoteId = lenderNote.mint(lender, loanId);
@@ -213,15 +203,15 @@ contract LoanCore is ILoanCore, Initializable, FullInterestAmountCalc,  AccessCo
      */
     function repay(uint256 loanId) external override onlyRole(REPAYER_ROLE) {
         LoanLibrary.LoanData memory data = loans[loanId];
-        // Ensure valid initial loan state
-        require(data.state == LoanLibrary.LoanState.Active, "LoanCore::repay: Invalid loan state");
+        // ensure valid initial loan state when starting loan
+        if(data.state != LoanLibrary.LoanState.Active) revert LC_StartInvalidState(data.state);
 
-        // ensure repayment was valid
         uint256 returnAmount = getFullInterestAmount(data.terms.principal, data.terms.interestRate);
-        require(returnAmount > 0, "No payment due.");
-
+        // ensure balance to be paid is greater than zero
+        if(returnAmount <= 0) revert LC_BalanceGTZero(returnAmount);
+        // transfer from msg.sender to this contract
         IERC20Upgradeable(data.terms.payableCurrency).safeTransferFrom(_msgSender(), address(this), returnAmount);
-
+        // get promissory notes from two parties involved
         address lender = lenderNote.ownerOf(data.lenderNoteId);
         address borrower = borrowerNote.ownerOf(data.borrowerNoteId);
 
@@ -245,10 +235,10 @@ contract LoanCore is ILoanCore, Initializable, FullInterestAmountCalc,  AccessCo
      */
     function claim(uint256 loanId) external override whenNotPaused onlyRole(REPAYER_ROLE) {
         LoanLibrary.LoanData memory data = loans[loanId];
-
-        // Ensure valid initial loan state
-        require(data.state == LoanLibrary.LoanState.Active, "LoanCore::claim: Invalid loan state");
-        require(data.dueDate < block.timestamp, "LoanCore::claim: Loan not expired");
+        // ensure valid initial loan state when starting loan
+        if(data.state == LoanLibrary.LoanState.Active) revert LC_StartInvalidState(data.state);
+        // ensure claiming after the loan has ended. block.timstamp must be greater than the dueDate.
+        if(data.dueDate > block.timestamp) revert LC_NotExpired(data.dueDate);
 
         address lender = lenderNote.ownerOf(data.lenderNoteId);
 
@@ -295,8 +285,8 @@ contract LoanCore is ILoanCore, Initializable, FullInterestAmountCalc,  AccessCo
         uint256 _paymentToLateFees
     ) external override onlyRole(REPAYER_ROLE) {
         LoanLibrary.LoanData storage data = loans[_loanId];
-        // ensure valid initial loan state
-        require(data.state == LoanLibrary.LoanState.Active, "LoanCore::repay: Invalid loan state");
+        // ensure valid initial loan state when repaying loan
+        if(data.state != LoanLibrary.LoanState.Active) revert LC_StartInvalidState(data.state);
         // calculate total sent by borrower and transferFrom repayment controller to this address
         uint256 paymentTotal = _paymentToPrincipal + _paymentToLateFees + _paymentToInterest;
         IERC20Upgradeable(data.terms.payableCurrency).safeTransferFrom(_msgSender(), address(this), paymentTotal);
@@ -334,8 +324,13 @@ contract LoanCore is ILoanCore, Initializable, FullInterestAmountCalc,  AccessCo
                 // update balance
                 data.balance = 0;
                 data.balancePaid += paymentTotal;
+<<<<<<< HEAD
                 // Loan is fully repaid, redistribute asset and collateral.
                 IERC20Upgradeable(data.terms.payableCurrency).safeTransfer(lender, paymentTotal);
+=======
+                // loan is fully repaid, redistribute asset and collateral.
+                IERC20(data.terms.payableCurrency).safeTransfer(lender, paymentTotal);
+>>>>>>> 745b93f (docs(.sol errors): loanCore, PromissoryNote, FILC, ERC721P, and punk router errors created)
                 IERC721(data.terms.collateralAddress).transferFrom(address(this), borrower, data.terms.collateralId);
             }
 
@@ -347,8 +342,13 @@ contract LoanCore is ILoanCore, Initializable, FullInterestAmountCalc,  AccessCo
             data.balance -= _paymentToPrincipal;
             data.balancePaid += paymentTotal;
 
+<<<<<<< HEAD
             // Loan partial payment, redistribute asset to lender.
             IERC20Upgradeable(data.terms.payableCurrency).safeTransfer(lender, paymentTotal);
+=======
+            // loan partial payment, redistribute asset to lender.
+            IERC20(data.terms.payableCurrency).safeTransfer(lender, paymentTotal);
+>>>>>>> 745b93f (docs(.sol errors): loanCore, PromissoryNote, FILC, ERC721P, and punk router errors created)
 
             // minimum repayment events will emit 0 and unchanged principal
             emit InstallmentPaymentReceived(_loanId, _paymentToPrincipal, data.balance);
@@ -437,7 +437,8 @@ contract LoanCore is ILoanCore, Initializable, FullInterestAmountCalc,  AccessCo
     }
 
     function _useNonce(address user, uint160 nonce) internal {
-        require(!usedNonces[user][nonce], "Nonce used");
+        if(usedNonces[user][nonce] == true) revert LC_NonceUsed(user, nonce);
+        // set nonce to used
         usedNonces[user][nonce] = true;
 
         emit NonceUsed(user, nonce);
