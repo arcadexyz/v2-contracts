@@ -133,22 +133,6 @@ const config: HardhatUserConfig = {
     solidity: {
         compilers: [
             {
-                version: "0.8.5",
-                settings: {
-                    metadata: {
-                        // Not including the metadata hash
-                        // https://github.com/paulrberg/solidity-template/issues/31
-                        bytecodeHash: "none",
-                    },
-                    // You should disable the optimizer when debugging
-                    // https://hardhat.org/hardhat-network/#solidity-optimizer-support
-                    optimizer: {
-                        enabled: optimizerEnabled,
-                        runs: 999999,
-                    },
-                },
-            },
-            {
                 version: "0.8.11",
                 settings: {
                     metadata: {

@@ -9,7 +9,6 @@ Safety/Robustness:
 Refactoring:
 - Split LoanCore into separate files (contract too big)
 - Custom errors
-- Make sure all files use 0.8.11 compiler
 - Consistent documentation - move to implementation
 
 Features:
