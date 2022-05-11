@@ -1,4 +1,4 @@
-import { ethers } from "hardhat";
+import hre, { ethers, upgrades } from "hardhat";
 
 import { ORIGINATOR_ROLE as DEFAULT_ORIGINATOR_ROLE, REPAYER_ROLE as DEFAULT_REPAYER_ROLE } from "./constants";
 
@@ -9,6 +9,8 @@ import {
     PromissoryNote,
     RepaymentController,
     OriginationController,
+    CallWhitelist,
+    VaultFactory
 } from "../typechain";
 export interface DeployedResources {
     assetVault: AssetVault;
@@ -18,6 +20,8 @@ export interface DeployedResources {
     lenderNote: PromissoryNote;
     repaymentController: RepaymentController;
     originationController: OriginationController;
+    whitelist: CallWhitelist;
+    vaultFactory: VaultFactory;
 }
 
 export async function main(
@@ -28,6 +32,8 @@ export async function main(
     // If this runs in a standalone fashion you may want to call compile manually
     // to make sure everything is compiled
     // await run("compile");
+    const CallWhiteListFactory = await ethers.getContractFactory("CallWhitelist");
+    const whitelist = <CallWhitelist>await CallWhiteListFactory.deploy();
 
     // We get the contract to deploy
     const AssetVaultFactory = await ethers.getContractFactory("AssetVault");
@@ -43,8 +49,10 @@ export async function main(
     console.log("FeeController deployed to: ", feeController.address);
 
     const LoanCoreFactory = await ethers.getContractFactory("LoanCore");
-    const loanCore = <LoanCore>await LoanCoreFactory.deploy(assetVault.address, feeController.address);
+    const loanCore = <LoanCore>await upgrades.deployProxy(LoanCoreFactory, [feeController.address], { kind: 'uups' });
     await loanCore.deployed();
+
+    console.log("LoanCore deployed to:", loanCore.address);
 
     const promissoryNoteFactory = await ethers.getContractFactory("PromissoryNote");
     const borrowerNoteAddr = await loanCore.borrowerNote();
@@ -52,13 +60,16 @@ export async function main(
     const lenderNoteAddr = await loanCore.lenderNote();
     const lenderNote = <PromissoryNote>await promissoryNoteFactory.attach(lenderNoteAddr);
 
-    console.log("LoanCore deployed to:", loanCore.address);
     console.log("BorrowerNote deployed to:", borrowerNoteAddr);
     console.log("LenderNote deployed to:", lenderNoteAddr);
 
     const RepaymentControllerFactory = await ethers.getContractFactory("RepaymentController");
     const repaymentController = <RepaymentController>(
-        await RepaymentControllerFactory.deploy(loanCore.address, borrowerNoteAddr, lenderNoteAddr)
+        await upgrades.deployProxy(RepaymentControllerFactory, [
+            loanCore.address,
+            borrowerNoteAddr,
+            lenderNoteAddr
+        ], { kind: 'uups' })
     );
     await repaymentController.deployed();
     const updateRepaymentControllerPermissions = await loanCore.grantRole(REPAYER_ROLE, repaymentController.address);
@@ -68,8 +79,9 @@ export async function main(
 
     const OriginationControllerFactory = await ethers.getContractFactory("OriginationController");
     const originationController = <OriginationController>(
-        await OriginationControllerFactory.deploy(loanCore.address, assetVault.address)
+        await upgrades.deployProxy(OriginationControllerFactory, [loanCore.address], { kind: 'uups' })
     );
+
     await originationController.deployed();
     const updateOriginationControllerPermissions = await loanCore.grantRole(
         ORIGINATOR_ROLE,
@@ -79,6 +91,12 @@ export async function main(
 
     console.log("OriginationController deployed to:", originationController.address);
 
+    const VaultFactoryFactory = await ethers.getContractFactory("VaultFactory");
+    // console.log("VaultFactory deployed to:", VaultFactoryFactory)
+    const vaultFactory = <VaultFactory>(await upgrades.deployProxy(VaultFactoryFactory, [assetVault.address, whitelist.address], { kind: 'uups', initializer: "initialize(address, address)" })
+    );
+    console.log("VaultFactory deployed to:", vaultFactory.address)
+
     return {
         assetVault,
         feeController,
@@ -87,6 +105,8 @@ export async function main(
         lenderNote,
         repaymentController,
         originationController,
+        whitelist,
+        vaultFactory
     };
 }
 
@@ -100,3 +120,4 @@ if (require.main === module) {
             process.exit(1);
         });
 }
+

@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: MIT
-
 pragma solidity ^0.8.11;
 
-import "@openzeppelin/contracts/utils/Context.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/cryptography/draft-EIP712Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts/interfaces/IERC1271.sol";
 
 import "./interfaces/IOriginationController.sol";
@@ -33,8 +34,10 @@ import { OC_ZeroAddress, OC_InvalidVerifier, OC_BatchLengthMismatch, OC_Predicat
  * takes place in this contract. To originate a loan, the controller
  * also takes custody of both the collateral and loan principal.
  */
-contract OriginationController is IOriginationController, Context, EIP712, ReentrancyGuard, Ownable {
-    using SafeERC20 for IERC20;
+
+contract OriginationController is Initializable, ContextUpgradeable, IOriginationController, EIP712Upgradeable, ReentrancyGuardUpgradeable, OwnableUpgradeable, UUPSUpgradeable {
+    using SafeERC20Upgradeable for IERC20Upgradeable;
+
 
     // ============================================ STATE ==============================================
 
@@ -55,9 +58,9 @@ contract OriginationController is IOriginationController, Context, EIP712, Reent
             // "LoanTermsWithItems(uint256 durationSecs,uint256 principal,uint256 interestRate,address collateralAddress,address payableCurrency)"
         );
 
-    // ============= Global Immutable State ==============
+    // ============= Global State ==============
 
-    address public immutable loanCore;
+    address public loanCore;
 
     // ================= State ==================
 
@@ -69,6 +72,16 @@ contract OriginationController is IOriginationController, Context, EIP712, Reent
     // ========================================== CONSTRUCTOR ===========================================
 
     /**
+     * @notice Runs the initializer function in an upgradeable contract.
+     *
+     *  @dev Add Unsafe-allow comment to notify upgrades plugin to accept the constructor.
+     */
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() initializer {}
+
+    // ========================================== INITIALIZER ===========================================
+
+    /**
      * @notice Creates a new origination controller contract, also initializing
      * the parent signature verifier.
      *
@@ -77,10 +90,26 @@ contract OriginationController is IOriginationController, Context, EIP712, Reent
      *
      * @param _loanCore                     The address of the loan core logic of the protocol.
      */
-    constructor(address _loanCore) EIP712("OriginationController", "2") {
+
+    function initialize(address _loanCore) initializer public {
+        __EIP712_init("OriginationController", "2");
+        __Ownable_init_unchained();
+        __UUPSUpgradeable_init_unchained();
         if (_loanCore == address(0)) revert OC_ZeroAddress();
+
         loanCore = _loanCore;
     }
+
+    // ======================================= UPGRADE AUTHORIZATION ========================================
+
+    /**
+     * @notice Authorization function to define who should be allowed to upgrade the contract
+     *
+     * @param newImplementation           The address of the upgraded verion of this contract
+     */
+
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
+
 
     // ==================================== ORIGINATION OPERATIONS ======================================
 
@@ -494,8 +523,8 @@ contract OriginationController is IOriginationController, Context, EIP712, Reent
         address lender
     ) internal nonReentrant returns (uint256 loanId) {
         // Take custody of funds
-        IERC20(loanTerms.payableCurrency).safeTransferFrom(lender, address(this), loanTerms.principal);
-        IERC20(loanTerms.payableCurrency).approve(loanCore, loanTerms.principal);
+        IERC20Upgradeable(loanTerms.payableCurrency).safeTransferFrom(lender, address(this), loanTerms.principal);
+        IERC20Upgradeable(loanTerms.payableCurrency).approve(loanCore, loanTerms.principal);
 
         IERC721(loanTerms.collateralAddress).transferFrom(borrower, address(this), loanTerms.collateralId);
         IERC721(loanTerms.collateralAddress).approve(loanCore, loanTerms.collateralId);
@@ -505,3 +534,4 @@ contract OriginationController is IOriginationController, Context, EIP712, Reent
         ILoanCore(loanCore).startLoan(lender, borrower, loanId);
     }
 }
+

@@ -130,3 +130,4 @@ contract PromissoryNote is
         require(!paused(), "ERC20Pausable: token transfer while paused");
     }
 }
+

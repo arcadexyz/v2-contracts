@@ -1,5 +1,5 @@
 import chai, { expect } from "chai";
-import hre, { waffle } from "hardhat";
+import hre, { waffle, upgrades } from "hardhat";
 import { solidity } from "ethereum-waffle";
 const { loadFixture } = waffle;
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
@@ -16,10 +16,11 @@ import {
     VaultFactory,
     AssetVault,
     PromissoryNote,
-    MockLoanCore,
+    LoanCore,
     ArcadeItemsVerifier,
     FeeController,
-    ERC1271LenderMock
+    ERC1271LenderMock,
+    MockOriginationController,
 } from "../typechain";
 import { approve, mint, ZERO_ADDRESS } from "./utils/erc20";
 import { mint as mint721 } from "./utils/erc721";
@@ -36,7 +37,7 @@ interface TestContext {
     vaultFactory: VaultFactory;
     lenderPromissoryNote: PromissoryNote;
     borrowerPromissoryNote: PromissoryNote;
-    loanCore: MockLoanCore;
+    loanCore: LoanCore;
     user: Signer;
     other: Signer;
     signers: Signer[];
@@ -46,17 +47,26 @@ const fixture = async (): Promise<TestContext> => {
     const signers: Signer[] = await hre.ethers.getSigners();
     const [deployer] = signers;
 
-    const loanCore = <MockLoanCore>await deploy("MockLoanCore", deployer, []);
+    const feeController = <FeeController>await deploy("FeeController", signers[0], []);
+
+    const LoanCore = await hre.ethers.getContractFactory("LoanCore");
+    const loanCore = <LoanCore>(
+        await upgrades.deployProxy(LoanCore, [feeController.address], { kind: 'uups' })
+    );
+
     const whitelist = <CallWhitelist>await deploy("CallWhitelist", deployer, []);
     const vaultTemplate = <AssetVault>await deploy("AssetVault", deployer, []);
-    const vaultFactory = <VaultFactory>(
-        await deploy("VaultFactory", deployer, [vaultTemplate.address, whitelist.address])
+
+    const VaultFactoryFactory = await hre.ethers.getContractFactory("VaultFactory");
+    const vaultFactory = <VaultFactory>(await upgrades.deployProxy(VaultFactoryFactory, [vaultTemplate.address, whitelist.address], { kind: 'uups', initializer: "initialize(address, address)" })
     );
+
     const mockERC20 = <MockERC20>await deploy("MockERC20", deployer, ["Mock ERC20", "MOCK"]);
     const mockERC721 = <MockERC721>await deploy("MockERC721", deployer, ["Mock ERC721", "MOCK"]);
 
+    const OriginationController = await hre.ethers.getContractFactory("OriginationController");
     const originationController = <OriginationController>(
-        await deploy("OriginationController", deployer, [loanCore.address])
+        await upgrades.deployProxy(OriginationController, [loanCore.address], { kind: 'uups' })
     );
 
     const borrowerNoteAddress = await loanCore.borrowerNote();
@@ -84,9 +94,9 @@ const createLoanTerms = (
     payableCurrency: string,
     collateralAddress: string,
     {
-        durationSecs = 360000,
+        durationSecs = BigNumber.from(360000),
         principal = hre.ethers.utils.parseEther("100"),
-        interest = hre.ethers.utils.parseEther("1"),
+        interestRate = hre.ethers.utils.parseEther("1"),
         collateralId = BigNumber.from("1"),
         numInstallments = 0,
     }: Partial<LoanTerms> = {},
@@ -94,7 +104,7 @@ const createLoanTerms = (
     return {
         durationSecs,
         principal,
-        interest,
+        interestRate,
         collateralId,
         collateralAddress,
         payableCurrency,
@@ -105,28 +115,42 @@ const createLoanTerms = (
 const maxDeadline = hre.ethers.constants.MaxUint256;
 
 describe("OriginationController", () => {
-    describe("constructor", () => {
+    describe("initializer", () => {
         it("Reverts if _loanCore address is not provided", async () => {
-            const signers: Signer[] = await hre.ethers.getSigners();
-            const [deployer] = signers;
-
-            await expect(deploy("OriginationController", deployer, [ZERO_ADDRESS])).to.be.revertedWith(
-                "OC_ZeroAddress",
-            );
+            const OriginationController = await hre.ethers.getContractFactory("OriginationController");
+            await expect(upgrades.deployProxy(OriginationController, [ZERO_ADDRESS])).to.be.revertedWith("OC_ZeroAddress");
         });
 
         it("Instantiates the OriginationController", async () => {
             const signers: Signer[] = await hre.ethers.getSigners();
             const [deployer] = signers;
 
-            const loanCore = <MockLoanCore>await deploy("MockLoanCore", deployer, []);
-
-            const originationController = await deploy("OriginationController", deployer, [loanCore.address]);
+            const loanCore = <LoanCore>await deploy("LoanCore", deployer, []);
+            const OriginationController = await hre.ethers.getContractFactory("OriginationController");
+            const originationController = await upgrades.deployProxy(OriginationController, [loanCore.address]);
 
             expect(await originationController.loanCore()).to.equal(loanCore.address);
         });
     });
+    describe("Upgradeability", async () => {
+        let ctx: TestContext;
 
+        beforeEach(async () => {
+            ctx = await loadFixture(fixture);
+        });
+        it("v1 functionality can be upgraded in v2", async () => {
+        const { originationController, user: lender, other: borrower } = ctx;
+
+        // THIS IS WHERE ORIGINATION CONTROLLER UPGRADES TO V2 / BECOMES MOCKORIGINATION CONTROLLER
+        const MockOriginationController = await hre.ethers.getContractFactory("MockOriginationController");
+        const mockOriginationController = <MockOriginationController>(await hre.upgrades.upgradeProxy(originationController.address, MockOriginationController));
+        // THE .version() FUNCTION RETURNS THAT THIS IS V2
+        expect (await mockOriginationController.version()).to.equal("This is OriginationController V2!");
+        // isApproved() IS CALLED AND RETURNS TRUE FOR FOR THE 2 ARGUMENTS NOT BEING EQUAL
+        expect (await mockOriginationController.isApproved(await borrower.getAddress(), await lender.getAddress())).to.be.true;
+        });
+    });
+});
     describe("initializeLoan", () => {
         let ctx: TestContext;
 
@@ -232,7 +256,6 @@ describe("OriginationController", () => {
                     .connect(borrower)
                     .initializeLoan(loanTerms, await borrower.getAddress(), await lender.getAddress(), sig, 1),
             ).to.be.revertedWith("OC_ApprovedOwnLoan");
-        });
 
         it("Reverts if signer is not a participant", async () => {
             const { originationController, mockERC20, vaultFactory, user: lender, other: borrower, signers } = ctx;
@@ -490,7 +513,7 @@ describe("OriginationController", () => {
                     borrowerPromissoryNote,
                 } = ctx;
 
-                const bundleId = await initializeBundle(vaultFactory, user);
+                const bundleId = await initializeBundle(vaultFactory,  user);
                 const loanTerms = createLoanTerms(mockERC20.address, vaultFactory.address, { collateralId: bundleId });
                 await mint(mockERC20, other, loanTerms.principal);
 
@@ -579,6 +602,7 @@ describe("OriginationController", () => {
                     .to.emit(mockERC20, "Transfer")
                     .withArgs(await lender.getAddress(), originationController.address, loanTerms.principal);
             });
+        });
         });
     });
 
@@ -1490,4 +1514,5 @@ describe("OriginationController", () => {
             ).to.be.revertedWith("OC_ApprovedOwnLoan");
         });
     });
-});
+
+

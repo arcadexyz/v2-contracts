@@ -1,8 +1,7 @@
 import { expect } from "chai";
-import hre, { ethers, waffle } from "hardhat";
+import hre, { ethers, waffle, upgrades } from "hardhat";
 const { loadFixture } = waffle;
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
-import { BigNumber } from "ethers";
 import {
     OriginationController,
     PromissoryNote,
@@ -14,8 +13,11 @@ import {
     CallWhitelist,
     VaultFactory,
     FeeController,
+    MockLoanCore,
+    RepaymentContV2
 } from "../typechain";
 import { BlockchainTime } from "./utils/time";
+import { utils, Signer, BigNumber } from "ethers";
 import { deploy } from "./utils/contracts";
 import { approve, mint } from "./utils/erc20";
 import { LoanTerms, LoanData } from "./utils/types";
@@ -40,6 +42,7 @@ interface TestContext {
     admin: SignerWithAddress;
     currentTimestamp: number;
     blockchainTime: BlockchainTime;
+    mockLoanCore: MockLoanCore;
 }
 
 /**
@@ -95,9 +98,18 @@ const fixture = async (): Promise<TestContext> => {
 
     const lenderNoteAddress = await loanCore.lenderNote();
     const lenderNote = <PromissoryNote>(await ethers.getContractFactory("PromissoryNote")).attach(lenderNoteAddress);
+
+    const mockLoanCore = <MockLoanCore>await deploy("MockLoanCore", admin, [feeController.address]);
+
+    const RepaymentController = await hre.ethers.getContractFactory("RepaymentController");
     const repaymentController = <RepaymentController>(
-        await deploy("RepaymentController", admin, [loanCore.address, borrowerNoteAddress, lenderNoteAddress])
+    await upgrades.deployProxy(RepaymentController, [
+        mockLoanCore.address,
+        borrowerNoteAddress,
+        lenderNoteAddress,
+    ], { kind: 'uups' })
     );
+
     await repaymentController.deployed();
     const updateRepaymentControllerPermissions = await loanCore.grantRole(REPAYER_ROLE, repaymentController.address);
     await updateRepaymentControllerPermissions.wait();
@@ -122,6 +134,7 @@ const fixture = async (): Promise<TestContext> => {
         admin,
         currentTimestamp,
         blockchainTime,
+        mockLoanCore
     };
 };
 
@@ -130,9 +143,9 @@ const fixture = async (): Promise<TestContext> => {
  */
 const createLoanTerms = (
     payableCurrency: string,
-    durationSecs: number,
+    durationSecs: BigNumber,
     principal: BigNumber,
-    interest: BigNumber,
+    interestRate: BigNumber,
     collateralAddress: string,
     numInstallments: number,
     { collateralId = BigNumber.from(1) }: Partial<LoanTerms> = {},
@@ -140,7 +153,7 @@ const createLoanTerms = (
     return {
         durationSecs,
         principal,
-        interest,
+        interestRate,
         collateralAddress,
         collateralId,
         payableCurrency,
@@ -161,7 +174,7 @@ interface LoanDef {
 const initializeLoan = async (
     context: TestContext,
     payableCurrency: string,
-    durationSecs: number,
+    durationSecs: BigNumber,
     principal: BigNumber,
     interest: BigNumber,
     numInstallments: number,
@@ -192,7 +205,7 @@ const initializeLoan = async (
 
     const tx = await originationController
         .connect(lender)
-        .initializeLoan(loanTerms, await borrower.getAddress(), await lender.getAddress(), sig);
+        .initializeLoan(loanTerms, await borrower.getAddress(), await lender.getAddress(), sig, 1);
     const receipt = await tx.wait();
 
     let loanId;
@@ -222,7 +235,7 @@ describe("Legacy Repayments with interest parameter as a rate:", () => {
         const { loanData, bundleId } = await initializeLoan(
             context,
             mockERC20.address,
-            86400, // durationSecs
+            BigNumber.from(86400), // durationSecs
             hre.ethers.utils.parseEther("100"), // principal
             hre.ethers.utils.parseEther("1000"), // interest
             0, // numInstallments
@@ -247,11 +260,12 @@ describe("Legacy Repayments with interest parameter as a rate:", () => {
         const { loanData, bundleId } = await initializeLoan(
             context,
             mockERC20.address,
-            86400, // durationSecs
+            BigNumber.from(86400), // durationSecs
             hre.ethers.utils.parseEther("10"), // principal
             hre.ethers.utils.parseEther("750"), // interest
             0, // numInstallments
-        );
+        )
+
         // total repayment amount
         const total = ethers.utils.parseEther("10.75");
         const repayAdditionalAmount = total.sub(await mockERC20.balanceOf(borrower.address));
@@ -272,7 +286,7 @@ describe("Legacy Repayments with interest parameter as a rate:", () => {
         const { loanData, bundleId } = await initializeLoan(
             context,
             mockERC20.address,
-            86400, // durationSecs
+            BigNumber.from(86400), // durationSecs
             hre.ethers.utils.parseEther("25"), // principal
             hre.ethers.utils.parseEther("250"), // interest
             0, // numInstallments
@@ -297,7 +311,7 @@ describe("Legacy Repayments with interest parameter as a rate:", () => {
         const { loanData, bundleId } = await initializeLoan(
             context,
             mockERC20.address,
-            86400, // durationSecs
+            BigNumber.from(86400), // durationSecs
             hre.ethers.utils.parseEther("25"), // principal
             hre.ethers.utils.parseEther("250"), // interest
             0, // numInstallments
@@ -322,7 +336,7 @@ describe("Legacy Repayments with interest parameter as a rate:", () => {
         const { loanData, bundleId } = await initializeLoan(
             context,
             mockERC20.address,
-            86400, // durationSecs
+            BigNumber.from(86400), // durationSecs
             hre.ethers.utils.parseEther("25"), // principal
             hre.ethers.utils.parseEther("250"), // interest
             0, // numInstallments
@@ -347,7 +361,7 @@ describe("Legacy Repayments with interest parameter as a rate:", () => {
             initializeLoan(
                 context,
                 mockERC20.address,
-                86400, // durationSecs
+                BigNumber.from(86400), // durationSecs
                 hre.ethers.utils.parseEther(".000000000000009999"), // principal
                 hre.ethers.utils.parseEther("250"), // interest
                 0, // numInstallments
@@ -361,7 +375,7 @@ describe("Legacy Repayments with interest parameter as a rate:", () => {
         const { loanData, bundleId } = await initializeLoan(
             context,
             mockERC20.address,
-            86400, // durationSecs
+            BigNumber.from(86400), // durationSecs
             hre.ethers.utils.parseEther(".00000000000001"), // principal
             hre.ethers.utils.parseEther("250"), // interest
             0, // numInstallments
@@ -378,5 +392,23 @@ describe("Legacy Repayments with interest parameter as a rate:", () => {
         await repaymentController.connect(borrower).repay(loanData.borrowerNoteId);
 
         expect(await mockERC20.balanceOf(borrower.address)).to.equal(0);
+    });
+});
+
+describe("RepaymentContV", () => {
+    it("Upgrades to v2", async () => {
+        const RepaymentContV2 = await hre.ethers.getContractFactory("RepaymentContV2");
+        const repaymentContV2 = <RepaymentContV2>(await hre.upgrades.upgradeProxy("0xdeaBbBe620EDF275F06E75E8fab18183389d606F", RepaymentContV2));
+
+        expect (await repaymentContV2.version()).to.equal("This is RepaymentController V2!");
+    });
+});
+
+describe("RepaymentContV", () => {
+    it("Upgrades to v2", async () => {
+        const RepaymentContV2 = await hre.ethers.getContractFactory("RepaymentContV2");
+        const repaymentContV2 = <RepaymentContV2>(await hre.upgrades.upgradeProxy("0xdeaBbBe620EDF275F06E75E8fab18183389d606F", RepaymentContV2));
+
+        expect (await repaymentContV2.version()).to.equal("This is RepaymentController V2!");
     });
 });

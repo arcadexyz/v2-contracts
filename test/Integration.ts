@@ -111,7 +111,7 @@ describe("Integration", () => {
         {
             durationSecs = 3600000,
             principal = hre.ethers.utils.parseEther("100"),
-            interest = hre.ethers.utils.parseEther("1"),
+            interestRate = hre.ethers.utils.parseEther("1"),
             collateralId = BigNumber.from(1),
             numInstallments = 0,
         }: Partial<LoanTerms> = {},
@@ -119,7 +119,7 @@ describe("Integration", () => {
         return {
             durationSecs,
             principal,
-            interest,
+            interestRate,
             collateralAddress,
             collateralId,
             payableCurrency,

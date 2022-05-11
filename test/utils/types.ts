@@ -21,7 +21,7 @@ export interface ItemsPredicate {
 }
 
 export interface LoanTerms {
-    durationSecs: BigNumberish;
+    durationSecs: BigNumber;
     principal: BigNumber;
     interestRate: BigNumber;
     collateralAddress: string;
