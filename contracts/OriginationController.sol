@@ -302,7 +302,7 @@ contract OriginationController is Initializable, ContextUpgradeable, IOriginatio
      *
      * @return isApproved                   Whether the grantee has been approved by the grantor.
      */
-    function isApproved(address owner, address signer) public view override returns (bool) {
+    function isApproved(address owner, address signer) public view virtual override returns (bool) {
         return _signerApprovals[owner][signer];
     }
 
