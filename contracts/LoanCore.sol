@@ -210,7 +210,11 @@ contract LoanCore is ILoanCore, Initializable, FullInterestAmountCalc,  AccessCo
         // ensure balance to be paid is greater than zero
         if(returnAmount <= 0) revert LC_BalanceGTZero(returnAmount);
         // transfer from msg.sender to this contract
+<<<<<<< HEAD
         IERC20Upgradeable(data.terms.payableCurrency).safeTransferFrom(_msgSender(), address(this), returnAmount);
+=======
+        IERC20(data.terms.payableCurrency).safeTransferFrom(_msgSender(), address(this), returnAmount);
+>>>>>>> 745b93fed11d96001a7d1bdbcf7513b263e0ec5d
         // get promissory notes from two parties involved
         address lender = lenderNote.ownerOf(data.lenderNoteId);
         address borrower = borrowerNote.ownerOf(data.borrowerNoteId);
@@ -325,9 +329,12 @@ contract LoanCore is ILoanCore, Initializable, FullInterestAmountCalc,  AccessCo
                 data.balance = 0;
                 data.balancePaid += paymentTotal;
 <<<<<<< HEAD
+<<<<<<< HEAD
                 // Loan is fully repaid, redistribute asset and collateral.
                 IERC20Upgradeable(data.terms.payableCurrency).safeTransfer(lender, paymentTotal);
 =======
+=======
+>>>>>>> 745b93fed11d96001a7d1bdbcf7513b263e0ec5d
                 // loan is fully repaid, redistribute asset and collateral.
                 IERC20(data.terms.payableCurrency).safeTransfer(lender, paymentTotal);
 >>>>>>> 745b93f (docs(.sol errors): loanCore, PromissoryNote, FILC, ERC721P, and punk router errors created)
@@ -343,9 +350,12 @@ contract LoanCore is ILoanCore, Initializable, FullInterestAmountCalc,  AccessCo
             data.balancePaid += paymentTotal;
 
 <<<<<<< HEAD
+<<<<<<< HEAD
             // Loan partial payment, redistribute asset to lender.
             IERC20Upgradeable(data.terms.payableCurrency).safeTransfer(lender, paymentTotal);
 =======
+=======
+>>>>>>> 745b93fed11d96001a7d1bdbcf7513b263e0ec5d
             // loan partial payment, redistribute asset to lender.
             IERC20(data.terms.payableCurrency).safeTransfer(lender, paymentTotal);
 >>>>>>> 745b93f (docs(.sol errors): loanCore, PromissoryNote, FILC, ERC721P, and punk router errors created)
