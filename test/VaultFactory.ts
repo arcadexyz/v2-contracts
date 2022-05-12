@@ -109,7 +109,7 @@ describe("VaultFactory", () => {
         it("Should revert if no vault at index", async () => {
             const { factory, user } = await loadFixture(fixture);
             // no vault created...
-            await expect(factory.instanceAt(0)).to.be.revertedWith("ERC721Enumerable: global index out of bounds");
+            await expect(factory.instanceAt(0)).to.be.revertedWith("VF_TokenIdOutOfBounds");
         });
 
         it("Should return vaults at index", async () => {
@@ -220,7 +220,7 @@ describe("VaultFactory", () => {
 
             await expect(
                 factory.permit(await other.getAddress(), await other.getAddress(), bundleId, maxDeadline, v, r, s),
-            ).to.be.revertedWith("ERC721Permit: not owner");
+            ).to.be.revertedWith("ERC721P_NotTokenOwner");
         });
 
         it("rejects if bundleId is not valid", async () => {
@@ -273,7 +273,7 @@ describe("VaultFactory", () => {
 
             await expect(
                 factory.permit(await user.getAddress(), await other.getAddress(), bundleId, maxDeadline, v, r, s),
-            ).to.be.revertedWith("ERC721Permit: invalid signature");
+            ).to.be.revertedWith("ERC721P_InvalidSignature");
         });
 
         it("rejects other signature", async () => {
@@ -296,7 +296,7 @@ describe("VaultFactory", () => {
 
             await expect(
                 factory.permit(await user.getAddress(), await other.getAddress(), bundleId, maxDeadline, v, r, s),
-            ).to.be.revertedWith("ERC721Permit: invalid signature");
+            ).to.be.revertedWith("ERC721P_InvalidSignature");
         });
 
         it("rejects expired signature", async () => {
@@ -331,7 +331,7 @@ describe("VaultFactory", () => {
                     r,
                     s,
                 ),
-            ).to.be.revertedWith("ERC721Permit: expired deadline");
+            ).to.be.revertedWith("ERC721P_DeadlineExpired");
         });
     });
 
@@ -496,7 +496,7 @@ describe("VaultFactory", () => {
                             token
                                 .connect(user)
                                 .transferFrom(await other.getAddress(), await other.getAddress(), tokenId),
-                        ).to.be.revertedWith("ERC721: transfer of token that is not own");
+                        ).to.be.revertedWith("ERC721: transfer from incorrect owner");
                     });
 
                     it("fails when the sender is not authorized", async () => {
