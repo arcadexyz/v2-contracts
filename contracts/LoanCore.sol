@@ -276,22 +276,27 @@ contract LoanCore is
      */
     function claim(uint256 loanId) external override whenNotPaused onlyRole(REPAYER_ROLE) {
         LoanLibrary.LoanData memory data = loans[loanId];
+        console.log("1 -------------------------------------------------------------------");
         // ensure valid initial loan state when starting loan
         if (data.state == LoanLibrary.LoanState.Active) revert LC_StartInvalidState(data.state);
+        console.log("2 -------------------------------------------------------------------");
         // ensure claiming after the loan has ended. block.timstamp must be greater than the dueDate.
         if (data.dueDate > block.timestamp) revert LC_NotExpired(data.dueDate);
-
+console.log("3 -------------------------------------------------------------------");
         address lender = lenderNote.ownerOf(data.lenderNoteId);
 
         // NOTE: these must be performed before assets are released to prevent reentrance
         loans[loanId].state = LoanLibrary.LoanState.Defaulted;
         collateralInUse[data.terms.collateralAddress][data.terms.collateralId] = false;
+        console.log("4 -------------------------------------------------------------------");
 
         lenderNote.burn(data.lenderNoteId);
         borrowerNote.burn(data.borrowerNoteId);
+        console.log("5 -------------------------------------------------------------------");
 
         // collateral redistribution
         IERC721(data.terms.collateralAddress).transferFrom(address(this), lender, data.terms.collateralId);
+        console.log("6 -------------------------------------------------------------------");
 
         emit LoanClaimed(loanId);
     }
