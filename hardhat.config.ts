@@ -130,6 +130,9 @@ const config: HardhatUserConfig = {
         sources: "./contracts",
         tests: "./test",
     },
+    // mocha: {
+    // timeout: 300000,
+  // },
     solidity: {
         compilers: [
             {

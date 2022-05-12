@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import hre, { ethers, waffle } from "hardhat";
+import hre, { ethers, waffle, upgrades } from "hardhat";
 const { loadFixture } = waffle;
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
 import { BigNumber } from "ethers";
@@ -65,8 +65,8 @@ describe("AssetVault", () => {
         const mockERC1155 = <MockERC1155>await deploy("MockERC1155", signers[0], []);
 
         const vaultTemplate = <AssetVault>await deploy("AssetVault", signers[0], []);
-        const factory = <VaultFactory>(
-            await deploy("VaultFactory", signers[0], [vaultTemplate.address, whitelist.address])
+        const VaultFactoryFactory = await hre.ethers.getContractFactory("VaultFactory");
+        const factory = <VaultFactory>(await upgrades.deployProxy(VaultFactoryFactory, [vaultTemplate.address, whitelist.address], { kind: 'uups' })
         );
         const vault = await createVault(factory, signers[0]);
 
@@ -359,7 +359,11 @@ describe("AssetVault", () => {
         it("fails if delegator is EOA", async () => {
             const { nft, whitelist, vault, mockERC20, user, other } = await loadFixture(fixture);
 
-            const selector = mockERC20.interface.getSighash("mint");
+            const mockCallDelegator = <MockCallDelegator>await deploy("MockCallDelegator", other, []);
+            await mockCallDelegator.connect(other).setCanCall(true);
+
+            const selector = mockERC20.interface.getSighash("mint(address,uint256)");
+
             const mintData = await mockERC20.populateTransaction.mint(
                 await user.getAddress(),
                 ethers.utils.parseEther("1"),
@@ -367,11 +371,13 @@ describe("AssetVault", () => {
             if (!mintData || !mintData.data) throw new Error("Populate transaction failed");
 
             // transfer the vault NFT to the call delegator (like using it as loan collateral)
-            await nft.transferFrom(await user.getAddress(), await other.getAddress(), vault.address);
-            await whitelist.add(mockERC20.address, selector);
+            await nft.transferFrom(await user.getAddress(), mockCallDelegator.address, vault.address);
 
-            await expect(vault.connect(user).call(mockERC20.address, mintData.data)).to.be.revertedWith(
-                "Transaction reverted: function call to a non-contract account",
+            await whitelist.add(await user.getAddress(), selector);
+
+            await expect(vault.connect(user).call(await user.getAddress(), mintData.data))
+            .to.be.revertedWith(
+               "Address: call to non-contract",
             );
         });
 
