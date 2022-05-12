@@ -10,7 +10,7 @@ import {
     RepaymentController,
     OriginationController,
     CallWhitelist,
-    VaultFactory
+    VaultFactory,
 } from "../typechain";
 export interface DeployedResources {
     assetVault: AssetVault;
@@ -49,7 +49,7 @@ export async function main(
     console.log("FeeController deployed to: ", feeController.address);
 
     const LoanCoreFactory = await ethers.getContractFactory("LoanCore");
-    const loanCore = <LoanCore>await upgrades.deployProxy(LoanCoreFactory, [feeController.address], { kind: 'uups' });
+    const loanCore = <LoanCore>await upgrades.deployProxy(LoanCoreFactory, [feeController.address], { kind: "uups" });
     await loanCore.deployed();
 
     console.log("LoanCore deployed to:", loanCore.address);
@@ -64,12 +64,12 @@ export async function main(
     console.log("LenderNote deployed to:", lenderNoteAddr);
 
     const RepaymentControllerFactory = await ethers.getContractFactory("RepaymentController");
-    const repaymentController = <RepaymentController>(
-        await upgrades.deployProxy(RepaymentControllerFactory, [
-            loanCore.address,
-            borrowerNoteAddr,
-            lenderNoteAddr
-        ], { kind: 'uups' })
+    const repaymentController = <RepaymentController>await upgrades.deployProxy(
+        RepaymentControllerFactory,
+        [loanCore.address, borrowerNoteAddr, lenderNoteAddr],
+        {
+            kind: "uups",
+        },
     );
     await repaymentController.deployed();
     const updateRepaymentControllerPermissions = await loanCore.grantRole(REPAYER_ROLE, repaymentController.address);
@@ -79,7 +79,7 @@ export async function main(
 
     const OriginationControllerFactory = await ethers.getContractFactory("OriginationController");
     const originationController = <OriginationController>(
-        await upgrades.deployProxy(OriginationControllerFactory, [loanCore.address], { kind: 'uups' })
+        await upgrades.deployProxy(OriginationControllerFactory, [loanCore.address], { kind: "uups" })
     );
 
     await originationController.deployed();
@@ -93,9 +93,15 @@ export async function main(
 
     const VaultFactoryFactory = await ethers.getContractFactory("VaultFactory");
     // console.log("VaultFactory deployed to:", VaultFactoryFactory)
-    const vaultFactory = <VaultFactory>(await upgrades.deployProxy(VaultFactoryFactory, [assetVault.address, whitelist.address], { kind: 'uups', initializer: "initialize(address, address)" })
+    const vaultFactory = <VaultFactory>await upgrades.deployProxy(
+        VaultFactoryFactory,
+        [assetVault.address, whitelist.address],
+        {
+            kind: "uups",
+            initializer: "initialize(address, address)",
+        },
     );
-    console.log("VaultFactory deployed to:", vaultFactory.address)
+    console.log("VaultFactory deployed to:", vaultFactory.address);
 
     return {
         assetVault,
@@ -106,7 +112,7 @@ export async function main(
         repaymentController,
         originationController,
         whitelist,
-        vaultFactory
+        vaultFactory,
     };
 }
 
@@ -120,4 +126,3 @@ if (require.main === module) {
             process.exit(1);
         });
 }
-

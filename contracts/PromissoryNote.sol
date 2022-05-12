@@ -13,6 +13,8 @@ import "./ERC721Permit.sol";
 import "./interfaces/ILoanCore.sol";
 import "./interfaces/IPromissoryNote.sol";
 
+import { PN_MintingRole, PN_BurningRole, PN_ContractPaused } from "./errors/Lending.sol";
+
 /**
  * Built off Openzeppelin's ERC721PresetMinterPauserAutoId.
  *
@@ -78,7 +80,7 @@ contract PromissoryNote is
      * - the caller must have the `MINTER_ROLE`.
      */
     function mint(address to, uint256 loanId) external override returns (uint256) {
-        require(hasRole(MINTER_ROLE, _msgSender()), "ERC721PresetMinter: sending does have proper role");
+        if (hasRole(MINTER_ROLE, _msgSender()) == false) revert PN_MintingRole(_msgSender());
 
         uint256 currentTokenId = _tokenIdTracker.current();
         _mint(to, currentTokenId);
@@ -101,7 +103,7 @@ contract PromissoryNote is
      *
      */
     function burn(uint256 tokenId) external override {
-        require(hasRole(BURNER_ROLE, _msgSender()), "PromissoryNote: callers is not owner nor approved");
+        if (hasRole(BURNER_ROLE, _msgSender()) == false) revert PN_BurningRole(_msgSender());
         _burn(tokenId);
         loanIdByNoteId[tokenId] = 0;
     }
@@ -129,7 +131,6 @@ contract PromissoryNote is
     ) internal virtual override(ERC721, ERC721Enumerable, ERC721Pausable) {
         super._beforeTokenTransfer(from, to, amount);
 
-        require(!paused(), "ERC20Pausable: token transfer while paused");
+        if (paused() == true) revert PN_ContractPaused();
     }
 }
-

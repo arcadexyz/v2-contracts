@@ -15,6 +15,8 @@ import "../interfaces/ICallDelegator.sol";
 import "../interfaces/IAssetVault.sol";
 import "./OwnableERC721.sol";
 
+import { AV_WithdrawsDisabled, AV_WithdrawsEnabled, AV_AlreadyInitialized, AV_CallDisallowed, AV_NonWhitelistedCall } from "../errors/Vault.sol";
+
 /// @title AssetVault
 /// @notice Vault for isolated storage of collateral tokens
 /// @dev Note this is a one-time use vault.
@@ -40,12 +42,12 @@ contract AssetVault is IAssetVault, OwnableERC721, Initializable, ERC1155Holder,
     ICallWhitelist public override whitelist;
 
     modifier onlyWithdrawEnabled() {
-        require(withdrawEnabled, "AssetVault: withdraws disabled");
+        if (withdrawEnabled == false) revert AV_WithdrawsDisabled();
         _;
     }
 
     modifier onlyWithdrawDisabled() {
-        require(!withdrawEnabled, "AssetVault: withdraws enabled");
+        if (withdrawEnabled == true) revert AV_WithdrawsEnabled();
         _;
     }
 
@@ -61,7 +63,7 @@ contract AssetVault is IAssetVault, OwnableERC721, Initializable, ERC1155Holder,
      * @dev Function to initialize the contract
      */
     function initialize(address _whitelist) external override initializer {
-        require(!withdrawEnabled && ownershipToken == address(0), "AssetVault: Already initialized");
+        if (withdrawEnabled == true || ownershipToken != address(0)) revert AV_AlreadyInitialized(ownershipToken);
         // set ownership to inherit from the factory who deployed us
         // The factory should have a tokenId == uint256(address(this))
         // whose owner has ownership control over this contract
@@ -136,11 +138,10 @@ contract AssetVault is IAssetVault, OwnableERC721, Initializable, ERC1155Holder,
      * @inheritdoc IAssetVault
      */
     function call(address to, bytes calldata data) external override onlyWithdrawDisabled nonReentrant {
-        require(
-            msg.sender == owner() || ICallDelegator(owner()).canCallOn(msg.sender, address(this)),
-            "AssetVault: call disallowed"
-        );
-        require(whitelist.isWhitelisted(to, bytes4(data[:4])), "AssetVault: non-whitelisted call");
+        if (msg.sender != owner() && !ICallDelegator(owner()).canCallOn(msg.sender, address(this)))
+            revert AV_CallDisallowed(msg.sender);
+
+        if (!whitelist.isWhitelisted(to, bytes4(data[:4]))) revert AV_NonWhitelistedCall(to, bytes4(data[:4]));
 
         to.functionCall(data);
         emit Call(msg.sender, to, data);

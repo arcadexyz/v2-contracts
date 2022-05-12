@@ -8,6 +8,8 @@ import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 
+import { ERC721P_DeadlineExpired, ERC721P_NotTokenOwner, ERC721P_InvalidSignature } from "./errors/LendingUtils.sol";
+
 /**
  * @dev Implementation of the ERC721 Permit extension allowing approvals to be made via signatures, as defined in
  * https://eips.ethereum.org/EIPS/eip-2612[EIP-2612].
@@ -48,8 +50,8 @@ abstract contract ERC721Permit is ERC721, IERC721Permit, EIP712 {
         bytes32 r,
         bytes32 s
     ) public virtual override {
-        require(block.timestamp <= deadline, "ERC721Permit: expired deadline");
-        require(owner == ERC721.ownerOf(tokenId), "ERC721Permit: not owner");
+        if (block.timestamp > deadline) revert ERC721P_DeadlineExpired(deadline);
+        if (owner != ERC721.ownerOf(tokenId)) revert ERC721P_NotTokenOwner(owner);
 
         bytes32 structHash = keccak256(
             abi.encode(_PERMIT_TYPEHASH, owner, spender, tokenId, _useNonce(owner), deadline)
@@ -58,7 +60,7 @@ abstract contract ERC721Permit is ERC721, IERC721Permit, EIP712 {
         bytes32 hash = _hashTypedDataV4(structHash);
 
         address signer = ECDSA.recover(hash, v, r, s);
-        require(signer == owner, "ERC721Permit: invalid signature");
+        if (signer != owner) revert ERC721P_InvalidSignature(signer);
 
         _approve(spender, tokenId);
     }

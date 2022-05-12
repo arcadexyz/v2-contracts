@@ -56,5 +56,4 @@ interface IERC721Permit is IERC721 {
      */
     // solhint-disable-next-line func-name-mixedcase
     function DOMAIN_SEPARATOR() external view returns (bytes32);
-
 }

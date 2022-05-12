@@ -30,7 +30,8 @@ describe("VaultFactory", () => {
 
         const VaultFactory = await hre.ethers.getContractFactory("VaultFactory");
         const factory = <VaultFactory>(
-            await upgrades.deployProxy(VaultFactory, [vaultTemplate.address, whitelist.address], { kind: 'uups' }));
+            await upgrades.deployProxy(VaultFactory, [vaultTemplate.address, whitelist.address], { kind: "uups" })
+        );
 
         return {
             factory,
@@ -527,14 +528,13 @@ describe("VaultFactory", () => {
         });
     });
 
-
     describe("Upgradeable", () => {
-            it("Upgrades to v2", async () => {
-                const { factory } = await loadFixture(fixture);
-                const VaultFactoryV2 = await hre.ethers.getContractFactory("VaultFactoryV2");
-                const vaultFactoryV2 = <VaultFactoryV2>(await hre.upgrades.upgradeProxy(factory.address, VaultFactoryV2));
+        it("Upgrades to v2", async () => {
+            const { factory } = await loadFixture(fixture);
+            const VaultFactoryV2 = await hre.ethers.getContractFactory("VaultFactoryV2");
+            const vaultFactoryV2 = <VaultFactoryV2>await hre.upgrades.upgradeProxy(factory.address, VaultFactoryV2);
 
-                expect (await vaultFactoryV2.version()).to.equal("This is VaultFactory V2!");
-            });
+            expect(await vaultFactoryV2.version()).to.equal("This is VaultFactory V2!");
+        });
     });
 });

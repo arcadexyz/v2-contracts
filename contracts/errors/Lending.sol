@@ -2,13 +2,15 @@
 
 pragma solidity ^0.8.11;
 
+import "../libraries/LoanLibrary.sol";
+
 /**
  * @title LendingErrors
  * @author Non-Fungible Technologies, Inc.
  *
- * This file contains all custom errors for the lending protocol, with errors prefixed
- * by the contract that throws them (e.g., "OC_" for OriginationController). Errors
- * located in one place to make it easier to holistically look at all possible
+ * This file contains custom errors for the core lending protocol contracts, with errors
+ * prefixed by the contract that throws them (e.g., "OC_" for OriginationController).
+ * Errors located in one place to make it possible to holistically look at all 
  * protocol failure cases.
  */
 
@@ -81,7 +83,7 @@ error IV_ItemMissingAddress();
  * @notice Provided SignatureItem has an invalid collateral type.
  * @dev    Should never actually fire, since cType is defined by an enum, so will fail on decode.
  *
- * @param asset                         The NFT contract being checked.
+ * @param asset                        The NFT contract being checked.
  * @param cType                        The collateralTytpe provided.
  */
 error IV_InvalidCollateralType(address asset, uint256 cType);
@@ -98,7 +100,7 @@ error IV_NonPositiveAmount1155(address asset, uint256 amount);
  * @notice Provided ERC1155 signature item is requiring an invalid token ID.
  *
  * @param asset                         The NFT contract being checked.
- * @param tokenId                        The token ID provided.
+ * @param tokenId                       The token ID provided.
  */
 error IV_InvalidTokenId1155(address asset, int256 tokenId);
 
@@ -109,3 +111,156 @@ error IV_InvalidTokenId1155(address asset, int256 tokenId);
  * @param amount                        The amount provided (should be 0).
  */
 error IV_NonPositiveAmount20(address asset, uint256 amount);
+
+// ==================================== REPAYMENT CONTROLLER ======================================
+/// @notice All errors prefixed with RC_, to separate from other contracts in the protocol.
+
+/**
+ * @notice Could not dereference loan from borrowerNoteId.
+ *
+ * @param target                     The loanId being checked.
+ */
+error RC_CannotDereference(uint256 target);
+
+/**
+ * @notice Repayment has already been completed for this loan without installments.
+ *
+ * @param amount                     Balance returned after calculating amount due.
+ */
+error RC_NoPaymentDue(uint256 amount);
+
+/**
+ * @notice Caller is not the owner of lender note.
+ *
+ * @param caller                     Msg.sender of the function call.
+ */
+error RC_OnlyLender(address caller);
+
+/**
+ * @notice Loan has not started yet.
+ *
+ * @param startDate                 block timestamp of the startDate of loan stored in LoanData.
+ */
+error RC_BeforeStartDate(uint256 startDate);
+
+/**
+ * @notice Loan does not have any installments.
+ *
+ * @param numInstallments           Number of installments returned from LoanTerms.
+ */
+error RC_NoInstallments(uint256 numInstallments);
+
+/**
+ * @notice No interest payment or late fees due.
+ *
+ * @param amount                    Minimum interest plus late fee amount returned
+ *                                  from minimum payment calculation.
+ */
+error RC_NoMinPaymentDue(uint256 amount);
+
+/**
+ * @notice Repaid amount must be larger than zero.
+ *
+ * @param amount                    Amount function call parameter.
+ */
+error RC_RepayPartGTZero(uint256 amount);
+
+/**
+ * @notice Amount paramater less than the minimum amount due.
+ *
+ * @param amount                    Amount function call parameter.
+ */
+error RC_RepayPartGTMin(uint256 amount);
+
+// ==================================== Loan Core ======================================
+/// @notice All errors prefixed with LC_, to separate from other contracts in the protocol.
+
+/**
+ * @notice Loan duration must be greater than 1hr and less than 3yrs.
+ *
+ * @param durationSecs                 Total amount of time in seconds.
+ */
+error LC_LoanDuration(uint256 durationSecs);
+
+/**
+ * @notice Check collateral is not already used in a active loan.
+ *
+ * @param collateralAddress             Address of the collateral.
+ * @param collateralId                  ID of the collateral token.
+ */
+error LC_CollateralInUse(address collateralAddress, uint256 collateralId);
+
+/**
+ * @notice Interest must be greater than 0.01%. (interestRate / 1e18 >= 1)
+ *
+ * @param interestRate                  InterestRate with 1e18 multiplier.
+ */
+error LC_InterestRate(uint256 interestRate);
+
+/**
+ * @notice Loan terms must have even number of installments and intallment periods must be < 1000000.
+ *
+ * @param numInstallments               Number of installment periods in loan.
+ */
+error LC_NumberInstallments(uint256 numInstallments);
+
+/**
+ * @notice Ensure valid initial loan state when starting loan.
+ *
+ * @param state                         Current state of a loan according to LoanState enum.
+ */
+error LC_StartInvalidState(LoanLibrary.LoanState state);
+
+/**
+ * @notice Loan duration has not expired.
+ *
+ * @param dueDate                       Timestamp of the end of the loan duration.
+ */
+error LC_NotExpired(uint256 dueDate);
+
+/**
+ * @notice Loan duration has not expired.
+ *
+ * @param returnAmount                  Total amount due for entire loan repayment.
+ */
+error LC_BalanceGTZero(uint256 returnAmount);
+
+/**
+ * @notice Loan duration has not expired.
+ *
+ * @param user                          Address of collateral owner.
+ * @param nonce                         Represents the number of transactions sent by address.
+ */
+error LC_NonceUsed(address user, uint160 nonce);
+
+// ================================== Full Insterest Amount Calc ====================================
+/// @notice All errors prefixed with FIAC_, to separate from other contracts in the protocol.
+
+/**
+ * @notice Interest must be greater than 0.01%. (interestRate / 1e18 >= 1)
+ *
+ * @param interestRate                  InterestRate with 1e18 multiplier.
+ */
+error FIAC_InterestRate(uint256 interestRate);
+
+// ==================================== Promissory Note ======================================
+/// @notice All errors prefixed with PN_, to separate from other contracts in the protocol.
+
+/**
+ * @notice Caller of mint function must have the MINTER_ROLE in AccessControl.
+ *
+ * @param caller                        Address of the function caller.
+ */
+error PN_MintingRole(address caller);
+
+/**
+ * @notice Caller of burn function must have the BURNER_ROLE in AccessControl.
+ *
+ * @param caller                        Address of the function caller.
+ */
+error PN_BurningRole(address caller);
+
+/**
+ * @notice No token transfers while contract is in paused state.
+ */
+error PN_ContractPaused();

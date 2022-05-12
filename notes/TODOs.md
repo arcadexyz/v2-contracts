@@ -3,38 +3,53 @@
 MAY 9 WHATS LEFT:
 
 Safety/Robustness:
+
 - Merge upgradeability
 - Fix test suite and ensure 100% coverage or as close as possible
 
 Refactoring:
+
 - Split LoanCore into separate files (contract too big)
 - Custom errors
 - Consistent documentation - move to implementation
 
 Features:
+
 - Installment Claim
 - Signature expiry
 - Move origination fee to fee controller
 - Native rollovers
 
-
 Evan:
 
-- Installments PR
-  - (DONE) Add `closeLoan` function for borrower with auto calculate the amount necessary to close the loan.
-    - Corresponding view function.
-    - Tests -> A scenario here lead to finding the error with making a repayment in the same installment period
-  - (DONE) Add borrower and lenders balance before and after the loan in all tests to look for errors in the accounting code
-  - (DONE) Add abstract contract for calculating the total interest amount based on a given principal and interest.
-  - (DONE) Add args emitted from event to all installment tests where there is an event emitted.
+V2 Progress:
 
-🔑 For Installment tests, run `npx hardhat test test/Installments.ts`.
+- (Ready for Review) Custom Errors
+  - Lending.sol
+    - (DONE) OC - Kevin
+    - (DONE) IV - Kevin
+    - (DONE) RC
+    - (DONE) LC
+    - (DONE) FILC
+    - (DONE) PN
+  - LendingUtils.sol
+    - (DONE) ERC721P
+    - (DONE) ERC721PU
+    - (DONE) PunkRouter
+  - Vault.sol
+    - (DONE) AssetVault
+    - (DONE) OwnableERC721
+    - (DONE) VaultFactory
+ - BEFORE MERGING:
+    - Go through natspec in error files to ensure they are up to standard.
+    - Remove the `TODO: custom errors` from top of contracts.
+    - Modify the tests so they do not fail due to new errors.
 
 📌 For Further Review Items:
+
 - Tune LoanTerms dials for what will be accepted. Namely: `durationSeconds` and `numInstallments`.
 - Global parameters, `LATE_FEE` and `GRACE_PERIOD`
 - `claim` functionality with installment loans, with grace period?
-- Custom Errors
 
 Mouzayan:
 
