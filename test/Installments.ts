@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import hre, { ethers, waffle, upgrades } from "hardhat";
+import hre, { ethers, waffle } from "hardhat";
 const { loadFixture } = waffle;
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
 import { BigNumber } from "ethers";
@@ -82,22 +82,18 @@ const fixture = async (): Promise<TestContext> => {
 
     const whitelist = <CallWhitelist>await deploy("CallWhitelist", admin, []);
     const vaultTemplate = <AssetVault>await deploy("AssetVault", admin, []);
-    const VaultFactoryFactory = await hre.ethers.getContractFactory("VaultFactory");
-    const vaultFactory = <VaultFactory>(await upgrades.deployProxy(VaultFactoryFactory, [vaultTemplate.address, whitelist.address], { kind: 'uups' })
+    const vaultFactory = <VaultFactory>(
+        await deploy("VaultFactory", signers[0], [vaultTemplate.address, whitelist.address])
     );
 
     const feeController = <FeeController>await deploy("FeeController", admin, []);
-    const LoanCore = await hre.ethers.getContractFactory("LoanCore");
-    const loanCore = <LoanCore>(
-        await upgrades.deployProxy(LoanCore, [feeController.address], { kind: 'uups' })
-    );
+    const loanCore = <LoanCore>await deploy("LoanCore", admin, [feeController.address]);
 
     const mockERC20 = <MockERC20>await deploy("MockERC20", signers[0], ["Mock ERC20", "MOCK"]);
     const mockERC721 = <MockERC721>await deploy("MockERC721", signers[0], ["Mock ERC721", "MOCK"]);
 
-    const OriginationController = await hre.ethers.getContractFactory("OriginationController");
     const originationController = <OriginationController>(
-        await upgrades.deployProxy(OriginationController, [loanCore.address], { kind: 'uups' })
+        await deploy("OriginationController", signers[0], [loanCore.address])
     );
     await originationController.deployed();
 
@@ -145,7 +141,7 @@ const createLoanTerms = (
     payableCurrency: string,
     collateralAddress: string,
     {
-        durationSecs = BigNumber.from(3600000),
+        durationSecs = 3600000,
         principal = hre.ethers.utils.parseEther("100"),
         interestRate = hre.ethers.utils.parseEther("1"),
         collateralId = BigNumber.from(1),
@@ -168,7 +164,7 @@ const createLoanTerms = (
  */
 const createInstallmentLoanTerms = (
     payableCurrency: string,
-    durationSecs: BigNumber,
+    durationSecs: number,
     principal: BigNumber,
     interestRate: BigNumber,
     collateralAddress: string,
@@ -208,14 +204,15 @@ const initializeLoan = async (context: TestContext): Promise<LoanDef> => {
 
     const tx = await originationController
         .connect(lender)
-        .initializeLoan(loanTerms, await borrower.getAddress(), await lender.getAddress(), sig, 1);
+        .initializeLoan(loanTerms, await borrower.getAddress(), await lender.getAddress(), sig);
     const receipt = await tx.wait();
 
     let loanId;
-    if (receipt && receipt.events) {
-        const loanCreatedLog = new hre.ethers.utils.Interface(["event LoanStarted(uint256 loanId, address lender, address borrower)",
+    if (receipt && receipt.events && receipt.events.length == 15) {
+        const LoanCreatedLog = new hre.ethers.utils.Interface([
+            "event LoanStarted(uint256 loanId, address lender, address borrower)",
         ]);
-        const log = loanCreatedLog.parseLog(receipt.events[receipt.events.length - 1]);
+        const log = LoanCreatedLog.parseLog(receipt.events[14]);
         loanId = log.args.loanId;
     } else {
         throw new Error("Unable to initialize loan");
@@ -235,7 +232,7 @@ const initializeLoan = async (context: TestContext): Promise<LoanDef> => {
 const initializeInstallmentLoan = async (
     context: TestContext,
     payableCurrency: string,
-    durationSecs: BigNumber,
+    durationSecs: number,
     principal: BigNumber,
     interestRate: BigNumber,
     numInstallments: number,
@@ -269,14 +266,15 @@ const initializeInstallmentLoan = async (
     await vaultFactory.connect(borrower).approve(originationController.address, bundleId);
     const tx = await originationController
         .connect(lender)
-        .initializeLoan(loanTerms, await borrower.getAddress(), await lender.getAddress(), sig, 1);
+        .initializeLoan(loanTerms, await borrower.getAddress(), await lender.getAddress(), sig);
     const receipt = await tx.wait();
 
     let loanId;
-    if (receipt && receipt.events) {
-        const loanCreatedLog = new hre.ethers.utils.Interface(["event LoanStarted(uint256 loanId, address lender, address borrower)",
+    if (receipt && receipt.events && receipt.events.length == 15) {
+        const LoanCreatedLog = new hre.ethers.utils.Interface([
+            "event LoanStarted(uint256 loanId, address lender, address borrower)",
         ]);
-        const log = loanCreatedLog.parseLog(receipt.events[receipt.events.length - 1]);
+        const log = LoanCreatedLog.parseLog(receipt.events[14]);
         loanId = log.args.loanId;
     } else {
         throw new Error("Unable to initialize loan");
@@ -300,7 +298,7 @@ describe("Installment Period", () => {
             initializeInstallmentLoan(
                 context,
                 mockERC20.address,
-                BigNumber.from(86400), // durationSecs
+                86400, // durationSecs
                 hre.ethers.utils.parseEther("100"), // principal
                 hre.ethers.utils.parseEther("1000"), // interest
                 1, // numInstallments
@@ -315,7 +313,7 @@ describe("Installment Period", () => {
             initializeInstallmentLoan(
                 context,
                 mockERC20.address,
-                BigNumber.from(86400 * 11), // durationSecs
+                86400 * 11, // durationSecs
                 hre.ethers.utils.parseEther("100"), // principal
                 hre.ethers.utils.parseEther("1000"), // interest
                 11, // numInstallments
@@ -329,7 +327,7 @@ describe("Installment Period", () => {
         const { loanData } = await initializeInstallmentLoan(
             context,
             mockERC20.address,
-            BigNumber.from(36000), // durationSecs
+            36000, // durationSecs
             hre.ethers.utils.parseEther("100"), // principal
             hre.ethers.utils.parseEther("1000"), // interest
             4, // numInstallments
@@ -355,7 +353,7 @@ describe("Installment Period", () => {
         const { loanData } = await initializeInstallmentLoan(
             context,
             mockERC20.address,
-            BigNumber.from(100000), // durationSecs
+            100000, // durationSecs
             hre.ethers.utils.parseEther("100"), // principal
             hre.ethers.utils.parseEther("1000"), // interest
             8, // numInstallments
@@ -381,7 +379,7 @@ describe("Installment Period", () => {
         const { loanData } = await initializeInstallmentLoan(
             context,
             mockERC20.address,
-            BigNumber.from(100000), // durationSecs
+            100000, // durationSecs
             hre.ethers.utils.parseEther("100"), // principal
             hre.ethers.utils.parseEther("1000"), // interest
             8, // numInstallments
@@ -407,7 +405,7 @@ describe("Installment Period", () => {
         const { loanData } = await initializeInstallmentLoan(
             context,
             mockERC20.address,
-            BigNumber.from(86400 * 365), // durationSecs
+            86400 * 365, // durationSecs
             hre.ethers.utils.parseEther("100"), // principal
             hre.ethers.utils.parseEther("1000"), // interest
             10, // numInstallments
@@ -433,7 +431,7 @@ describe("Installment Period", () => {
         const { loanData, loanId } = await initializeInstallmentLoan(
             context,
             mockERC20.address,
-            BigNumber.from(36000), // durationSecs
+            36000, // durationSecs
             hre.ethers.utils.parseEther("100"), // principal
             hre.ethers.utils.parseEther("1000"), // interest
             4, // numInstallments
@@ -463,7 +461,7 @@ describe("Installment Period", () => {
         const { loanData, loanId } = await initializeInstallmentLoan(
             context,
             mockERC20.address,
-            BigNumber.from(36000), // durationSecs
+            36000, // durationSecs
             hre.ethers.utils.parseEther("100"), // principal
             hre.ethers.utils.parseEther("1000"), // interest
             8, // numInstallments
@@ -514,7 +512,7 @@ describe("Installment Repayments", () => {
         const { loanData, loanId } = await initializeInstallmentLoan(
             context,
             mockERC20.address,
-            BigNumber.from(36000), // durationSecs
+            36000, // durationSecs
             hre.ethers.utils.parseEther("100"), // principal
             hre.ethers.utils.parseEther("1000"), // interest
             8, // numInstallments
@@ -547,7 +545,7 @@ describe("Installment Repayments", () => {
         const { loanData, loanId } = await initializeInstallmentLoan(
             context,
             mockERC20.address,
-            BigNumber.from(36000), // durationSecs
+            36000, // durationSecs
             hre.ethers.utils.parseEther("100"), // principal
             hre.ethers.utils.parseEther("1000"), // interest
             4, // numInstallments
@@ -580,7 +578,7 @@ describe("Installment Repayments", () => {
         const { loanData } = await initializeInstallmentLoan(
             context,
             mockERC20.address,
-            BigNumber.from(36000), // durationSecs
+            36000, // durationSecs
             hre.ethers.utils.parseEther("100"), // principal
             hre.ethers.utils.parseEther("1000"), // interest
             4, // numInstallments
@@ -602,7 +600,7 @@ describe("Installment Repayments", () => {
             const { loanData, loanId } = await initializeInstallmentLoan(
                 context,
                 mockERC20.address,
-                BigNumber.from(36000), // durationSecs
+                36000, // durationSecs
                 hre.ethers.utils.parseEther("100"), // principal
                 hre.ethers.utils.parseEther("1000"), // interest
                 4, // numInstallments
@@ -634,7 +632,7 @@ describe("Installment Repayments", () => {
             const { loanData, loanId } = await initializeInstallmentLoan(
                 context,
                 mockERC20.address,
-                BigNumber.from(36000), // durationSecs
+                36000, // durationSecs
                 hre.ethers.utils.parseEther("100"), // principal
                 hre.ethers.utils.parseEther("1000"), // interest
                 4, // numInstallments
@@ -666,7 +664,7 @@ describe("Installment Repayments", () => {
             const { loanData } = await initializeInstallmentLoan(
                 context,
                 mockERC20.address,
-                BigNumber.from(36000), // durationSecs
+                36000, // durationSecs
                 hre.ethers.utils.parseEther("100"), // principal
                 hre.ethers.utils.parseEther("1000"), // interest
                 4, // numInstallments
@@ -686,7 +684,7 @@ describe("Installment Repayments", () => {
             const { loanData, loanId } = await initializeInstallmentLoan(
                 context,
                 mockERC20.address,
-                BigNumber.from(36000), // durationSecs
+                36000, // durationSecs
                 hre.ethers.utils.parseEther("100"), // principal
                 hre.ethers.utils.parseEther("1000"), // interest
                 4, // numInstallments
@@ -728,7 +726,7 @@ describe("Installment Repayments", () => {
                 const { loanData, loanId } = await initializeInstallmentLoan(
                     context,
                     mockERC20.address,
-                    BigNumber.from(36000), // durationSecs
+                    36000, // durationSecs
                     hre.ethers.utils.parseEther("100"), // principal
                     hre.ethers.utils.parseEther("1000"), // interest
                     4, // numInstallments
@@ -771,7 +769,7 @@ describe("Installment Repayments", () => {
                 const { loanData } = await initializeInstallmentLoan(
                     context,
                     mockERC20.address,
-                    BigNumber.from(36000), // durationSecs
+                    36000, // durationSecs
                     hre.ethers.utils.parseEther("100"), // principal
                     hre.ethers.utils.parseEther("1000"), // interest
                     4, // numInstallments
@@ -797,7 +795,7 @@ describe("Installment Repayments", () => {
                 const { loanData, loanId } = await initializeInstallmentLoan(
                     context,
                     mockERC20.address,
-                    BigNumber.from(36000), // durationSecs
+                    36000, // durationSecs
                     hre.ethers.utils.parseEther("100"), // principal
                     hre.ethers.utils.parseEther("1000"), // interest
                     4, // numInstallments
@@ -840,7 +838,7 @@ describe("Installment Repayments", () => {
                 const { loanData, loanId } = await initializeInstallmentLoan(
                     context,
                     mockERC20.address,
-                    BigNumber.from(36000), // durationSecs
+                    36000, // durationSecs
                     hre.ethers.utils.parseEther("100"), // principal
                     hre.ethers.utils.parseEther("1000"), // interest
                     4, // numInstallments
@@ -886,7 +884,7 @@ describe("Installment Repayments", () => {
             const { loanData, loanId } = await initializeInstallmentLoan(
                 context,
                 mockERC20.address,
-                BigNumber.from(36000), // durationSecs
+                36000, // durationSecs
                 hre.ethers.utils.parseEther("100"), // principal
                 hre.ethers.utils.parseEther("1000"), // interest
                 8, // numInstallments
@@ -923,7 +921,7 @@ describe("Installment Repayments", () => {
             const { loanId, loanData } = await initializeInstallmentLoan(
                 context,
                 mockERC20.address,
-                BigNumber.from(36000), // durationSecs
+                36000, // durationSecs
                 hre.ethers.utils.parseEther("100"), // principal
                 hre.ethers.utils.parseEther("1000"), // interest
                 4, // numInstallments
@@ -992,7 +990,7 @@ describe("Installment Repayments", () => {
             const { loanId, loanData } = await initializeInstallmentLoan(
                 context,
                 mockERC20.address,
-                BigNumber.from(72000), // durationSecs
+                72000, // durationSecs
                 hre.ethers.utils.parseEther("100"), // principal
                 hre.ethers.utils.parseEther("1000"), // interest
                 8, // numInstallments
@@ -1087,7 +1085,7 @@ describe("Installment Repayments", () => {
             const { loanId, loanData } = await initializeInstallmentLoan(
                 context,
                 mockERC20.address,
-                BigNumber.from(31536000), // durationSecs
+                31536000, // durationSecs
                 hre.ethers.utils.parseEther("1000"), // principal
                 hre.ethers.utils.parseEther("625"), // interest
                 12, // numInstallments
@@ -1132,7 +1130,7 @@ describe("Installment Repayments", () => {
             const { loanId, loanData } = await initializeInstallmentLoan(
                 context,
                 mockERC20.address,
-                BigNumber.from(31536000), // durationSecs
+                31536000, // durationSecs
                 hre.ethers.utils.parseEther("100000"), // principal
                 hre.ethers.utils.parseEther("1000"), // interest
                 12, // numInstallments
@@ -1184,7 +1182,7 @@ describe("Installment Repayments", () => {
             const { loanId, loanData } = await initializeInstallmentLoan(
                 context,
                 mockERC20.address,
-                BigNumber.from(31536000), // durationSecs
+                31536000, // durationSecs
                 hre.ethers.utils.parseEther("100"), // principal
                 hre.ethers.utils.parseEther("1000"), // interest
                 4, // numInstallments
@@ -1234,7 +1232,7 @@ describe("Installment Repayments", () => {
             const { loanId, loanData } = await initializeInstallmentLoan(
                 context,
                 mockERC20.address,
-                BigNumber.from(36000), // durationSecs
+                36000, // durationSecs
                 hre.ethers.utils.parseEther("100"), // principal
                 hre.ethers.utils.parseEther("1000"), // interest
                 4, // numInstallments
@@ -1288,7 +1286,7 @@ describe("Installment Repayments", () => {
             const { loanId, loanData } = await initializeInstallmentLoan(
                 context,
                 mockERC20.address,
-                BigNumber.from(31536000), // durationSecs
+                31536000, // durationSecs
                 hre.ethers.utils.parseEther("100"), // principal
                 hre.ethers.utils.parseEther("1000"), // interest
                 4, // numInstallments
@@ -1340,7 +1338,7 @@ describe("Installment Repayments", () => {
             const { loanId, loanData } = await initializeInstallmentLoan(
                 context,
                 mockERC20.address,
-                BigNumber.from(31536000 * 2), // durationSecs
+                31536000 * 2, // durationSecs
                 hre.ethers.utils.parseEther("1000"), // principal
                 hre.ethers.utils.parseEther("75"), // interest
                 24, // numInstallments
@@ -1385,7 +1383,7 @@ describe("Installment Repayments", () => {
             const { loanData } = await initializeInstallmentLoan(
                 context,
                 mockERC20.address,
-                BigNumber.from(36000), // durationSecs
+                36000, // durationSecs
                 hre.ethers.utils.parseEther("100"), // principal
                 hre.ethers.utils.parseEther("1000"), // interest
                 4, // numInstallments
@@ -1421,7 +1419,7 @@ describe("Installment Repayments", () => {
             const { loanData } = await initializeInstallmentLoan(
                 context,
                 mockERC20.address,
-                BigNumber.from(36000), // durationSecs
+                36000, // durationSecs
                 hre.ethers.utils.parseEther("100"), // principal
                 hre.ethers.utils.parseEther("1000"), // interest
                 4, // numInstallments
@@ -1446,7 +1444,7 @@ describe("Installment Repayments", () => {
             const { loanData } = await initializeInstallmentLoan(
                 context,
                 mockERC20.address,
-                BigNumber.from(36000), // durationSecs
+                36000, // durationSecs
                 hre.ethers.utils.parseEther("100"), // principal
                 hre.ethers.utils.parseEther("1000"), // interest
                 4, // numInstallments
@@ -1490,7 +1488,7 @@ describe("Installment Repayments", () => {
             const { loanData } = await initializeInstallmentLoan(
                 context,
                 mockERC20.address,
-                BigNumber.from(36000), // durationSecs
+                36000, // durationSecs
                 hre.ethers.utils.parseEther("100"), // principal
                 hre.ethers.utils.parseEther("1000"), // interest
                 4, // numInstallments
@@ -1543,7 +1541,7 @@ describe("Installment Repayments", () => {
             const { loanData } = await initializeInstallmentLoan(
                 context,
                 mockERC20.address,
-                BigNumber.from(36000), // durationSecs
+                36000, // durationSecs
                 hre.ethers.utils.parseEther("100"), // principal
                 hre.ethers.utils.parseEther("1000"), // interest
                 4, // numInstallments
@@ -1586,7 +1584,7 @@ describe("Installment Repayments", () => {
             const { loanData } = await initializeInstallmentLoan(
                 context,
                 mockERC20.address,
-                BigNumber.from(36000), // durationSecs
+                36000, // durationSecs
                 hre.ethers.utils.parseEther("100"), // principal
                 hre.ethers.utils.parseEther("1000"), // interest
                 4, // numInstallments

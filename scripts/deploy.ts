@@ -64,10 +64,13 @@ export async function main(
     console.log("LenderNote deployed to:", lenderNoteAddr);
 
     const RepaymentControllerFactory = await ethers.getContractFactory("RepaymentController");
-    const repaymentController = <RepaymentController>(
-         await RepaymentControllerFactory.deploy(loanCore.address, borrowerNoteAddr, lenderNoteAddr)
+    const repaymentController = <RepaymentController>await upgrades.deployProxy(
+        RepaymentControllerFactory,
+        [loanCore.address, borrowerNoteAddr, lenderNoteAddr],
+        {
+            kind: "uups",
+        },
     );
-
     await repaymentController.deployed();
     const updateRepaymentControllerPermissions = await loanCore.grantRole(REPAYER_ROLE, repaymentController.address);
     await updateRepaymentControllerPermissions.wait();

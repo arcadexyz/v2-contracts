@@ -12,7 +12,6 @@ import {
     VaultFactory,
     AssetVault,
     LoanCoreV2Mock,
-    OriginationController
 } from "../typechain";
 import { mint as mintERC721 } from "./utils/erc721";
 import { BlockchainTime } from "./utils/time";
@@ -266,7 +265,7 @@ describe("LoanCore", () => {
             });
 
             await expect(createLoan(loanCore, user, terms)).to.be.revertedWith(
-                "LC_LoanDuration",
+                "LoanCore::create: duration greater than 1hr and less than 3yrs",
             );
         });
 
@@ -278,7 +277,7 @@ describe("LoanCore", () => {
             await createLoan(loanCore, user, terms);
 
             await expect(createLoan(loanCore, user, terms)).to.be.revertedWith(
-                "LC_CollateralInUse",
+                "LoanCore::create: Collateral token already in use",
             );
         });
 
@@ -528,7 +527,7 @@ describe("LoanCore", () => {
             const loanId = BigNumber.from("123412341324");
             await expect(
                 loanCore.connect(borrower).startLoan(await lender.getAddress(), await borrower.getAddress(), loanId),
-            ).to.be.revertedWith("LC_StartInvalidState");
+            ).to.be.revertedWith("LoanCore::start: Invalid loan state");
         });
 
         it("should fail to start a loan that is already started", async () => {
@@ -556,7 +555,7 @@ describe("LoanCore", () => {
             await loanCore.connect(borrower).startLoan(await lender.getAddress(), await borrower.getAddress(), loanId);
             await expect(
                 loanCore.connect(borrower).startLoan(await lender.getAddress(), await borrower.getAddress(), loanId),
-            ).to.be.revertedWith("LC_StartInvalidState");
+            ).to.be.revertedWith("LoanCore::start: Invalid loan state");
         });
 
         it("should fail to start a loan that is repaid", async () => {
@@ -586,8 +585,8 @@ describe("LoanCore", () => {
             await loanCore.connect(borrower).repay(loanId);
 
             await expect(
-                loanCore.connect(borrower).startLoan(await lender.getAddress(), await borrower.getAddress(), loanId)
-            ).to.be.revertedWith("LC_StartInvalidState");
+                loanCore.connect(borrower).startLoan(await lender.getAddress(), await borrower.getAddress(), loanId),
+            ).to.be.revertedWith("LoanCore::start: Invalid loan state");
         });
 
         it("should fail to start a loan that is already claimed", async () => {
@@ -627,7 +626,7 @@ describe("LoanCore", () => {
         it("should fail to start a loan if collateral has not been sent", async () => {
             const { loanCore, loanId, borrower, lender } = await setupLoan();
             await expect(
-                loanCore.connect(borrower).startLoan(await lender.getAddress(), await borrower.getAddress(), loanId)
+                loanCore.connect(borrower).startLoan(await lender.getAddress(), await borrower.getAddress(), loanId),
             ).to.be.revertedWith("ERC721: transfer caller is not owner nor approved");
         });
 
@@ -803,7 +802,7 @@ describe("LoanCore", () => {
             const { loanCore, user: borrower } = await setupLoan();
             const loanId = BigNumber.from("123412341324");
             await expect(loanCore.connect(borrower).repay(loanId)).to.be.revertedWith(
-                "LC_StartInvalidState",
+                "LoanCore::repay: Invalid loan state",
             );
         });
 
@@ -813,7 +812,7 @@ describe("LoanCore", () => {
             terms.collateralId = collateralId;
             const loanId = await createLoan(loanCore, borrower, terms);
             await expect(loanCore.connect(borrower).repay(loanId)).to.be.revertedWith(
-                "LC_StartInvalidState",
+                "LoanCore::repay: Invalid loan state",
             );
         });
 
@@ -826,19 +825,21 @@ describe("LoanCore", () => {
 
             await loanCore.connect(borrower).repay(loanId);
             await expect(loanCore.connect(borrower).repay(loanId)).to.be.revertedWith(
-                "LC_StartInvalidState",
+                "LoanCore::repay: Invalid loan state",
             );
         });
 
-        it.only("should fail if the loan is already claimed", async () => {
+        it("should fail if the loan is already claimed", async () => {
             const {
                 mockERC20,
                 loanId,
                 loanCore,
                 user: borrower,
                 terms,
-                blockchainTime
-            } = await setupLoan();
+                blockchainTime,
+            } = await setupLoan(undefined, {
+                durationSecs: BigNumber.from(1000),
+            });
 
             await mockERC20.connect(borrower).mint(loanCore.address, terms.principal.add(terms.interestRate));
 
@@ -846,7 +847,7 @@ describe("LoanCore", () => {
 
             await loanCore.connect(borrower).claim(loanId);
             await expect(loanCore.connect(borrower).repay(loanId)).to.be.revertedWith(
-                "LC_StartInvalidState",
+                "LoanCore::repay: Invalid loan state",
             );
         });
 
@@ -894,7 +895,7 @@ describe("LoanCore", () => {
             const tx = await loanCore.connect(borrower).repay(loanId);
             const receipt = await tx.wait();
             const gasUsed = receipt.gasUsed;
-            expect(gasUsed.toString()).to.equal("256503");
+            expect(gasUsed.toString()).to.equal("256432");
         });
     });
 
@@ -951,7 +952,7 @@ describe("LoanCore", () => {
 
             await blockchainTime.increaseTime(360001);
 
-            await expect(loanCore.connect(borrower).claim(loanId)).to.emit(loanCore, "LC_StartInvalidState").withArgs(loanId);
+            await expect(loanCore.connect(borrower).claim(loanId)).to.emit(loanCore, "LoanClaimed").withArgs(loanId);
         });
 
         it("Rejects calls from non-repayer", async () => {
@@ -969,7 +970,7 @@ describe("LoanCore", () => {
             const { loanCore, user: borrower } = await setupLoan();
             const loanId = BigNumber.from("123412341324");
             await expect(loanCore.connect(borrower).claim(loanId)).to.be.revertedWith(
-                "ERC721: owner query for nonexistent token",
+                "LoanCore::claim: Invalid loan state",
             );
         });
 
@@ -979,7 +980,7 @@ describe("LoanCore", () => {
             terms.collateralId = collateralId;
             const loanId = await createLoan(loanCore, borrower, terms);
             await expect(loanCore.connect(borrower).claim(loanId)).to.be.revertedWith(
-                "LC_NotExpired",
+                "LoanCore::claim: Invalid loan state",
             );
         });
 
@@ -992,7 +993,7 @@ describe("LoanCore", () => {
 
             await loanCore.connect(borrower).repay(loanId);
             await expect(loanCore.connect(borrower).claim(loanId)).to.be.revertedWith(
-                "LC_NotExpired",
+                "LoanCore::claim: Invalid loan state",
             );
         });
 
@@ -1014,7 +1015,7 @@ describe("LoanCore", () => {
 
             await loanCore.connect(borrower).claim(loanId);
             await expect(loanCore.connect(borrower).claim(loanId)).to.be.revertedWith(
-                "LC_StartInvalidState"
+                "LoanCore::claim: Invalid loan state",
             );
         });
 
@@ -1023,7 +1024,7 @@ describe("LoanCore", () => {
             await mockERC20.connect(borrower).mint(loanCore.address, terms.principal.add(terms.interestRate));
 
             await expect(loanCore.connect(borrower).claim(loanId)).to.be.revertedWith(
-                "LC_StartInvalidState",
+                "LoanCore::claim: Loan not expired",
             );
         });
 
@@ -1065,7 +1066,7 @@ describe("LoanCore", () => {
             const tx = await loanCore.connect(borrower).claim(loanId);
             const receipt = await tx.wait();
             const gasUsed = receipt.gasUsed;
-            expect(gasUsed.toString()).to.equal("215899");
+            expect(gasUsed.toString()).to.equal("215916");
         });
     });
 
@@ -1245,12 +1246,9 @@ describe("LoanCore", () => {
             await expect(
                 loanCore.connect(borrower).startLoan(await lender.getAddress(), await borrower.getAddress(), loanId),
             )
-            .to.emit(loanCore, "LoanStarted")
-            .withArgs(loanId, await lender.getAddress(), await borrower.getAddress());
+                .to.emit(loanCore, "LoanStarted")
+                .withArgs(loanId, await lender.getAddress(), await borrower.getAddress());
             expect(await loanCore.canCallOn(await borrower.getAddress(), vault.address)).to.be.true;
-
-            const storedLoanData = await loanCore.getLoan(loanId);
-            expect(storedLoanData.state).to.equal(LoanState.Active);
 
             expect(await loanCore.canCallOn(await borrower.getAddress(), collateralId.toString())).to.be.true;
         });
@@ -1443,9 +1441,9 @@ describe("LoanCore", () => {
 
         it("does not let a nonce be consumed by a non-originator", async () => {
             const { loanCore, other, user } = context;
-            await expect(
-                loanCore.connect(other).consumeNonce(await user.getAddress(), 10)
-            ).to.be.revertedWith(`AccessControl: account ${await (await other.getAddress()).toLocaleLowerCase()} is missing role ${ORIGINATOR_ROLE}`);
+            await expect(loanCore.connect(other).consumeNonce(await user.getAddress(), 10)).to.be.revertedWith(
+                `AccessControl: account 0x88cde74d0d35369cf2253ef8353581f750b49f1f is missing role ${ORIGINATOR_ROLE}`,
+            );
         });
 
         it("reverts if attempting to use a nonce that has already been consumed");

@@ -5,7 +5,6 @@ import { VaultFactory } from "../../typechain";
 import { SignatureItem, ItemsPredicate } from "./types";
 
 export const initializeBundle = async (vaultFactory: VaultFactory, user: SignerWithAddress): Promise<BigNumber> => {
-
     const tx = await vaultFactory.connect(user).initializeBundle(await user.getAddress());
     const receipt = await tx.wait();
 

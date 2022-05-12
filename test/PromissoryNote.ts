@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import hre, { waffle, upgrades } from "hardhat";
+import hre, { waffle } from "hardhat";
 const { loadFixture } = waffle;
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
 import { BigNumber, BigNumberish } from "ethers";
@@ -47,9 +47,9 @@ describe("PromissoryNote", () => {
         payableCurrency: string,
         collateralAddress: string,
         {
-            durationSecs = BigNumber.from(360000),
+            durationSecs = 360000,
             principal = hre.ethers.utils.parseEther("100"),
-            interestRate = hre.ethers.utils.parseEther("1"),
+            interest = hre.ethers.utils.parseEther("1"),
             collateralId = BigNumber.from(1),
             numInstallments = 0,
         }: Partial<LoanTerms> = {},
@@ -57,7 +57,7 @@ describe("PromissoryNote", () => {
         return {
             durationSecs,
             principal,
-            interestRate,
+            interest,
             collateralId,
             collateralAddress,
             payableCurrency,
@@ -71,21 +71,15 @@ describe("PromissoryNote", () => {
 
         const whitelist = <CallWhitelist>await deploy("CallWhitelist", signers[0], []);
         const vaultTemplate = <AssetVault>await deploy("AssetVault", signers[0], []);
-        const VaultFactoryFactory = await hre.ethers.getContractFactory("VaultFactory");
-    const vaultFactory = <VaultFactory>(await upgrades.deployProxy(VaultFactoryFactory, [vaultTemplate.address, whitelist.address], { kind: 'uups' })
-    );
+        const vaultFactory = <VaultFactory>(
+            await deploy("VaultFactory", signers[0], [vaultTemplate.address, whitelist.address])
+        );
         const mockERC20 = <MockERC20>await deploy("MockERC20", signers[0], ["Mock ERC20", "MOCK"]);
 
         const feeController = <FeeController>await deploy("FeeController", signers[0], []);
-
-        const LoanCore = await hre.ethers.getContractFactory("LoanCore");
-        const loanCore = <LoanCore>(
-            await upgrades.deployProxy(LoanCore, [feeController.address], { kind: 'uups' })
-        );
-
-        const OriginationController = await hre.ethers.getContractFactory("OriginationController");
+        const loanCore = <LoanCore>await deploy("LoanCore", signers[0], [feeController.address]);
         const originationController = <OriginationController>(
-            await upgrades.deployProxy(OriginationController, [loanCore.address], { kind: 'uups' })
+            await deploy("OriginationController", signers[0], [loanCore.address])
         );
         await originationController.deployed();
         const originator = signers[0];

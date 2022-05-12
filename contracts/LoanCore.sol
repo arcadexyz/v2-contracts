@@ -22,8 +22,6 @@ import "./FullInterestAmountCalc.sol";
 import "./PromissoryNote.sol";
 import "./vault/OwnableERC721.sol";
 
-import "hardhat/console.sol";
-
 import { LC_LoanDuration, LC_CollateralInUse, LC_InterestRate, LC_NumberInstallments, LC_StartInvalidState, LC_NotExpired, LC_BalanceGTZero, LC_NonceUsed } from "./errors/Lending.sol";
 
 /**
@@ -436,16 +434,12 @@ contract LoanCore is
         if (!collateralInUse[OwnableERC721(vault).ownershipToken()][uint256(uint160(vault))]) {
             return false;
         }
-        console.log("caler -----------------------------", caller);
-        console.log("vault -----------------------------", vault);
-        console.log("vault 2 -----------------------------", uint256(uint160(vault)));
 
         for (uint256 i = 0; i < borrowerNote.balanceOf(caller); i++) {
             uint256 borrowerNoteId = borrowerNote.tokenOfOwnerByIndex(caller, i);
             uint256 loanId = borrowerNote.loanIdByNoteId(borrowerNoteId);
             // if the borrower is currently borrowing against this vault,
             // return true
-            console.log("collateralId -----------------------------", loans[loanId].terms.collateralId);
             if (loans[loanId].terms.collateralId == uint256(uint160(vault))) {
                 return true;
             }

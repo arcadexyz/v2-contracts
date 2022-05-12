@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL-3.0-only
 
 pragma solidity ^0.8.11;
 
@@ -192,7 +192,6 @@ contract AssetVault is IAssetVault, OwnableERC721, Initializable, ERC1155Holder,
         if (!whitelist.isWhitelisted(to, bytes4(data[:4]))) revert AV_NonWhitelistedCall(to, bytes4(data[:4]));
 
         to.functionCall(data);
-
         emit Call(msg.sender, to, data);
     }
 

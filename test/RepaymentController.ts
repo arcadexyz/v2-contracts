@@ -8,11 +8,13 @@ import {
     RepaymentController,
     LoanCore,
     MockERC20,
+    MockERC721,
     AssetVault,
     CallWhitelist,
     VaultFactory,
     FeeController,
     MockLoanCore,
+    RepaymentContV2,
 } from "../typechain";
 import { BlockchainTime } from "./utils/time";
 import { utils, Signer, BigNumber } from "ethers";
@@ -29,6 +31,7 @@ const REPAYER_ROLE = "0x9c60024347074fd9de2c1e36003080d22dbc76a41ef87444d21e361b
 interface TestContext {
     loanCore: LoanCore;
     mockERC20: MockERC20;
+    mockERC721: MockERC721;
     borrowerNote: PromissoryNote;
     lenderNote: PromissoryNote;
     vaultFactory: VaultFactory;
@@ -73,23 +76,18 @@ const fixture = async (): Promise<TestContext> => {
 
     const whitelist = <CallWhitelist>await deploy("CallWhitelist", admin, []);
     const vaultTemplate = <AssetVault>await deploy("AssetVault", admin, []);
-
-    const VaultFactory = await ethers.getContractFactory("VaultFactory");
     const vaultFactory = <VaultFactory>(
-        await upgrades.deployProxy(VaultFactory, [vaultTemplate.address, whitelist.address], { kind: 'uups' }));
-
-    const feeController = <FeeController>await deploy("FeeController", admin, []);
-
-    const LoanCore = await hre.ethers.getContractFactory("LoanCore");
-    const loanCore = <LoanCore>(
-        await upgrades.deployProxy(LoanCore, [feeController.address], { kind: 'uups' })
+        await deploy("VaultFactory", signers[0], [vaultTemplate.address, whitelist.address])
     );
 
-    const mockERC20 = <MockERC20>await deploy("MockERC20", signers[0], ["Mock ERC20", "MOCK"]);
+    const feeController = <FeeController>await deploy("FeeController", admin, []);
+    const loanCore = <LoanCore>await deploy("LoanCore", admin, [feeController.address]);
 
-    const OriginationController = await hre.ethers.getContractFactory("OriginationController");
+    const mockERC20 = <MockERC20>await deploy("MockERC20", signers[0], ["Mock ERC20", "MOCK"]);
+    const mockERC721 = <MockERC721>await deploy("MockERC721", signers[0], ["Mock ERC721", "MOCK"]);
+
     const originationController = <OriginationController>(
-        await upgrades.deployProxy(OriginationController, [loanCore.address], { kind: 'uups' })
+        await deploy("OriginationController", signers[0], [loanCore.address])
     );
     await originationController.deployed();
 
@@ -101,13 +99,15 @@ const fixture = async (): Promise<TestContext> => {
     const lenderNoteAddress = await loanCore.lenderNote();
     const lenderNote = <PromissoryNote>(await ethers.getContractFactory("PromissoryNote")).attach(lenderNoteAddress);
 
-    const MockLoanCore = await hre.ethers.getContractFactory("MockLoanCore");
-    const mockLoanCore = <MockLoanCore>(
-        await upgrades.deployProxy(MockLoanCore, [feeController.address], { kind: 'uups' })
-    );
+    const mockLoanCore = <MockLoanCore>await deploy("MockLoanCore", admin, [feeController.address]);
 
+    const RepaymentController = await hre.ethers.getContractFactory("RepaymentController");
     const repaymentController = <RepaymentController>(
-        await deploy("RepaymentController", admin, [loanCore.address, borrowerNoteAddress, lenderNoteAddress])
+        await upgrades.deployProxy(
+            RepaymentController,
+            [mockLoanCore.address, borrowerNoteAddress, lenderNoteAddress],
+            { kind: "uups" },
+        )
     );
 
     await repaymentController.deployed();
@@ -127,6 +127,7 @@ const fixture = async (): Promise<TestContext> => {
         repaymentController,
         originationController,
         mockERC20,
+        mockERC721,
         vaultFactory,
         borrower,
         lender,
@@ -209,11 +210,11 @@ const initializeLoan = async (
 
     let loanId;
 
-    if (receipt && receipt.events) {
-        const loanCreatedLog = new hre.ethers.utils.Interface([
+    if (receipt && receipt.events && receipt.events.length == 15) {
+        const LoanCreatedLog = new hre.ethers.utils.Interface([
             "event LoanStarted(uint256 loanId, address lender, address borrower)",
         ]);
-        const log = loanCreatedLog.parseLog(receipt.events[receipt.events.length - 1]);
+        const log = LoanCreatedLog.parseLog(receipt.events[14]);
         loanId = log.args.loanId;
     } else {
         throw new Error("Unable to initialize loan");
@@ -228,7 +229,7 @@ const initializeLoan = async (
 };
 
 describe("Legacy Repayments with interest parameter as a rate:", () => {
-    it("Legacy loan type (no installments), repay interest and principal. 100 ETH principal, 10% interest rate.", async () => {
+    it("Create legacy loan type (no installments) and repay interest. 100 ETH principal, 10% interest rate.", async () => {
         const context = await loadFixture(fixture);
         const { repaymentController, vaultFactory, mockERC20, loanCore, borrower } = context;
         const { loanData, bundleId } = await initializeLoan(
@@ -253,7 +254,7 @@ describe("Legacy Repayments with interest parameter as a rate:", () => {
         expect(await mockERC20.balanceOf(borrower.address)).to.equal(0);
     });
 
-    it("Legacy loan type (no installments), repay interest and principal. 10 ETH principal, 7.5% interest rate.", async () => {
+    it("Create legacy loan type (no installments) and repay interest. 10 ETH principal, 7.5% interest rate.", async () => {
         const context = await loadFixture(fixture);
         const { repaymentController, vaultFactory, mockERC20, loanCore, borrower } = context;
         const { loanData, bundleId } = await initializeLoan(
@@ -279,7 +280,7 @@ describe("Legacy Repayments with interest parameter as a rate:", () => {
         expect(await mockERC20.balanceOf(borrower.address)).to.equal(0);
     });
 
-    it("Legacy loan type (no installments), repay interest and principal. 25 ETH principal, 2.5% interest rate.", async () => {
+    it("Create legacy loan type (no installments) and repay interest. 25 ETH principal, 2.5% interest rate.", async () => {
         const context = await loadFixture(fixture);
         const { repaymentController, vaultFactory, mockERC20, loanCore, borrower } = context;
         const { loanData, bundleId } = await initializeLoan(
@@ -304,7 +305,7 @@ describe("Legacy Repayments with interest parameter as a rate:", () => {
         expect(await mockERC20.balanceOf(borrower.address)).to.equal(0);
     });
 
-    it("Legacy loan type (no installments), repay interest and principal. 25 ETH principal, 2.5% interest rate. Borrower tries to repay with insufficient balance. Should revert.", async () => {
+    it("Create legacy loan type (no installments) and repay interest. 25 ETH principal, 2.5% interest rate. Borrower tries to repay with insufficient amount. Should revert.", async () => {
         const context = await loadFixture(fixture);
         const { repaymentController, vaultFactory, mockERC20, loanCore, borrower } = context;
         const { loanData, bundleId } = await initializeLoan(
@@ -329,7 +330,7 @@ describe("Legacy Repayments with interest parameter as a rate:", () => {
         );
     });
 
-    it("Legacy loan type (no installments), repay interest and principal. 25 ETH principal, 2.5% interest rate. Borrower tries to repay with insufficient allowance. Should revert.", async () => {
+    it("Create legacy loan type (no installments) and repay interest. 25 ETH principal, 2.5% interest rate. Repay function called without borrower approval. Should revert.", async () => {
         const context = await loadFixture(fixture);
         const { repaymentController, vaultFactory, mockERC20, loanCore, borrower } = context;
         const { loanData, bundleId } = await initializeLoan(
@@ -353,24 +354,22 @@ describe("Legacy Repayments with interest parameter as a rate:", () => {
         );
     });
 
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // NOTE: require statement needed in the CreateLoan function to block anything below 10000 wei for a principal
-    // it("Legacy loan type (no installments), repay interest and principal. 9999 Wei principal, 2.5% interest rate. Should revert on initialization.", async () => {
-    //     const context = await loadFixture(fixture);
-    //     const { mockERC20 } = context;
-    //     await expect(
-    //         initializeLoan(
-    //             context,
-    //             mockERC20.address,
-    //             BigNumber.from(86400), // durationSecs
-    //             hre.ethers.utils.parseEther(".000000000000009999"), // principal
-    //             hre.ethers.utils.parseEther("250"), // interest
-    //             0, // numInstallments
-    //         ),
-    //     ).to.be.revertedWith("LoanCore::create: The minimum Principal allowed is 10000 wei.");
-    // });
+    it("Create legacy loan type (no installments) and repay interest. 25 ETH principal, 2.5% interest rate. Repay function called without borrower approval. Should revert.", async () => {
+        const context = await loadFixture(fixture);
+        const { mockERC20 } = context;
+        await expect(
+            initializeLoan(
+                context,
+                mockERC20.address,
+                BigNumber.from(86400), // durationSecs
+                hre.ethers.utils.parseEther(".000000000000009999"), // principal
+                hre.ethers.utils.parseEther("250"), // interest
+                0, // numInstallments
+            ),
+        ).to.be.revertedWith("LoanCore::create: The minimum Principal allowed is 10000 wei.");
+    });
 
-    it("Legacy loan type (no installments), repay interest and principal. 1000 Wei principal, 2.5% interest rate.", async () => {
+    it("Create legacy loan type (no installments) and repay interest. 25 ETH principal, 2.5% interest rate. Repay function called without borrower approval. Should revert.", async () => {
         const context = await loadFixture(fixture);
         const { repaymentController, vaultFactory, mockERC20, loanCore, borrower } = context;
         const { loanData, bundleId } = await initializeLoan(
@@ -393,5 +392,27 @@ describe("Legacy Repayments with interest parameter as a rate:", () => {
         await repaymentController.connect(borrower).repay(loanData.borrowerNoteId);
 
         expect(await mockERC20.balanceOf(borrower.address)).to.equal(0);
+    });
+});
+
+describe("RepaymentContV", () => {
+    it("Upgrades to v2", async () => {
+        const RepaymentContV2 = await hre.ethers.getContractFactory("RepaymentContV2");
+        const repaymentContV2 = <RepaymentContV2>(
+            await hre.upgrades.upgradeProxy("0xdeaBbBe620EDF275F06E75E8fab18183389d606F", RepaymentContV2)
+        );
+
+        expect(await repaymentContV2.version()).to.equal("This is RepaymentController V2!");
+    });
+});
+
+describe("RepaymentContV", () => {
+    it("Upgrades to v2", async () => {
+        const RepaymentContV2 = await hre.ethers.getContractFactory("RepaymentContV2");
+        const repaymentContV2 = <RepaymentContV2>(
+            await hre.upgrades.upgradeProxy("0xdeaBbBe620EDF275F06E75E8fab18183389d606F", RepaymentContV2)
+        );
+
+        expect(await repaymentContV2.version()).to.equal("This is RepaymentController V2!");
     });
 });
