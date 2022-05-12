@@ -305,7 +305,7 @@ describe("Installment Period", () => {
                 hre.ethers.utils.parseEther("1000"), // interest
                 1, // numInstallments
             ),
-        ).to.be.revertedWith("LoanCore::create: Even num of installments and must be < 1000000");
+        ).to.be.revertedWith("LC_NumberInstallments");
     });
 
     it("Create a loan with an odd number (11) of installment payments, should revert.", async () => {
@@ -320,7 +320,7 @@ describe("Installment Period", () => {
                 hre.ethers.utils.parseEther("1000"), // interest
                 11, // numInstallments
             ),
-        ).to.be.revertedWith("LoanCore::create: Even num of installments and must be < 1000000");
+        ).to.be.revertedWith("LC_NumberInstallments");
     });
 
     it("Verify missed payments equals zero.", async () => {
