@@ -117,7 +117,7 @@ contract VaultFactory is ERC721EnumerableUpgradeable, ERC721PermitUpgradeable, I
      *                              token ID at the specified index.
      */
     function instanceAtIndex(uint256 index) external view override returns (address instance) {
-        return address(uint160(tokenByIndex(tokenId)));
+        return address(uint160(tokenByIndex(index)));
     }
 
     // ==================================== FACTORY OPERATIONS ==========================================
@@ -161,6 +161,10 @@ contract VaultFactory is ERC721EnumerableUpgradeable, ERC721PermitUpgradeable, I
      *
      * @dev Does not let tokens with withdraw enabled be transferred, which ensures
      *      that items cannot be withdrawn in a frontrunning attack before loan origination.
+     *
+     * @param from                  The previous owner of the token.
+     * @param to                    The owner of the token after transfer.
+     * @param tokenId               The token ID.
      */
     function _beforeTokenTransfer(
         address from,
