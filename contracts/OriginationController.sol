@@ -65,11 +65,11 @@ contract OriginationController is
             // "LoanTermsWithItems(uint256 durationSecs,uint256 principal,uint256 interestRate,address collateralAddress,address payableCurrency)"
         );
 
-    // ============= Global State ==============
+    // =============== Contract References ===============
 
     address public loanCore;
 
-    // ================= State ==================
+    // ================= Approval State ==================
 
     /// @notice Mapping from owner to operator approvals
     mapping(address => mapping(address => bool)) private _signerApprovals;

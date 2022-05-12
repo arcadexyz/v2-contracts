@@ -18,8 +18,7 @@ Refactoring:
 - Run prettier
 
 Features:
-
-- Installment Claim
+- Installment Claim (and grace period?)
 - Signature expiry
 - Move origination fee to fee controller
 - Native rollovers
