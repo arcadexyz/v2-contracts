@@ -4,7 +4,7 @@ const { loadFixture } = waffle;
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
 import { BigNumber } from "ethers";
 
-import { VaultFactory, CallWhitelist, AssetVault, PunkRouter, CryptoPunksMarket, WrappedPunk } from "../typechain";
+import { VaultFactory, CallWhitelist, AssetVault, PunkRouter, CryptoPunksMarket, WrappedPunk, OriginationController, LoanCore, FeeController } from "../typechain";
 import { deploy } from "./utils/contracts";
 
 type Signer = SignerWithAddress;
@@ -17,6 +17,9 @@ interface TestContext {
     user: Signer;
     other: Signer;
     signers: Signer[];
+    originationController: OriginationController;
+    loanCore: LoanCore;
+    feeController: FeeController;
 }
 
 interface TestContextForDepositStuck {
@@ -40,11 +43,25 @@ describe("PunkRouter", () => {
         const vaultTemplate = <AssetVault>await deploy("AssetVault", signers[0], []);
 
         const VaultFactoryFactory = await hre.ethers.getContractFactory("VaultFactory");
-        const vaultFactory = <VaultFactory>(await upgrades.deployProxy(VaultFactoryFactory, [vaultTemplate.address, whitelist.address], { kind: 'uups', initializer: "initialize(address, address)" })
+        const vaultFactory = <VaultFactory>(await upgrades.deployProxy(VaultFactoryFactory, [vaultTemplate.address, whitelist.address], { kind: 'uups' })
         );
 
+        const feeController = <FeeController>await deploy("FeeController", signers[0], []);
+
+        const LoanCore = await hre.ethers.getContractFactory("LoanCore");
+        const loanCore = <LoanCore>(
+            await upgrades.deployProxy(LoanCore, [feeController.address], { kind: 'uups' })
+        );
+
+        const OriginationController = await hre.ethers.getContractFactory("OriginationController");
+        const originationController = <OriginationController>(
+            await upgrades.deployProxy(OriginationController, [loanCore.address], { kind: 'uups' })
+        );
+        await originationController.deployed();
+
+
         const punkRouter = <PunkRouter>(
-            await deploy("PunkRouter", signers[0], [vaultFactory.address, wrappedPunks.address, punks.address])
+            await deploy("PunkRouter", signers[0], [wrappedPunks.address, punks.address])
         );
 
         return {
@@ -55,6 +72,9 @@ describe("PunkRouter", () => {
             user: signers[0],
             other: signers[1],
             signers: signers.slice(2),
+            originationController,
+            loanCore,
+            feeController
         };
     };
 
@@ -113,7 +133,8 @@ describe("PunkRouter", () => {
             expect(await wrappedPunks.ownerOf(punkIndex)).to.equal(bundleId);
         });
 
-        // REQUIRE STATEMENT NEEDED for offerPunkForSaleToAddress function in
+        // modifier NEEDED for offerPunkForSaleToAddress function to cause revert
+        ////////////////////////////////////////////////////////////////////
         // it("should fail if not approved", async () => {
         //     const { punks, punkRouter, user } = await setupTestContext();
         //     const punkIndex = 1234;
@@ -126,6 +147,9 @@ describe("PunkRouter", () => {
         //     await expect(punkRouter.depositPunk(punkIndex, bundleId)).to.be.reverted;
         // });
 
+        // Test times out one line 166 right at .to.be.revertedWith(
+        //        "PunkRouter: not owner",)
+        ////////////////////////////////////////////////////////////////////
         it("should fail if not owner", async () => {
             const { punks, punkRouter, user, other } = await setupTestContext();
             const punkIndex = 1234;
