@@ -2,11 +2,14 @@
 
 pragma solidity ^0.8.11;
 
-import "@openzeppelin/contracts/utils/Counters.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol";
 
 import "../interfaces/ILoanCore.sol";
 import "../interfaces/IPromissoryNote.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import "../PromissoryNote.sol";
 
@@ -15,9 +18,9 @@ import "../PromissoryNote.sol";
 /**
  * @dev Interface for the LoanCore contract
  */
-contract MockLoanCore is ILoanCore {
-    using Counters for Counters.Counter;
-    Counters.Counter private loanIdTracker;
+contract MockLoanCore is ILoanCore, Initializable, AccessControlUpgradeable, UUPSUpgradeable {
+    using CountersUpgradeable for CountersUpgradeable.Counter;
+    CountersUpgradeable.Counter private loanIdTracker;
 
     IPromissoryNote public override borrowerNote;
     IPromissoryNote public override lenderNote;
@@ -27,7 +30,21 @@ contract MockLoanCore is ILoanCore {
     mapping(uint256 => LoanLibrary.LoanData) public loans;
     mapping(address => mapping(uint160 => bool)) public usedNonces;
 
-    constructor() {
+    // ========================================== CONSTRUCTOR ===========================================
+
+    /**
+     * @notice Runs the initializer function in an upgradeable contract.
+     *
+     *  @dev Add Unsafe-allow comment to notify upgrades plugin to accept the constructor.
+     */
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() initializer {}
+
+    // ========================================== INITIALIZER ===========================================
+
+    function initialize(address) public initializer {
+        __AccessControl_init();
+        __UUPSUpgradeable_init_unchained();
         borrowerNote = new PromissoryNote("Mock BorrowerNote", "MB");
         lenderNote = new PromissoryNote("Mock LenderNote", "ML");
 
@@ -35,6 +52,19 @@ contract MockLoanCore is ILoanCore {
         loanIdTracker.increment();
     }
 
+    // ======================================= UPGRADE AUTHORIZATION ========================================
+
+    /**
+     * @notice Authorization function to define who should be allowed to upgrade the contract
+     *
+     * @param newImplementation           The address of the upgraded verion of this contract
+     */
+
+    function _authorizeUpgrade(address newImplementation) internal override onlyRole(DEFAULT_ADMIN_ROLE) {}
+
+
+
+    // ==================================== MOCKLOANCORE OPERATIONS ======================================
     /**
      * @dev Get LoanData by loanId
      */
@@ -141,7 +171,7 @@ contract MockLoanCore is ILoanCore {
         // transfer funds to LoanCore
         uint256 paymentTotal = _repaidAmount + _lateFeesAccrued + _paymentToInterest;
         //console.log("TOTAL PAID FROM BORROWER: ", paymentTotal);
-        IERC20(data.terms.payableCurrency).transferFrom(msg.sender, address(this), paymentTotal);
+        IERC20Upgradeable(data.terms.payableCurrency).transferFrom(msg.sender, address(this), paymentTotal);
         // use variable.
         data.numInstallmentsPaid = data.numInstallmentsPaid + _numMissedPayments + 1;
     }
