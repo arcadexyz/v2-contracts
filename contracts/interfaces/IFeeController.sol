@@ -3,12 +3,15 @@
 pragma solidity ^0.8.11;
 
 interface IFeeController {
-    /**
-     * @dev Emitted when origination fee is updated
-     */
+    // ================ Events =================
+
     event UpdateOriginationFee(uint256 _newFee);
 
+    // ================ Fee Setters =================
+
     function setOriginationFee(uint256 _originationFee) external;
+
+    // ================ Fee Getters =================
 
     function getOriginationFee() external view returns (uint256);
 }

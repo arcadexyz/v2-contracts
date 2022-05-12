@@ -4,18 +4,21 @@ MAY 9 WHATS LEFT:
 
 Safety/Robustness:
 
-- Merge upgradeability
 - Fix test suite and ensure 100% coverage or as close as possible
 
 Refactoring:
-
-- Split LoanCore into separate files (contract too big)
+- Split LoanCore into separate files
+  - (contract too big)
+  - (merge create and start loan)
+  - (if not merging, start clock in startLoan)
+  - (check setFeeController for address 0 and emit event)
+  - (add isNonceUsed function)
+  - (remove SafeMath)
 - Custom errors
-- Consistent documentation - move to implementation
+- Run prettier
 
 Features:
-
-- Installment Claim
+- Installment Claim (and grace period?)
 - Signature expiry
 - Move origination fee to fee controller
 - Native rollovers

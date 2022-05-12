@@ -7,42 +7,41 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interfaces/IFeeController.sol";
 
 /**
- * Fee Controller is intended to be an upgradable component of Pawnfi
- * where new fees can be added or modified based on different user attributes
+ * @title FeeController
+ * @author Non-Fungible Technologies, Inc.
  *
- * Type/size of loan being requested
- * Amount of tokens being staked, etc
- *
- * Version 1 (as of 4/21/2021) Capabilities:
- *
- * FeeController will be called once after a loan has been matched so that we can
- * create an origination fee (2% credited to PawnFi)
- * @dev support for floating point originationFee should be discussed
+ * The Fee Controller is used by LoanCore to query for fees for different
+ * loan lifecycle interactions (origiations, rollovers, etc). All fees should
+ * have setters and getters and be expressed in BPs. In the future, this contract
+ * could be extended to support more complext logic (introducing a mapping of users
+ * who get a discount, e.g.). Since LoanCore can change the fee controller reference,
+ * any changes to this contract can be newly deployed on-chain and adopted.
  */
-
 contract FeeController is AccessControlEnumerable, IFeeController, Ownable {
-    // initial fee is 3%
+    // ============================================ STATE ==============================================
+
+    /// @dev Fee for origination - default is 0.03%
     uint256 private originationFee = 300;
 
-    constructor() {}
+    // ========================================= FEE SETTERS ===========================================
 
     /**
-     * @dev Set the origination fee to the given value
+     * @notice Set the origination fee to the given value. The caller
+     *         must be the owner of the contract.
      *
-     * @param _originationFee the new origination fee, in bps
-     *
-     * Requirements:
-     *
-     * - The caller must be the owner of the contract
+     * @param _originationFee       The new origination fee, in bps.
      */
     function setOriginationFee(uint256 _originationFee) external override onlyOwner {
         originationFee = _originationFee;
         emit UpdateOriginationFee(_originationFee);
     }
 
+    // ========================================= FEE GETTERS ===========================================
+
     /**
-     * @dev Get the current origination fee in bps
+     * @notice Get the current origination fee in bps.
      *
+     * @return originationFee       The current fee in bps.
      */
     function getOriginationFee() public view override returns (uint256) {
         return originationFee;

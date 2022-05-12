@@ -15,6 +15,10 @@ import "./interfaces/IERC721PermitUpgradeable.sol";
 import { ERC721P_DeadlineExpired, ERC721P_NotTokenOwner, ERC721P_InvalidSignature } from "./errors/LendingUtils.sol";
 
 /**
+ * @title ERC721PermitUpgradeable
+ * @author Non-Fungible Technologies, Inc.
+ * @notice Upgradeable version of ERC721Permit.
+ *
  * @dev Implementation of the ERC721 Permit extension allowing approvals to be made via signatures, as defined in
  * https://eips.ethereum.org/EIPS/eip-2612[EIP-2612].
  *
@@ -35,11 +39,14 @@ abstract contract ERC721PermitUpgradeable is
 {
     using CountersUpgradeable for CountersUpgradeable.Counter;
 
-    mapping(address => CountersUpgradeable.Counter) private _nonces;
+    // ============================================ STATE ==============================================
 
     // solhint-disable-next-line var-name-mixedcase
     bytes32 private constant _PERMIT_TYPEHASH =
         keccak256("Permit(address owner,address spender,uint256 tokenId,uint256 nonce,uint256 deadline)");
+
+    /// @dev Nonce for permit signatures.
+    mapping(address => CountersUpgradeable.Counter) private _nonces;
 
     // ========================================== INITIALIZER ===========================================
 
@@ -47,8 +54,9 @@ abstract contract ERC721PermitUpgradeable is
      * @dev Initializes the {EIP712} domain separator using the `name` parameter, and setting `version` to `"1"`.
      *
      * It's a good idea to use the same `name` that is defined as the ERC721 token name.
+     *
+     * @param name                  The name of the signing domain.
      */
-
     function __ERC721PermitUpgradeable_init(string memory name) internal {
         __EIP712_init(name, "1");
         __AccessControl_init();
@@ -59,9 +67,9 @@ abstract contract ERC721PermitUpgradeable is
     // ======================================= UPGRADE AUTHORIZATION ========================================
 
     /**
-     * @notice Authorization function to define who should be allowed to upgrade the contract
+     * @notice Authorization function to define whether a contract upgrade should be allowed..
      *
-     * @param newImplementation           The address of the upgraded verion of this contract
+     * @param newImplementation           The address of the upgraded verion of this contract.
      */
 
     function _authorizeUpgrade(address newImplementation) internal virtual override onlyRole(DEFAULT_ADMIN_ROLE) {}
@@ -69,7 +77,31 @@ abstract contract ERC721PermitUpgradeable is
     // ==================================== ERC721PERMIT OPERATIONS ======================================
 
     /**
-     * @dev See {IERC721-permit}.
+     * @notice Allows the spender to spend the token ID which is owned by owner,
+     * given owner's signed approval.
+     *
+     * Emits an {Approval} event.
+     *
+     * Requirements:
+     *
+     * - `spender` cannot be the zero address.
+     * - `owner` must be the owner of `tokenId`.
+     * - `deadline` must be a timestamp in the future.
+     * - `v`, `r` and `s` must be a valid `secp256k1` signature from `owner`
+     * over the EIP712-formatted function arguments.
+     * - the signature must use ``owner``'s current nonce (see {nonces}).
+     *
+     * For more information on the signature format, see the
+     * https://eips.ethereum.org/EIPS/eip-2612#specification[relevant EIP
+     * section].
+     *
+     * @param owner                 The owner of the token being permitted.
+     * @param spender               The address allowed to spend the token.
+     * @param tokenId               The token ID of the given asset.
+     * @param deadline              The maximum timestamp the signature is valid for.
+     * @param v                     Component of the signature.
+     * @param r                     Component of the signature.
+     * @param s                     Component of the signature.
      */
     function permit(
         address owner,
@@ -95,25 +127,37 @@ abstract contract ERC721PermitUpgradeable is
         _approve(spender, tokenId);
     }
 
-    /**
-     * @dev See {IERC721Permit-nonces}.
+   /**
+     * @notice Returns the current nonce for `owner`. This value must be
+     * included whenever a signature is generated.
+     *
+     * Every successful call to permit increases the owner's nonce by one. This
+     * prevents a signature from being used multiple times.
+     *
+     * @param owner                 The given owner to check the nonce for.
+     *
+     * @return current              The current noonce for the owner.
      */
     function nonces(address owner) public view virtual override returns (uint256) {
         return _nonces[owner].current();
     }
 
     /**
-     * @dev See {IERC721Permit-DOMAIN_SEPARATOR}.
+     * @notice Returns the domain separator used in the encoding of the signature for {permit}, as defined by {EIP712}.
+     *
+     * @return separator             The bytes for the domain separator.
      */
     // solhint-disable-next-line func-name-mixedcase
     function DOMAIN_SEPARATOR() external view override returns (bytes32) {
         return _domainSeparatorV4();
     }
 
-    /**
-     * @dev "Consume a nonce": return the current value and increment.
+   /**
+     * @dev Consumes the nonce - returns the current value and increments.
      *
-     * _Available since v4.1._
+     * @param owner                 The address of the user to consume a nonce for.
+     *
+     * @return current              The current nonce, before incrementation.
      */
     function _useNonce(address owner) internal virtual returns (uint256 current) {
         CountersUpgradeable.Counter storage nonce = _nonces[owner];

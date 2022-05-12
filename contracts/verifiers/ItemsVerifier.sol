@@ -72,7 +72,7 @@ contract ArcadeItemsVerifier is IArcadeSignatureVerifier {
      * @notice Verify that the items specified by the packed SignatureItem array are held by the vault.
      * @dev    Reverts on a malformed SignatureItem, returns false on missing contents.
      *
-     * @param predicates                   The SignatureItem[] array of items, packed in bytes.
+     * @param predicates                    The SignatureItem[] array of items, packed in bytes.
      * @param vault                         The vault that should own the specified items.
      *
      * @return verified                     Whether the bundle contains the specified items.
