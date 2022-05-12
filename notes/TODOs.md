@@ -40,6 +40,10 @@ V2 Progress:
     - (DONE) AssetVault
     - (DONE) OwnableERC721
     - (DONE) VaultFactory
+ - BEFORE MERGING:
+    - Go through natspec in error files to ensure they are up to standard.
+    - Remove the `TODO: custom errors` from top of contracts.
+    - Modify the tests so they do not fail due to new errors.
 
 📌 For Further Review Items:
 

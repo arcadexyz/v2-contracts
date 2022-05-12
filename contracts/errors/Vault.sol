@@ -3,13 +3,13 @@
 pragma solidity ^0.8.11;
 
 /**
- * @title LendingErrors
+ * @title VaultErrors
  * @author Non-Fungible Technologies, Inc.
  *
- * This file contains all custom errors for the lending protocol, with errors prefixed
- * by the contract that throws them (e.g., "OC_" for OriginationController). Errors
- * located in one place to make it easier to holistically look at all possible
- * protocol failure cases.
+ * This file contains all custom errors for vault contracts used by the protocol.
+ * All errors prefixed by the contract that throws them (e.g., "AV_" for Asset Vault).
+ * Errors located in one place to make it possible to holistically look at all
+ * asset vault failure cases.
  */
 
 // ==================================== Asset Vault ======================================

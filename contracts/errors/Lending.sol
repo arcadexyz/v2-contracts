@@ -8,9 +8,9 @@ import "../libraries/LoanLibrary.sol";
  * @title LendingErrors
  * @author Non-Fungible Technologies, Inc.
  *
- * This file contains all custom errors for the lending protocol, with errors prefixed
- * by the contract that throws them (e.g., "OC_" for OriginationController). Errors
- * located in one place to make it easier to holistically look at all possible
+ * This file contains custom errors for the core lending protocol contracts, with errors
+ * prefixed by the contract that throws them (e.g., "OC_" for OriginationController).
+ * Errors located in one place to make it possible to holistically look at all 
  * protocol failure cases.
  */
 

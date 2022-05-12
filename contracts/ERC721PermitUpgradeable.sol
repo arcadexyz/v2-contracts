@@ -12,7 +12,7 @@ import "@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol";
 
 import "./interfaces/IERC721PermitUpgradeable.sol";
 
-import { ERC721PU_DeadlineExpired, ERC721PU_NotTokenOwner, ERC721PU_InvalidSignature } from "./errors/LendingUtils.sol";
+import { ERC721P_DeadlineExpired, ERC721P_NotTokenOwner, ERC721P_InvalidSignature } from "./errors/LendingUtils.sol";
 
 /**
  * @dev Implementation of the ERC721 Permit extension allowing approvals to be made via signatures, as defined in
@@ -80,8 +80,8 @@ abstract contract ERC721PermitUpgradeable is
         bytes32 r,
         bytes32 s
     ) public virtual override {
-        if (block.timestamp > deadline) revert ERC721PU_DeadlineExpired(deadline);
-        if (owner != ERC721Upgradeable.ownerOf(tokenId)) revert ERC721PU_NotTokenOwner(owner);
+        if (block.timestamp > deadline) revert ERC721P_DeadlineExpired(deadline);
+        if (owner != ERC721Upgradeable.ownerOf(tokenId)) revert ERC721P_NotTokenOwner(owner);
 
         bytes32 structHash = keccak256(
             abi.encode(_PERMIT_TYPEHASH, owner, spender, tokenId, _useNonce(owner), deadline)
@@ -90,7 +90,7 @@ abstract contract ERC721PermitUpgradeable is
         bytes32 hash = _hashTypedDataV4(structHash);
 
         address signer = ECDSAUpgradeable.recover(hash, v, r, s);
-        if (signer != owner) revert ERC721PU_InvalidSignature(signer);
+        if (signer != owner) revert ERC721P_InvalidSignature(signer);
 
         _approve(spender, tokenId);
     }

@@ -76,7 +76,7 @@ contract VaultFactory is ERC721EnumerableUpgradeable, ERC721PermitUpgradeable, I
      */
     function instanceAt(uint256 tokenId) external view override returns (address instance) {
         // check _owners[tokenId] != address(0)
-        if (_exists(tokenId) == false) revert VF_TokenIdOutOfBounds(tokenId);
+        if (!_exists(tokenId)) revert VF_TokenIdOutOfBounds(tokenId);
 
         return address(uint160(tokenId));
         //return address(uint160(tokenByIndex(tokenId)));
@@ -119,7 +119,7 @@ contract VaultFactory is ERC721EnumerableUpgradeable, ERC721PermitUpgradeable, I
         uint256 tokenId
     ) internal virtual override(ERC721Upgradeable, ERC721EnumerableUpgradeable) {
         IAssetVault vault = IAssetVault(address(uint160(tokenId)));
-        if (vault.withdrawEnabled() == true) revert VF_NoTransferWithdrawEnabled(tokenId);
+        if (vault.withdrawEnabled()) revert VF_NoTransferWithdrawEnabled(tokenId);
 
         super._beforeTokenTransfer(from, to, tokenId);
     }
