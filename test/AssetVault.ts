@@ -281,7 +281,7 @@ describe("AssetVault", () => {
             const { vault, other } = await loadFixture(fixture);
             expect(await vault.withdrawEnabled()).to.equal(false);
             await expect(vault.connect(other).enableWithdraw()).to.be.revertedWith(
-                "OwnableERC721: caller is not the owner",
+                "OERC721_CallerNotOwner",
             );
 
             expect(await vault.withdrawEnabled()).to.equal(false);
@@ -352,7 +352,7 @@ describe("AssetVault", () => {
             await whitelist.add(mockERC20.address, selector);
 
             await expect(vault.connect(user).call(mockERC20.address, mintData.data)).to.be.revertedWith(
-                "AssetVault: call disallowed",
+                "AV_CallDisallowed",
             );
         });
 
@@ -410,7 +410,7 @@ describe("AssetVault", () => {
             if (!mintData || !mintData.data) throw new Error("Populate transaction failed");
 
             await expect(vault.connect(user).call(mockERC20.address, mintData.data)).to.be.revertedWith(
-                "AssetVault: non-whitelisted call",
+                "AV_NonWhitelistedCall",
             );
         });
 
@@ -429,7 +429,7 @@ describe("AssetVault", () => {
             await nft.transferFrom(await user.getAddress(), mockCallDelegator.address, vault.address);
 
             await expect(vault.connect(user).call(mockERC20.address, mintData.data)).to.be.revertedWith(
-                "AssetVault: non-whitelisted call",
+                "AV_NonWhitelistedCall",
             );
         });
 
@@ -443,7 +443,7 @@ describe("AssetVault", () => {
             if (!transferData || !transferData.data) throw new Error("Populate transaction failed");
 
             await expect(vault.connect(user).call(mockERC20.address, transferData.data)).to.be.revertedWith(
-                "AssetVault: non-whitelisted call",
+                "AV_NonWhitelistedCall",
             );
         });
 
@@ -460,7 +460,7 @@ describe("AssetVault", () => {
             await whitelist.add(mockERC20.address, selector);
 
             await expect(vault.connect(user).call(mockERC20.address, transferData.data)).to.be.revertedWith(
-                "AssetVault: non-whitelisted call",
+                "AV_NonWhitelistedCall",
             );
         });
 
@@ -474,7 +474,7 @@ describe("AssetVault", () => {
             await whitelist.add(mockERC721.address, selector);
 
             await expect(vault.connect(user).call(mockERC721.address, mintData.data)).to.be.revertedWith(
-                "AssetVault: non-whitelisted call",
+                "AV_NonWhitelistedCall",
             );
         });
 
@@ -491,7 +491,7 @@ describe("AssetVault", () => {
             await whitelist.add(mockERC20.address, selector);
 
             await expect(vault.connect(user).call(mockERC1155.address, mintData.data)).to.be.revertedWith(
-                "AssetVault: non-whitelisted call",
+                "AV_NonWhitelistedCall",
             );
         });
     });
@@ -583,7 +583,7 @@ describe("AssetVault", () => {
 
                 await expect(
                     vault.connect(user).withdrawERC20(mockERC20.address, await user.getAddress()),
-                ).to.be.revertedWith("AssetVault: withdraws disabled");
+                ).to.be.revertedWith("AV_WithdrawsDisabled");
             });
 
             it("should fail to withdraw from non-owner", async () => {
@@ -594,7 +594,7 @@ describe("AssetVault", () => {
                 await vault.enableWithdraw();
                 await expect(
                     vault.connect(other).withdrawERC20(mockERC20.address, await user.getAddress()),
-                ).to.be.revertedWith("OwnableERC721: caller is not the owner");
+                ).to.be.revertedWith("OERC721_CallerNotOwner");
             });
 
             it("should throw when withdraw called by non-owner", async () => {
@@ -604,7 +604,7 @@ describe("AssetVault", () => {
 
                 await expect(
                     vault.connect(other).withdrawERC20(mockERC20.address, await user.getAddress()),
-                ).to.be.revertedWith("OwnableERC721: caller is not the owner");
+                ).to.be.revertedWith("OERC721_CallerNotOwner");
             });
 
             it("should fail when non-owner calls with approval", async () => {
@@ -613,7 +613,7 @@ describe("AssetVault", () => {
                 await nft.connect(user).approve(await other.getAddress(), vault.address);
                 await expect(
                     vault.connect(other).withdrawERC20(mockERC20.address, await user.getAddress()),
-                ).to.be.revertedWith("OwnableERC721: caller is not the owner");
+                ).to.be.revertedWith("OERC721_CallerNotOwner");
             });
         });
 
@@ -666,7 +666,7 @@ describe("AssetVault", () => {
                 await vault.enableWithdraw();
                 await expect(
                     vault.connect(other).withdrawERC721(mockERC721.address, tokenId, await user.getAddress()),
-                ).to.be.revertedWith("OwnableERC721: caller is not the owner");
+                ).to.be.revertedWith("OERC721_CallerNotOwner");
             });
 
             it("should fail to withdraw when withdraws disabled", async () => {
@@ -675,7 +675,7 @@ describe("AssetVault", () => {
 
                 await expect(
                     vault.connect(user).withdrawERC721(mockERC721.address, tokenId, await user.getAddress()),
-                ).to.be.revertedWith("AssetVault: withdraws disabled");
+                ).to.be.revertedWith("AV_WithdrawsDisabled");
             });
         });
 
@@ -715,14 +715,14 @@ describe("AssetVault", () => {
                     .withArgs(vault.address, vault.address, await user.getAddress(), tokenId, amount);
             });
 
-            it("should fail to withdraw when withdrwas disabled", async () => {
+            it("should fail to withdraw when withdraws disabled", async () => {
                 const { vault, mockERC1155, user } = await loadFixture(fixture);
                 const amount = hre.ethers.utils.parseEther("100");
                 const tokenId = await deposit(mockERC1155, vault, user, amount);
 
                 await expect(
                     vault.connect(user).withdrawERC1155(mockERC1155.address, tokenId, await user.getAddress()),
-                ).to.be.revertedWith("AssetVault: withdraws disabled");
+                ).to.be.revertedWith("AV_WithdrawsDisabled");
             });
 
             it("should throw when withdraw called by non-owner", async () => {
@@ -733,7 +733,7 @@ describe("AssetVault", () => {
                 await vault.enableWithdraw();
                 await expect(
                     vault.connect(other).withdrawERC1155(mockERC1155.address, tokenId, await other.getAddress()),
-                ).to.be.revertedWith("OwnableERC721: caller is not the owner");
+                ).to.be.revertedWith("OERC721_CallerNotOwner");
             });
         });
 
@@ -767,7 +767,7 @@ describe("AssetVault", () => {
                 await deposit(vault, user, amount);
 
                 await expect(vault.connect(user).withdrawETH(await user.getAddress())).to.be.revertedWith(
-                    "AssetVault: withdraws disabled",
+                    "AV_WithdrawsDisabled",
                 );
             });
 
@@ -777,7 +777,7 @@ describe("AssetVault", () => {
                 await deposit(vault, user, amount);
 
                 await expect(vault.connect(other).withdrawETH(await other.getAddress())).to.be.revertedWith(
-                    "OwnableERC721: caller is not the owner",
+                    "OERC721_CallerNotOwner",
                 );
             });
         });
