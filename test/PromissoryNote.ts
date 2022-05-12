@@ -397,7 +397,7 @@ describe("PromissoryNote", () => {
                     r,
                     s,
                 ),
-            ).to.be.revertedWith("ERC721Permit: not owner");
+            ).to.be.revertedWith("ERC721P_NotTokenOwner");
         });
 
         it("rejects if promissoryNoteId is not valid", async () => {
@@ -415,7 +415,7 @@ describe("PromissoryNote", () => {
                     r,
                     s,
                 ),
-            ).to.be.revertedWith("ERC721Permit: not owner");
+            ).to.be.revertedWith("ERC721P_NotTokenOwner");
         });
 
         it("rejects reused signature", async () => {
@@ -443,7 +443,7 @@ describe("PromissoryNote", () => {
                     r,
                     s,
                 ),
-            ).to.be.revertedWith("ERC721Permit: invalid signature");
+            ).to.be.revertedWith("ERC721P_InvalidSignature");
         });
 
         it("rejects other signature", async () => {
@@ -471,7 +471,7 @@ describe("PromissoryNote", () => {
                     r,
                     s,
                 ),
-            ).to.be.revertedWith("ERC721Permit: invalid signature");
+            ).to.be.revertedWith("ERC721P_InvalidSignature");
         });
 
         it("rejects expired signature", async () => {
@@ -503,7 +503,7 @@ describe("PromissoryNote", () => {
                     r,
                     s,
                 ),
-            ).to.be.revertedWith("ERC721Permit: expired deadline");
+            ).to.be.revertedWith("ERC721P_DeadlineExpired");
         });
     });
 });
