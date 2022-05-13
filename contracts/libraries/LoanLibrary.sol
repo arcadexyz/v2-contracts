@@ -18,8 +18,6 @@ library LoanLibrary {
     enum LoanState {
         // We need a default that is not 'Created' - this is the zero value
         DUMMY_DO_NOT_USE,
-        // The loan data is stored, but not initiated yet.
-        Created,
         // The loan has been initialized, funds have been delivered to the borrower and the collateral is held.
         Active,
         // The loan has been repaid, and the collateral has been returned to the borrower. This is a terminal state.

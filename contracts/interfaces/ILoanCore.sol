@@ -23,13 +23,11 @@ interface ILoanCore {
 
     // ============== Lifecycle Operations ==============
 
-    function createLoan(LoanLibrary.LoanTerms calldata terms) external returns (uint256 loanId);
-
     function startLoan(
         address lender,
         address borrower,
-        uint256 loanId
-    ) external;
+        LoanLibrary.LoanTerms calldata terms
+    ) external returns (uint256 loanId);
 
     function repay(uint256 loanId) external;
 

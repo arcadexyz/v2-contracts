@@ -131,15 +131,22 @@ contract LoanCore is
     // ====================================== LIFECYCLE OPERATIONS ======================================
 
     /**
-     * @notice Create and store a loan object with the given terms.
-     *         Performs check on terms validity and creates a LoanData
-     *         struct in storage.
+     * @notice Start a loan, matching a set of terms, with a given
+     *         lender and borrower. Collects collateral and distributes
+     *         principal, along with collecting an origination fee for the
+     *         protocol. Can only be called by OriginationController.
      *
+     * @param lender                The lender for the loan.
+     * @param borrower              The borrower for the loan.
      * @param terms                 The terms of the loan.
      *
      * @return loanId               The ID of the newly created loan.
      */
-    function createLoan(LoanLibrary.LoanTerms calldata terms)
+    function startLoan(
+        address lender,
+        address borrower,
+        LoanLibrary.LoanTerms calldata terms
+    )
         external
         override
         whenNotPaused
@@ -147,25 +154,29 @@ contract LoanCore is
         returns (uint256 loanId)
     {
         // loan duration must be greater than 1 hr and less than 3 years
-        if (terms.durationSecs < 3600 || terms.durationSecs > 94608000) revert LC_LoanDuration(terms.durationSecs);
+        if (terms.durationSecs < 3600 || terms.durationSecs > 94_608_000) revert LC_LoanDuration(terms.durationSecs);
+
         // check collateral is not already used in a loan.
         if (collateralInUse[terms.collateralAddress][terms.collateralId] == true)
             revert LC_CollateralInUse(terms.collateralAddress, terms.collateralId);
+
         // interest rate must be greater than or equal to 0.01%
         if (terms.interestRate / INTEREST_RATE_DENOMINATOR < 1) revert LC_InterestRate(terms.interestRate);
+
         // number of installments must be an even number.
-        if (terms.numInstallments % 2 != 0 || terms.numInstallments > 1000000)
+        if (terms.numInstallments % 2 != 0 || terms.numInstallments > 1_000_000)
             revert LC_NumberInstallments(terms.numInstallments);
 
         // get current loanId and increment for next function call
         loanId = loanIdTracker.current();
         loanIdTracker.increment();
-        // Using loanId, set inital LoanData state
+
+        // Initiate loan state
         loans[loanId] = LoanLibrary.LoanData({
-            borrowerNoteId: 0,
-            lenderNoteId: 0,
+            borrowerNoteId: loanId,
+            lenderNoteId: loanId,
             terms: terms,
-            state: LoanLibrary.LoanState.Created,
+            state: LoanLibrary.LoanState.Active,
             dueDate: block.timestamp + terms.durationSecs,
             startDate: block.timestamp,
             balance: terms.principal,
@@ -173,56 +184,20 @@ contract LoanCore is
             lateFeesAccrued: 0,
             numInstallmentsPaid: 0
         });
-        // set collateral to in use.
+
+        LoanLibrary.LoanData storage data = loans[loanId];
         collateralInUse[terms.collateralAddress][terms.collateralId] = true;
 
-        emit LoanCreated(terms, loanId);
-    }
+        // Distribute notes and principal
+        borrowerNote.mint(borrower, loanId);
+        lenderNote.mint(lender, loanId);
 
-    /**
-     * @notice Start a loan, matching a stored set of terms, with a given
-     *         lender and borrower. Collects collateral and distributes
-     *         principal, along with collecting an origination fee for the
-     *         protocol. Can only be called by OriginationController.
-     *
-     * @param lender                The lender for the loan.
-     * @param borrower              The borrower for the loan.
-     * @param loanId                The ID of the loan to start.
-     */
-    function startLoan(
-        address lender,
-        address borrower,
-        uint256 loanId
-    ) external override whenNotPaused onlyRole(ORIGINATOR_ROLE) {
-        LoanLibrary.LoanData memory data = loans[loanId];
+        IERC721Upgradeable(data.terms.collateralAddress).transferFrom(_msgSender(), address(this), data.terms.collateralId);
 
-        // Ensure valid initial loan state
-        if (data.state != LoanLibrary.LoanState.Created) revert LC_StartInvalidState(data.state);
-
-        // Pull collateral token and principal
-        IERC721(data.terms.collateralAddress).transferFrom(_msgSender(), address(this), data.terms.collateralId);
         IERC20Upgradeable(data.terms.payableCurrency).safeTransferFrom(
             _msgSender(),
             address(this),
             data.terms.principal
-        );
-
-        // Distribute notes and principal, initiate loan state
-        loans[loanId].state = LoanLibrary.LoanState.Active;
-        uint256 borrowerNoteId = borrowerNote.mint(borrower, loanId);
-        uint256 lenderNoteId = lenderNote.mint(lender, loanId);
-
-        loans[loanId] = LoanLibrary.LoanData(
-            borrowerNoteId,
-            lenderNoteId,
-            data.terms,
-            LoanLibrary.LoanState.Active,
-            data.dueDate,
-            data.startDate,
-            data.balance,
-            data.balancePaid,
-            data.lateFeesAccrued,
-            data.numInstallmentsPaid
         );
 
         IERC20Upgradeable(data.terms.payableCurrency).safeTransfer(
@@ -249,7 +224,8 @@ contract LoanCore is
 
         uint256 returnAmount = getFullInterestAmount(data.terms.principal, data.terms.interestRate);
         // ensure balance to be paid is greater than zero
-        if (returnAmount <= 0) revert LC_BalanceGTZero(returnAmount);
+        if (returnAmount == 0) revert LC_BalanceGTZero(returnAmount);
+
         // transfer from msg.sender to this contract
         IERC20Upgradeable(data.terms.payableCurrency).safeTransferFrom(_msgSender(), address(this), returnAmount);
 
@@ -267,7 +243,7 @@ contract LoanCore is
 
         // asset and collateral redistribution
         IERC20Upgradeable(data.terms.payableCurrency).safeTransfer(lender, returnAmount);
-        IERC721(data.terms.collateralAddress).transferFrom(address(this), borrower, data.terms.collateralId);
+        IERC721Upgradeable(data.terms.collateralAddress).transferFrom(address(this), borrower, data.terms.collateralId);
 
         emit LoanRepaid(loanId);
     }
@@ -298,7 +274,8 @@ contract LoanCore is
         borrowerNote.burn(data.borrowerNoteId);
 
         // collateral redistribution
-        IERC721(data.terms.collateralAddress).transferFrom(address(this), lender, data.terms.collateralId);
+        IERC721Upgradeable(data.terms.collateralAddress).transferFrom(address(this), lender, data.terms.collateralId);
+
         emit LoanClaimed(loanId);
     }
 
@@ -357,7 +334,7 @@ contract LoanCore is
                 IERC20Upgradeable(data.terms.payableCurrency).safeTransfer(borrower, diffAmount);
                 // Loan is fully repaid, redistribute asset and collateral.
                 IERC20Upgradeable(data.terms.payableCurrency).safeTransfer(lender, paymentTotal - diffAmount);
-                IERC721(data.terms.collateralAddress).transferFrom(address(this), borrower, data.terms.collateralId);
+                IERC721Upgradeable(data.terms.collateralAddress).transferFrom(address(this), borrower, data.terms.collateralId);
             }
             // exact amount sent, no difference calculation necessary
             else {
@@ -368,7 +345,7 @@ contract LoanCore is
                 // Loan is fully repaid, redistribute asset and collateral.
                 IERC20Upgradeable(data.terms.payableCurrency).safeTransfer(lender, paymentTotal);
 
-                IERC721(data.terms.collateralAddress).transferFrom(address(this), borrower, data.terms.collateralId);
+                IERC721Upgradeable(data.terms.collateralAddress).transferFrom(address(this), borrower, data.terms.collateralId);
             }
 
             emit LoanRepaid(_loanId);
