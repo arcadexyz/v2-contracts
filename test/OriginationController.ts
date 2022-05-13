@@ -177,6 +177,7 @@ describe("OriginationController", () => {
                 loanTerms,
                 borrower,
                 "2",
+                BigNumber.from(1)
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -203,6 +204,7 @@ describe("OriginationController", () => {
                 loanTerms,
                 borrower,
                 "2",
+                BigNumber.from(1)
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -227,6 +229,7 @@ describe("OriginationController", () => {
                 loanTerms,
                 borrower,
                 "2",
+                BigNumber.from(1)
             );
 
             await vaultFactory.connect(borrower).approve(originationController.address, bundleId);
@@ -251,6 +254,7 @@ describe("OriginationController", () => {
                 loanTerms,
                 borrower,
                 "2",
+                BigNumber.from(1)
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -276,6 +280,7 @@ describe("OriginationController", () => {
                 loanTerms,
                 signers[3],
                 "2",
+                BigNumber.from(1)
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -300,7 +305,7 @@ describe("OriginationController", () => {
                 loanTerms,
                 borrower,
                 "2",
-                "2", // Use nonce 2
+                BigNumber.from(2), // Use nonce 2
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -326,7 +331,7 @@ describe("OriginationController", () => {
                 loanTerms,
                 borrower,
                 "2",
-                "2", // Use nonce 2
+                BigNumber.from(2), // Use nonce 2
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -351,6 +356,7 @@ describe("OriginationController", () => {
                 loanTerms,
                 borrower,
                 "2",
+                BigNumber.from(1)
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -377,6 +383,7 @@ describe("OriginationController", () => {
                 loanTerms,
                 lender,
                 "2",
+                BigNumber.from(1)
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -404,6 +411,7 @@ describe("OriginationController", () => {
                 loanTerms,
                 borrower,
                 "2",
+                BigNumber.from(1)
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -430,6 +438,7 @@ describe("OriginationController", () => {
                 loanTerms,
                 lender,
                 "2",
+                BigNumber.from(1)
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -490,6 +499,7 @@ describe("OriginationController", () => {
                     loanTerms,
                     user,
                     "2",
+                    BigNumber.from(1)
                 );
 
                 await expect(
@@ -544,6 +554,7 @@ describe("OriginationController", () => {
                     loanTerms,
                     user,
                     "2",
+                    BigNumber.from(1)
                 );
 
                 await expect(
@@ -589,6 +600,7 @@ describe("OriginationController", () => {
                     loanTerms,
                     borrower,
                     "2",
+                    BigNumber.from(1)
                 );
 
                 let total = mockERC20.deployTransaction.value
@@ -1330,6 +1342,7 @@ describe("OriginationController", () => {
                 loanTerms,
                 newSigner, // Now signed by a third party
                 "2",
+                BigNumber.from(1)
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -1361,6 +1374,7 @@ describe("OriginationController", () => {
                 loanTerms,
                 newSigner, // Now signed by a third party
                 "2",
+                BigNumber.from(1)
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -1392,6 +1406,7 @@ describe("OriginationController", () => {
                 loanTerms,
                 lender,
                 "2",
+                BigNumber.from(1)
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -1423,6 +1438,7 @@ describe("OriginationController", () => {
                 loanTerms,
                 borrower,
                 "2",
+                BigNumber.from(1)
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -1455,6 +1471,7 @@ describe("OriginationController", () => {
                 loanTerms,
                 lender,
                 "2",
+                BigNumber.from(1)
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -1485,6 +1502,7 @@ describe("OriginationController", () => {
                 loanTerms,
                 borrower,
                 "2",
+                BigNumber.from(1)
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -1513,6 +1531,7 @@ describe("OriginationController", () => {
                 loanTerms,
                 lender,
                 "2",
+                BigNumber.from(1)
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
