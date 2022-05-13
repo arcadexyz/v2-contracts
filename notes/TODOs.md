@@ -7,41 +7,31 @@ Features:
 - Signature expiry
 - Native rollovers
 
-Final Cleanup:
-- Get 100% test coverage
-- Run prettier
+#### Evan:
 
+> V2 Protocol Planning/ Progress Report:
 
-Evan:
+- (IN PROGRESS) Installment claims:
+  - GRACE_PERIOD for late repayments after loanDuration?
+  - MAX_INSTALLMENTS_MISSED_FOR_LENDER_CLAIM?
+    - 3?
+      - How does this effect the various loan terms scenarios?
+  - Is a repayment LATE_FEE of 0.5% what we want?
+- (REVIEW) Loan Terms Restrictions:
+  - durationsSecs and numInstallments
 
-V2 Progress:
+> Branch Notes:
 
-- (Ready for Review) Custom Errors
-  - Lending.sol
-    - (DONE) OC - Kevin
-    - (DONE) IV - Kevin
-    - (DONE) RC
-    - (DONE) LC
-    - (DONE) FILC
-    - (DONE) PN
-  - LendingUtils.sol
-    - (DONE) ERC721P
-    - (DONE) ERC721PU
-    - (DONE) PunkRouter
-  - Vault.sol
-    - (DONE) AssetVault
-    - (DONE) OwnableERC721
-    - (DONE) VaultFactory
- - BEFORE MERGING:
-    - Go through natspec in error files to ensure they are up to standard.
-    - Remove the `TODO: custom errors` from top of contracts.
-    - Modify the tests so they do not fail due to new errors.
-
-📌 For Further Review Items:
-
-- Tune LoanTerms dials for what will be accepted. Namely: `durationSeconds` and `numInstallments`.
-- Global parameters, `LATE_FEE` and `GRACE_PERIOD`
-- `claim` functionality with installment loans, with grace period?
+- `installment-claims` branch:
+  1. Claiming after (x) amount of CONSECUTIVE missed installment payments.
+  2. Global late fee adjustment, Currently (0.5%)
+  3. Restrictions around LATE_FEE and numInstallments when creating a loan.
+  4. How to differentiate between legacy loan claims and installment claim scenarios
+  5. Tests for installment loan claiming scenarios
+    - Number of installments missed for claiming, consecutive an non-consecutive...
+    - Calling before and after the repayment grace period...
+    - Legacy vs installments lender claiming scenarios, protections from overlap...
+    - If the LATE_FEE parameter is changed, lots of installment calculations regarding late fees will need re-calculation
 
 Mouzayan:
 
