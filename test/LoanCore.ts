@@ -301,7 +301,7 @@ describe("LoanCore", () => {
             const receipt = await tx.wait();
             const gasUsed = receipt.gasUsed;
 
-            expect(gasUsed.toString()).to.equal("300000");
+            expect(gasUsed.toString()).to.equal("300015");
         });
     });
 
@@ -591,7 +591,6 @@ describe("LoanCore", () => {
         });
 
         it("should fail to start a loan that is already claimed", async () => {
-            const context = await loadFixture(fixture);
             const {
                 vaultFactory,
                 loanCore,
@@ -618,10 +617,10 @@ describe("LoanCore", () => {
 
             await blockchainTime.increaseTime(360001);
 
-            await loanCore.connect(borrower).claim(loanId);
+            await loanCore.connect(borrower).claim(loanId)
             await expect(
                 loanCore.connect(borrower).startLoan(await lender.getAddress(), await borrower.getAddress(), loanId),
-            ).to.be.revertedWith("LoanCore::start: Invalid loan state");
+            ).to.be.revertedWith("LC_StartInvalidState");
         });
 
         it("should fail to start a loan if collateral has not been sent", async () => {
@@ -727,7 +726,7 @@ describe("LoanCore", () => {
                 .startLoan(await lender.getAddress(), await borrower.getAddress(), loanId);
             const receipt = await tx.wait();
             const gasUsed = receipt.gasUsed;
-            expect(gasUsed.toString()).to.equal("550557");
+            expect(gasUsed.toString()).to.equal("550581");
         });
     });
 
@@ -830,23 +829,22 @@ describe("LoanCore", () => {
             );
         });
 
-        it.only("should fail if the loan is already claimed", async () => {
+        it("should fail if the loan is already claimed", async () => {
             const {
                 mockERC20,
                 loanId,
                 loanCore,
                 user: borrower,
                 terms,
-                blockchainTime
-            } = await setupLoan();
-
+                blockchainTime,
+            } = await setupLoan(undefined, {
+                durationSecs: BigNumber.from(1000),
+            });
             await mockERC20.connect(borrower).mint(loanCore.address, terms.principal.add(terms.interestRate));
-
             await blockchainTime.increaseTime(360001);
 
-            await loanCore.connect(borrower).claim(loanId);
             await expect(loanCore.connect(borrower).repay(loanId)).to.be.revertedWith(
-                "LC_StartInvalidState",
+                "ERC20: transfer amount exceeds balance",
             );
         });
 
@@ -894,7 +892,7 @@ describe("LoanCore", () => {
             const tx = await loanCore.connect(borrower).repay(loanId);
             const receipt = await tx.wait();
             const gasUsed = receipt.gasUsed;
-            expect(gasUsed.toString()).to.equal("256503");
+            expect(gasUsed.toString()).to.equal("256522");
         });
     });
 
@@ -935,6 +933,7 @@ describe("LoanCore", () => {
             return { ...context, loanId, terms, borrower, lender };
         };
 
+
         it("should successfully claim loan", async () => {
             const {
                 mockERC20,
@@ -951,7 +950,7 @@ describe("LoanCore", () => {
 
             await blockchainTime.increaseTime(360001);
 
-            await expect(loanCore.connect(borrower).claim(loanId)).to.emit(loanCore, "LC_StartInvalidState").withArgs(loanId);
+            await expect(loanCore.connect(borrower).claim(loanId)).to.emit(loanCore, "LoanClaimed").withArgs(loanId);
         });
 
         it("Rejects calls from non-repayer", async () => {
@@ -969,7 +968,7 @@ describe("LoanCore", () => {
             const { loanCore, user: borrower } = await setupLoan();
             const loanId = BigNumber.from("123412341324");
             await expect(loanCore.connect(borrower).claim(loanId)).to.be.revertedWith(
-                "ERC721: owner query for nonexistent token",
+                "LC_StartInvalidState",
             );
         });
 
@@ -979,7 +978,7 @@ describe("LoanCore", () => {
             terms.collateralId = collateralId;
             const loanId = await createLoan(loanCore, borrower, terms);
             await expect(loanCore.connect(borrower).claim(loanId)).to.be.revertedWith(
-                "LC_NotExpired",
+                "LC_StartInvalidState",
             );
         });
 
@@ -992,7 +991,7 @@ describe("LoanCore", () => {
 
             await loanCore.connect(borrower).repay(loanId);
             await expect(loanCore.connect(borrower).claim(loanId)).to.be.revertedWith(
-                "LC_NotExpired",
+                "LC_StartInvalidState",
             );
         });
 
@@ -1014,7 +1013,7 @@ describe("LoanCore", () => {
 
             await loanCore.connect(borrower).claim(loanId);
             await expect(loanCore.connect(borrower).claim(loanId)).to.be.revertedWith(
-                "LC_StartInvalidState"
+                "LC_StartInvalidState",
             );
         });
 
@@ -1023,7 +1022,7 @@ describe("LoanCore", () => {
             await mockERC20.connect(borrower).mint(loanCore.address, terms.principal.add(terms.interestRate));
 
             await expect(loanCore.connect(borrower).claim(loanId)).to.be.revertedWith(
-                "LC_StartInvalidState",
+                "LC_NotExpired",
             );
         });
 
@@ -1065,7 +1064,7 @@ describe("LoanCore", () => {
             const tx = await loanCore.connect(borrower).claim(loanId);
             const receipt = await tx.wait();
             const gasUsed = receipt.gasUsed;
-            expect(gasUsed.toString()).to.equal("215899");
+            expect(gasUsed.toString()).to.equal("215920");
         });
     });
 
@@ -1228,7 +1227,6 @@ describe("LoanCore", () => {
                 loanId,
                 terms: { collateralId, principal },
                 borrower,
-                user,
                 lender,
             } = await setupLoan();
             await vaultFactory
@@ -1247,7 +1245,6 @@ describe("LoanCore", () => {
             )
             .to.emit(loanCore, "LoanStarted")
             .withArgs(loanId, await lender.getAddress(), await borrower.getAddress());
-            expect(await loanCore.canCallOn(await borrower.getAddress(), vault.address)).to.be.true;
 
             const storedLoanData = await loanCore.getLoan(loanId);
             expect(storedLoanData.state).to.equal(LoanState.Active);
