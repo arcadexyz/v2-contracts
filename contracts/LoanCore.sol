@@ -21,10 +21,15 @@ import "./interfaces/ILoanCore.sol";
 import "./FullInterestAmountCalc.sol";
 import "./PromissoryNote.sol";
 import "./vault/OwnableERC721.sol";
-
-import "hardhat/console.sol";
-
-import { LC_LoanDuration, LC_CollateralInUse, LC_InterestRate, LC_NumberInstallments, LC_StartInvalidState, LC_NotExpired, LC_BalanceGTZero, LC_NonceUsed } from "./errors/Lending.sol";
+import { LC_LoanDuration,
+            LC_CollateralInUse,
+            LC_InterestRate,
+            LC_NumberInstallments,
+            LC_StartInvalidState,
+            LC_NotExpired,
+            LC_BalanceGTZero,
+            LC_NonceUsed
+        } from "./errors/Lending.sol";
 
 /**
  * @title LoanCore
@@ -276,28 +281,23 @@ contract LoanCore is
      */
     function claim(uint256 loanId) external override whenNotPaused onlyRole(REPAYER_ROLE) {
         LoanLibrary.LoanData memory data = loans[loanId];
-        console.log("1 -------------------------------------------------------------------");
         // ensure valid initial loan state when starting loan
-        if (data.state == LoanLibrary.LoanState.Active) revert LC_StartInvalidState(data.state);
-        console.log("2 -------------------------------------------------------------------");
+        if (data.state != LoanLibrary.LoanState.Active) revert LC_StartInvalidState(data.state);
         // ensure claiming after the loan has ended. block.timstamp must be greater than the dueDate.
+
         if (data.dueDate > block.timestamp) revert LC_NotExpired(data.dueDate);
-console.log("3 -------------------------------------------------------------------");
+
         address lender = lenderNote.ownerOf(data.lenderNoteId);
 
         // NOTE: these must be performed before assets are released to prevent reentrance
         loans[loanId].state = LoanLibrary.LoanState.Defaulted;
         collateralInUse[data.terms.collateralAddress][data.terms.collateralId] = false;
-        console.log("4 -------------------------------------------------------------------");
 
         lenderNote.burn(data.lenderNoteId);
         borrowerNote.burn(data.borrowerNoteId);
-        console.log("5 -------------------------------------------------------------------");
 
         // collateral redistribution
         IERC721(data.terms.collateralAddress).transferFrom(address(this), lender, data.terms.collateralId);
-        console.log("6 -------------------------------------------------------------------");
-
         emit LoanClaimed(loanId);
     }
 
@@ -441,16 +441,11 @@ console.log("3 -----------------------------------------------------------------
         if (!collateralInUse[OwnableERC721(vault).ownershipToken()][uint256(uint160(vault))]) {
             return false;
         }
-        console.log("caler -----------------------------", caller);
-        console.log("vault -----------------------------", vault);
-        console.log("vault 2 -----------------------------", uint256(uint160(vault)));
-
         for (uint256 i = 0; i < borrowerNote.balanceOf(caller); i++) {
             uint256 borrowerNoteId = borrowerNote.tokenOfOwnerByIndex(caller, i);
             uint256 loanId = borrowerNote.loanIdByNoteId(borrowerNoteId);
             // if the borrower is currently borrowing against this vault,
             // return true
-            console.log("collateralId -----------------------------", loans[loanId].terms.collateralId);
             if (loans[loanId].terms.collateralId == uint256(uint160(vault))) {
                 return true;
             }
