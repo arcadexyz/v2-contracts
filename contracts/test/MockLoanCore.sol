@@ -13,8 +13,6 @@ import "../interfaces/IPromissoryNote.sol";
 
 import "../PromissoryNote.sol";
 
-// TODO: Proper natspec
-
 /**
  * @dev Interface for the LoanCore contract
  */
@@ -73,43 +71,6 @@ contract MockLoanCore is ILoanCore, Initializable, AccessControlUpgradeable, UUP
     }
 
     /**
-     * @dev Create store a loan object with some given terms
-     */
-    function createLoan(LoanLibrary.LoanTerms calldata terms) external override returns (uint256 loanId) {
-        LoanLibrary.LoanTerms memory _loanTerms = LoanLibrary.LoanTerms(
-            terms.durationSecs,
-            terms.principal,
-            terms.interestRate,
-            terms.collateralAddress,
-            terms.collateralId,
-            terms.payableCurrency,
-            terms.numInstallments
-        );
-
-        LoanLibrary.LoanData memory _loanData = LoanLibrary.LoanData(
-            0,
-            0,
-            _loanTerms,
-            LoanLibrary.LoanState.Created,
-            terms.durationSecs,
-            block.timestamp,
-            terms.principal,
-            0,
-            0,
-            0
-        );
-
-        loanId = loanIdTracker.current();
-        loanIdTracker.increment();
-
-        loans[loanId] = _loanData;
-
-        emit LoanCreated(terms, loanId);
-
-        return loanId;
-    }
-
-    /**
      * @dev Start a loan with the given borrower and lender
      *  Distributes the principal less the protocol fee to the borrower
      *
@@ -120,20 +81,22 @@ contract MockLoanCore is ILoanCore, Initializable, AccessControlUpgradeable, UUP
     function startLoan(
         address lender,
         address borrower,
-        uint256 loanId
-    ) public override {
+        LoanLibrary.LoanTerms calldata terms
+    ) public override returns (uint256 loanId) {
+        loanId = loanIdTracker.current();
+        loanIdTracker.increment();
+
         uint256 borrowerNoteId = borrowerNote.mint(borrower, loanId);
         uint256 lenderNoteId = lenderNote.mint(lender, loanId);
 
-        LoanLibrary.LoanData memory data = loans[loanId];
         loans[loanId] = LoanLibrary.LoanData(
             borrowerNoteId,
             lenderNoteId,
-            data.terms,
+            terms,
             LoanLibrary.LoanState.Active,
-            data.dueDate,
-            data.startDate,
-            data.terms.principal,
+            block.timestamp + terms.durationSecs,
+            block.timestamp,
+            terms.principal,
             0,
             0,
             0

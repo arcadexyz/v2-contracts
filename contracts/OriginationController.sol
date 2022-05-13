@@ -546,7 +546,6 @@ contract OriginationController is
         IERC721(loanTerms.collateralAddress).approve(loanCore, loanTerms.collateralId);
 
         // Start loan
-        loanId = ILoanCore(loanCore).createLoan(loanTerms);
-        ILoanCore(loanCore).startLoan(lender, borrower, loanId);
+        loanId = ILoanCore(loanCore).startLoan(lender, borrower, loanTerms);
     }
 }

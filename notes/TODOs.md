@@ -14,7 +14,6 @@ Refactoring:
   - (check setFeeController for address 0 and emit event)
   - (add isNonceUsed function)
   - (remove SafeMath)
-- Custom errors
 - Run prettier
 
 Features:
