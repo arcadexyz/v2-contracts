@@ -114,15 +114,18 @@ describe("VaultFactory", () => {
 
         it("Should return vaults at index", async () => {
             const { factory, user } = await loadFixture(fixture);
-
+            // create vaults
             const vault1 = await createVault(factory, user);
             const vault2 = await createVault(factory, user);
             const vault3 = await createVault(factory, user);
-
-            //expect(await factory.instanceAt(0)).to.equal(vault1.address);
-            expect(await factory.instanceAt(1)).to.be.true;
-            expect(await factory.instanceAt(1)).to.equal(vault2.address);
-            expect(await factory.instanceAt(2)).to.equal(vault3.address);
+            //find the address of vault at specified index
+            const instAtIndex1 = await factory.instanceAtIndex(0);
+            const instAtIndex2 = await factory.instanceAtIndex(1);
+            const instAtIndex3 = await factory.instanceAtIndex(2);
+            //use index returned to get the address of vault and compare
+            expect(await factory.instanceAt(instAtIndex1)).to.equal(vault1.address);
+            expect(await factory.instanceAt(instAtIndex2)).to.equal(vault2.address);
+            expect(await factory.instanceAt(instAtIndex3)).to.equal(vault3.address);
         });
     });
 
