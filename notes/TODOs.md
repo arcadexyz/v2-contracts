@@ -9,6 +9,7 @@ Features:
 
 #### Evan:
 
+<<<<<<< HEAD
 > V2 Protocol Planning/ Progress:
 
 - (IN PROGRESS) Installment Claims:
@@ -24,6 +25,18 @@ Features:
   - `durationsSecs` and `numInstallments`
    - Max `numInstallments` in LoanTerms to be changed to 1000 installments.
    - Need to add more tests around the smaller duration loans after the claiming is implemented.
+=======
+> V2 Protocol Planning/ Progress Report:
+
+- (IN PROGRESS) Installment claims:
+  - GRACE_PERIOD for late repayments after loanDuration?
+  - MAX_INSTALLMENTS_MISSED_FOR_LENDER_CLAIM?
+    - 3?
+      - How does this effect the various loan terms scenarios?
+  - Is a repayment LATE_FEE of 0.5% what we want?
+- (REVIEW) Loan Terms Restrictions:
+  - durationsSecs and numInstallments
+>>>>>>> 132ae80 (docs(claims): todo updated with goals for the branch)
 
 > Branch Notes:
 
