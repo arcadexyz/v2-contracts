@@ -304,61 +304,51 @@ contract LoanCore is
         LoanLibrary.LoanData storage data = loans[_loanId];
         // ensure valid initial loan state when repaying loan
         if (data.state != LoanLibrary.LoanState.Active) revert LC_StartInvalidState(data.state);
+
         // calculate total sent by borrower and transferFrom repayment controller to this address
         uint256 paymentTotal = _paymentToPrincipal + _paymentToLateFees + _paymentToInterest;
         IERC20Upgradeable(data.terms.payableCurrency).safeTransferFrom(_msgSender(), address(this), paymentTotal);
+
         // get the lender and borrower
         address lender = lenderNote.ownerOf(data.lenderNoteId);
         address borrower = borrowerNote.ownerOf(data.borrowerNoteId);
-        // update common state
-        data.lateFeesAccrued = data.lateFeesAccrued + _paymentToLateFees;
-        data.numInstallmentsPaid = data.numInstallmentsPaid + _currentMissedPayments + 1;
 
-        // * If payment sent is exact or extra than remaining principal
-        if (_paymentToPrincipal > data.balance || _paymentToPrincipal == data.balance) {
-            // set the loan state to repaid
+        // update common state
+        data.lateFeesAccrued += _paymentToLateFees;
+        data.numInstallmentsPaid += _currentMissedPayments + 1;
+
+        uint256 _balanceToPay = _paymentToPrincipal;
+        if (_balanceToPay >= data.balance) {
+            _balanceToPay = data.balance;
+
+            // mark loan as closed
             data.state = LoanLibrary.LoanState.Repaid;
             collateralInUse[data.terms.collateralAddress][data.terms.collateralId] = false;
-
-            // state changes and cleanup
             lenderNote.burn(data.lenderNoteId);
             borrowerNote.burn(data.borrowerNoteId);
+        }
 
-            // return the difference to borrower
-            if (_paymentToPrincipal > data.balance) {
-                uint256 diffAmount = _paymentToPrincipal - data.balance;
-                // update balance state balancePaid is the current principal
-                data.balance = 0;
-                data.balancePaid += paymentTotal - diffAmount;
-                // update paymentTotal since extra amount sent
-                IERC20Upgradeable(data.terms.payableCurrency).safeTransfer(borrower, diffAmount);
-                // Loan is fully repaid, redistribute asset and collateral.
-                IERC20Upgradeable(data.terms.payableCurrency).safeTransfer(lender, paymentTotal - diffAmount);
-                IERC721Upgradeable(data.terms.collateralAddress).transferFrom(address(this), borrower, data.terms.collateralId);
-            }
-            // exact amount sent, no difference calculation necessary
-            else {
-                // update balance
-                data.balance = 0;
-                data.balancePaid += paymentTotal;
+        // Unlike paymentTotal, cannot go over maximum amount owed
+        uint256 boundedPaymentTotal = _balanceToPay + _paymentToLateFees + _paymentToInterest;
 
-                // Loan is fully repaid, redistribute asset and collateral.
-                IERC20Upgradeable(data.terms.payableCurrency).safeTransfer(lender, paymentTotal);
+        // update balance state
+        data.balance -= _balanceToPay;
+        data.balancePaid += boundedPaymentTotal;
 
-                IERC721Upgradeable(data.terms.collateralAddress).transferFrom(address(this), borrower, data.terms.collateralId);
+        // Send payment to lender.
+        IERC20Upgradeable(data.terms.payableCurrency).safeTransfer(lender, boundedPaymentTotal);
+
+        // If repaid, send collateral to borrower
+        if (data.state == LoanLibrary.LoanState.Repaid) {
+            IERC721Upgradeable(data.terms.collateralAddress).transferFrom(address(this), borrower, data.terms.collateralId);
+
+            if (_paymentToPrincipal > _balanceToPay) {
+                // Borrower overpaid, so send refund
+                IERC20Upgradeable(data.terms.payableCurrency).safeTransfer(borrower, _paymentToPrincipal - _balanceToPay);
             }
 
             emit LoanRepaid(_loanId);
-        }
-        // * Else, (mid loan payment)
-        else {
-            // update balance state
-            data.balance -= _paymentToPrincipal;
-            data.balancePaid += paymentTotal;
-
-            // Loan partial payment, redistribute asset to lender.
-            IERC20Upgradeable(data.terms.payableCurrency).safeTransfer(lender, paymentTotal);
-
+        } else {
             // minimum repayment events will emit 0 and unchanged principal
             emit InstallmentPaymentReceived(_loanId, _paymentToPrincipal, data.balance);
         }
