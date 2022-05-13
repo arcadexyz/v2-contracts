@@ -197,6 +197,7 @@ const initializeLoan = async (
         loanTerms,
         borrower,
         "2",
+        BigNumber.from(1)
     );
 
     await approve(mockERC20, lender, originationController.address, loanTerms.principal);
