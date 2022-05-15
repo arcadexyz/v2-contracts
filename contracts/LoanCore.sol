@@ -313,10 +313,6 @@ contract LoanCore is
         address lender = lenderNote.ownerOf(data.lenderNoteId);
         address borrower = borrowerNote.ownerOf(data.borrowerNoteId);
 
-        // update common state
-        data.lateFeesAccrued += _paymentToLateFees;
-        data.numInstallmentsPaid += _currentMissedPayments + 1;
-
         uint256 _balanceToPay = _paymentToPrincipal;
         if (_balanceToPay >= data.balance) {
             _balanceToPay = data.balance;
@@ -331,7 +327,9 @@ contract LoanCore is
         // Unlike paymentTotal, cannot go over maximum amount owed
         uint256 boundedPaymentTotal = _balanceToPay + _paymentToLateFees + _paymentToInterest;
 
-        // update balance state
+        // update loan state
+        data.lateFeesAccrued += _paymentToLateFees;
+        data.numInstallmentsPaid += _currentMissedPayments + 1;
         data.balance -= _balanceToPay;
         data.balancePaid += boundedPaymentTotal;
 
