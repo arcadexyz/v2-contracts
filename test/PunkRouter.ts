@@ -1,11 +1,11 @@
 import { expect } from "chai";
-import hre, { upgrades, waffle } from "hardhat";
-const { loadFixture } = waffle;
+import hre, { upgrades } from "hardhat";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
 import { BigNumber } from "ethers";
 
 import { VaultFactory, CallWhitelist, AssetVault, PunkRouter, CryptoPunksMarket, WrappedPunk, OriginationController, LoanCore, FeeController } from "../typechain";
 import { deploy } from "./utils/contracts";
+
 
 type Signer = SignerWithAddress;
 
@@ -31,7 +31,8 @@ interface TestContextForDepositStuck {
     vaultFactory: VaultFactory;
 }
 
-describe("PunkRouter", () => {
+describe("PunkRouter", async () => {
+
     /**
      * Sets up a test context, deploying new contracts and returning them for use in a test
      */
@@ -96,13 +97,14 @@ describe("PunkRouter", () => {
         };
     };
 
+
     /**
-     * Initialize a new bundle, returning the bundleId
+     * Set up a test asset vault for the user passed as a parameter
      */
-    const initializeBundle = async (user: Signer): Promise<BigNumber> => {
-        const { vaultFactory } = await loadFixture(setupTestContext);
+    const initializeBundle = async (vaultFactory: VaultFactory, user: SignerWithAddress): Promise<BigNumber> => {
         const tx = await vaultFactory.connect(user).initializeBundle(await user.getAddress());
         const receipt = await tx.wait();
+
         if (receipt && receipt.events) {
             for (const event of receipt.events) {
                 if (event.event && event.event === "VaultCreated" && event.args && event.args.vault) {
@@ -115,9 +117,10 @@ describe("PunkRouter", () => {
         }
     };
 
-    describe("Deposit CryptoPunk", function () {
+
+    describe("Deposit CryptoPunk", async () => {
         it("should successfully deposit a cryptopunk into bundle", async () => {
-            const { punks, wrappedPunks, punkRouter, user } = await setupTestContext();
+            const { vaultFactory, punks, wrappedPunks, punkRouter, user } = await setupTestContext();
             const punkIndex = 1234;
             // claim ownership of punk
             await punks.setInitialOwner(await user.getAddress(), punkIndex);
@@ -125,52 +128,45 @@ describe("PunkRouter", () => {
             // "approve" the punk to the router
             await punks.offerPunkForSaleToAddress(punkIndex, 0, punkRouter.address);
 
-            const bundleId = await initializeBundle(user);
-            await expect(punkRouter.depositPunk(punkIndex, bundleId))
+            const bundleId = await initializeBundle(vaultFactory, user);
+            expect(await punkRouter.depositPunk(punkIndex, bundleId))
                 .to.emit(wrappedPunks, "Transfer")
                 .withArgs(punkRouter.address, bundleId, punkIndex);
 
-            expect(await wrappedPunks.ownerOf(punkIndex)).to.equal(bundleId);
+            const owner = await wrappedPunks.ownerOf(punkIndex)
+            expect(owner).to.equal(bundleId);
         });
 
-        // modifier NEEDED for offerPunkForSaleToAddress function to cause revert
-        ////////////////////////////////////////////////////////////////////
-        // it("should fail if not approved", async () => {
-        //     const { punks, punkRouter, user } = await setupTestContext();
-        //     const punkIndex = 1234;
-        //     // claim ownership of punk
-        //     await punks.setInitialOwner(await user.getAddress(), punkIndex);
-        //     await punks.allInitialOwnersAssigned();
-        //     // skip "approving" the punk to the router
 
-        //     const bundleId = await initializeBundle(user);
-        //     await expect(punkRouter.depositPunk(punkIndex, bundleId)).to.be.reverted;
-        // });
-
-        // Test times out one line 166 right at .to.be.revertedWith(
-        //        "PunkRouter: not owner",)
-        ////////////////////////////////////////////////////////////////////
-        it("should fail if not owner", async () => {
-            const { punks, punkRouter, user, other } = await setupTestContext();
+        it("should fail if not approved", async () => {
+            const { vaultFactory, punks, punkRouter, user } = await setupTestContext();
             const punkIndex = 1234;
             // claim ownership of punk
             await punks.setInitialOwner(await user.getAddress(), punkIndex);
             await punks.allInitialOwnersAssigned();
- console.log('----------------------------------------')
+            // skip "approving" the punk to the router
 
+            const bundleId = await initializeBundle(vaultFactory, user);
+            await expect(punkRouter.depositPunk(punkIndex, bundleId)).to.be.reverted;
+        })
 
-console.log('----------------------------------------')
+        it("should fail if not owner", async () => {
+            const { vaultFactory, punks, punkRouter, user, other } = await setupTestContext();
+            const punkIndex = 1234;
+            // claim ownership of punk
+            await punks.setInitialOwner(await user.getAddress(), punkIndex);
+            await punks.allInitialOwnersAssigned();
+
             // "approve" the punk to the router
             await punks.offerPunkForSaleToAddress(punkIndex, 0, punkRouter.address);
-            const bundleId = await initializeBundle(user);
-console.log('---------------------------------------- bundleId', bundleId)
-            await expect(punkRouter.connect(other).depositPunk(punkIndex, bundleId)).to.be.revertedWith(
-                "PunkRouter: not owner",)
+            const bundleId = await initializeBundle(vaultFactory, user);
 
+            await expect(punkRouter.connect(other).depositPunk(punkIndex, bundleId)).to.be.revertedWith(
+                "PR_NotOwner",)
         });
     });
 
-    describe("Withdraw CryptoPunk held by PunkRouter", function () {
+    describe("Withdraw CryptoPunk held by PunkRouter", async function () {
         it("should successfully withdraw punk", async () => {
             const { punks, punkRouter, other, punkIndex } = await setupTestContextForDepositStuck();
             await expect(punkRouter.withdrawPunk(punkIndex, other.address))
@@ -188,3 +184,4 @@ console.log('---------------------------------------- bundleId', bundleId)
         });
     });
 });
+
