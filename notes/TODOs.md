@@ -10,6 +10,9 @@ Features:
 #### Evan:
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 00dddf5 (docs(installment-claims): tODOs updated to reflect claim deiscussions with Arcade team)
 > V2 Protocol Planning/ Progress:
 
 - (IN PROGRESS) Installment Claims:
@@ -25,6 +28,7 @@ Features:
   - `durationsSecs` and `numInstallments`
    - Max `numInstallments` in LoanTerms to be changed to 1000 installments.
    - Need to add more tests around the smaller duration loans after the claiming is implemented.
+<<<<<<< HEAD
 =======
 > V2 Protocol Planning/ Progress Report:
 
@@ -37,6 +41,8 @@ Features:
 - (REVIEW) Loan Terms Restrictions:
   - durationsSecs and numInstallments
 >>>>>>> 132ae80 (docs(claims): todo updated with goals for the branch)
+=======
+>>>>>>> 00dddf5 (docs(installment-claims): tODOs updated to reflect claim deiscussions with Arcade team)
 
 > Branch Notes:
 
