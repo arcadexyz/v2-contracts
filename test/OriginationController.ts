@@ -155,7 +155,7 @@ describe("OriginationController", () => {
         expect (await mockOriginationController.isApproved(await borrower.getAddress(), await lender.getAddress())).to.be.true;
         });
     });
-});
+
     describe("initializeLoan", () => {
         let ctx: TestContext;
 
@@ -1544,4 +1544,4 @@ describe("OriginationController", () => {
         });
     });
 
-
+});
