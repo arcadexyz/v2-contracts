@@ -19,7 +19,7 @@ import "./interfaces/IERC721Permit.sol";
 import "./interfaces/IAssetVault.sol";
 import "./interfaces/IVaultFactory.sol";
 import "./interfaces/ISignatureVerifier.sol";
-import "hardhat/console.sol";
+
 import "./verifiers/ItemsVerifier.sol";
 import {
     OC_ZeroAddress,
