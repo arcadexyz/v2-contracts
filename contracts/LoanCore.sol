@@ -99,7 +99,7 @@ contract LoanCore is
      *
      * @param _feeController      The address of the contract governing protocol fees.
      */
-    function initialize(IFeeController _feeController) public initializer {
+    function initialize(IFeeController _feeController, IPromissoryNote _borrowerNote, IPromissoryNote _lenderNote) public initializer {
         // only those with FEE_CLAIMER_ROLE can update or grant FEE_CLAIMER_ROLE
         __AccessControl_init();
         __UUPSUpgradeable_init_unchained();
@@ -110,10 +110,11 @@ contract LoanCore is
 
         feeController = _feeController;
 
-        // TODO: Why are these deployed? Can these be provided beforehand?
-        //       Even updatable with note addresses going in LoanData?
-        borrowerNote = new PromissoryNote("PawnFi Borrower Note", "pBN");
-        lenderNote = new PromissoryNote("PawnFi Lender Note", "pLN");
+        /// @dev Although using references for both promissory notes, these
+        ///      must be fresh versions and cannot be re-used across multiple
+        ///      loanCore instances, to ensure loanId <> tokenID parity
+        borrowerNote = _borrowerNote;
+        lenderNote = _lenderNote;
 
         // Avoid having loanId = 0
         loanIdTracker.increment();
