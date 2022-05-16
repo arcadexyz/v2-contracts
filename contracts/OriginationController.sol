@@ -19,7 +19,7 @@ import "./interfaces/IERC721Permit.sol";
 import "./interfaces/IAssetVault.sol";
 import "./interfaces/IVaultFactory.sol";
 import "./interfaces/ISignatureVerifier.sol";
-
+import "hardhat/console.sol";
 import "./verifiers/ItemsVerifier.sol";
 import {
     OC_ZeroAddress,
@@ -29,7 +29,8 @@ import {
     OC_SelfApprove,
     OC_ApprovedOwnLoan,
     OC_InvalidSignature,
-    OC_CallerNotParticipant
+    OC_CallerNotParticipant,
+    OC_PrincipalTooLow
 } from "./errors/Lending.sol";
 
 /**
@@ -154,6 +155,9 @@ contract OriginationController is
         (bytes32 sighash, address externalSigner) = recoverTokenSignature(loanTerms, sig, nonce);
 
         _validateCounterparties(borrower, lender, msg.sender, externalSigner, sig, sighash);
+
+        // principal must be greater than or equal to 1000 wei
+        if (loanTerms.principal <= 9999) revert OC_PrincipalTooLow(loanTerms.principal);
 
         ILoanCore(loanCore).consumeNonce(externalSigner, nonce);
         loanId = _initialize(loanTerms, borrower, lender);

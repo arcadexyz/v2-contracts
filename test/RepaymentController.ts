@@ -354,22 +354,20 @@ describe("Legacy Repayments with interest parameter as a rate:", () => {
         );
     });
 
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // NOTE: require statement needed in the CreateLoan function to block anything below 10000 wei for a principal
-    // it("Legacy loan type (no installments), repay interest and principal. 9999 Wei principal, 2.5% interest rate. Should revert on initialization.", async () => {
-    //     const context = await loadFixture(fixture);
-    //     const { mockERC20 } = context;
-    //     await expect(
-    //         initializeLoan(
-    //             context,
-    //             mockERC20.address,
-    //             BigNumber.from(86400), // durationSecs
-    //             hre.ethers.utils.parseEther(".000000000000009999"), // principal
-    //             hre.ethers.utils.parseEther("250"), // interest
-    //             0, // numInstallments
-    //         ),
-    //     ).to.be.revertedWith("LoanCore::create: The minimum Principal allowed is 10000 wei.");
-    // });
+    it("Legacy loan type (no installments), repay interest and principal. 9999 Wei principal, 2.5% interest rate. Should revert on initialization.", async () => {
+        const context = await loadFixture(fixture);
+        const { mockERC20 } = context;
+        await expect(
+            initializeLoan(
+                context,
+                mockERC20.address,
+                BigNumber.from(86400), // durationSecs
+                hre.ethers.utils.parseEther(".000000000000009999"), // principal
+                hre.ethers.utils.parseEther("250"), // interest
+                0, // numInstallments
+            ),
+        ).to.be.revertedWith("OC_PrincipalTooLow");
+    });
 
     it("Legacy loan type (no installments), repay interest and principal. 1000 Wei principal, 2.5% interest rate.", async () => {
         const context = await loadFixture(fixture);
