@@ -21,8 +21,16 @@ import "./interfaces/IVaultFactory.sol";
 import "./interfaces/ISignatureVerifier.sol";
 
 import "./verifiers/ItemsVerifier.sol";
-import "hardhat/console.sol";
-import { OC_ZeroAddress, OC_InvalidVerifier, OC_BatchLengthMismatch, OC_PredicateFailed, OC_SelfApprove, OC_ApprovedOwnLoan, OC_InvalidSignature, OC_CallerNotParticipant } from "./errors/Lending.sol";
+import {
+    OC_ZeroAddress,
+    OC_InvalidVerifier,
+    OC_BatchLengthMismatch,
+    OC_PredicateFailed,
+    OC_SelfApprove,
+    OC_ApprovedOwnLoan,
+    OC_InvalidSignature,
+    OC_CallerNotParticipant
+} from "./errors/Lending.sol";
 
 /**
  * @title OriginationController
@@ -49,7 +57,6 @@ contract OriginationController is
     // ============================================ STATE ==============================================
 
     // =================== Constants =====================
-    bytes32 public constant ORIGINATOR_ROLE = keccak256("ORIGINATOR_ROLE");
 
     /// @notice EIP712 type hash for bundle-based signatures.
     bytes32 private constant _TOKEN_ID_TYPEHASH =
