@@ -21,15 +21,16 @@ import "./interfaces/ILoanCore.sol";
 import "./FullInterestAmountCalc.sol";
 import "./PromissoryNote.sol";
 import "./vault/OwnableERC721.sol";
-import { LC_LoanDuration,
-            LC_CollateralInUse,
-            LC_InterestRate,
-            LC_NumberInstallments,
-            LC_StartInvalidState,
-            LC_NotExpired,
-            LC_BalanceGTZero,
-            LC_NonceUsed
-        } from "./errors/Lending.sol";
+import {
+    LC_LoanDuration,
+    LC_CollateralInUse,
+    LC_InterestRate,
+    LC_NumberInstallments,
+    LC_StartInvalidState,
+    LC_NotExpired,
+    LC_BalanceGTZero,
+    LC_NonceUsed
+} from "./errors/Lending.sol";
 
 /**
  * @title LoanCore
