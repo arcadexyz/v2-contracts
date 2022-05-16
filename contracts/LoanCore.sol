@@ -181,8 +181,6 @@ contract LoanCore is
 
         // Initiate loan state
         loans[loanId] = LoanLibrary.LoanData({
-            borrowerNoteId: loanId,
-            lenderNoteId: loanId,
             terms: terms,
             state: LoanLibrary.LoanState.Active,
             dueDate: block.timestamp + terms.durationSecs,
@@ -238,16 +236,16 @@ contract LoanCore is
         IERC20Upgradeable(data.terms.payableCurrency).safeTransferFrom(_msgSender(), address(this), returnAmount);
 
         // get promissory notes from two parties involved
-        address lender = lenderNote.ownerOf(data.lenderNoteId);
-        address borrower = borrowerNote.ownerOf(data.borrowerNoteId);
+        address lender = lenderNote.ownerOf(loanId);
+        address borrower = borrowerNote.ownerOf(loanId);
 
         // state changes and cleanup
         // NOTE: these must be performed before assets are released to prevent reentrance
         loans[loanId].state = LoanLibrary.LoanState.Repaid;
         collateralInUse[data.terms.collateralAddress][data.terms.collateralId] = false;
 
-        lenderNote.burn(data.lenderNoteId);
-        borrowerNote.burn(data.borrowerNoteId);
+        lenderNote.burn(loanId);
+        borrowerNote.burn(loanId);
 
         // asset and collateral redistribution
         IERC20Upgradeable(data.terms.payableCurrency).safeTransfer(lender, returnAmount);
@@ -272,14 +270,14 @@ contract LoanCore is
 
         if (data.dueDate > block.timestamp) revert LC_NotExpired(data.dueDate);
 
-        address lender = lenderNote.ownerOf(data.lenderNoteId);
+        address lender = lenderNote.ownerOf(loanId);
 
         // NOTE: these must be performed before assets are released to prevent reentrance
         loans[loanId].state = LoanLibrary.LoanState.Defaulted;
         collateralInUse[data.terms.collateralAddress][data.terms.collateralId] = false;
 
-        lenderNote.burn(data.lenderNoteId);
-        borrowerNote.burn(data.borrowerNoteId);
+        lenderNote.burn(loanId);
+        borrowerNote.burn(loanId);
 
         // collateral redistribution
         IERC721Upgradeable(data.terms.collateralAddress).transferFrom(address(this), lender, data.terms.collateralId);
@@ -318,8 +316,8 @@ contract LoanCore is
         IERC20Upgradeable(data.terms.payableCurrency).safeTransferFrom(_msgSender(), address(this), paymentTotal);
 
         // get the lender and borrower
-        address lender = lenderNote.ownerOf(data.lenderNoteId);
-        address borrower = borrowerNote.ownerOf(data.borrowerNoteId);
+        address lender = lenderNote.ownerOf(_loanId);
+        address borrower = borrowerNote.ownerOf(_loanId);
 
         uint256 _balanceToPay = _paymentToPrincipal;
         if (_balanceToPay >= data.balance) {
@@ -328,8 +326,8 @@ contract LoanCore is
             // mark loan as closed
             data.state = LoanLibrary.LoanState.Repaid;
             collateralInUse[data.terms.collateralAddress][data.terms.collateralId] = false;
-            lenderNote.burn(data.lenderNoteId);
-            borrowerNote.burn(data.borrowerNoteId);
+            lenderNote.burn(_loanId);
+            borrowerNote.burn(_loanId);
         }
 
         // Unlike paymentTotal, cannot go over maximum amount owed

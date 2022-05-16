@@ -28,8 +28,29 @@ import "./interfaces/IPromissoryNote.sol";
 import "./interfaces/ILoanCore.sol";
 import "./interfaces/IRepaymentController.sol";
 
-contract RepaymentController is IRepaymentController, FullInterestAmountCalc, Context {
-    using SafeERC20 for IERC20;
+import { RC_CannotDereference, RC_NoPaymentDue, RC_OnlyLender, RC_BeforeStartDate, RC_NoInstallments, RC_NoMinPaymentDue, RC_RepayPartZero, RC_RepayPartLTMin } from "./errors/Lending.sol";
+
+/**
+ * @title RepaymentController
+ * @author Non-Fungible Technologies, Inc.
+ *
+ * The Repayment Controller is the entry point for all loan lifecycle
+ * operations in the Arcade.xyz lending protocol once a loan has begun.
+ * This contract allows a caller to calculate an amount due on a loan,
+ * make a payment (either in full or part, for installment loans), and
+ * claim collateral on a defaulted loan. It is this contract's responsibility
+ * to verify loan conditions before calling LoanCore.
+ */
+contract RepaymentController is
+    IRepaymentController,
+    Initializable,
+    FullInterestAmountCalc,
+    AccessControlUpgradeable,
+    UUPSUpgradeable
+{
+    using SafeERC20Upgradeable for IERC20Upgradeable;
+
+    // ============================================ STATE ===============================================
 
     ILoanCore private loanCore;
     IPromissoryNote private borrowerNote;
