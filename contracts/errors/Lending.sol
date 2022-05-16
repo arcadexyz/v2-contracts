@@ -182,6 +182,9 @@ error RC_RepayPartGTMin(uint256 amount);
 // ==================================== Loan Core ======================================
 /// @notice All errors prefixed with LC_, to separate from other contracts in the protocol.
 
+/// @notice Zero address passed in where not allowed.
+error LC_ZeroAddress();
+
 /**
  * @notice Loan duration must be greater than 1hr and less than 3yrs.
  *

@@ -9,7 +9,6 @@ import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol"
 import "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol";
 
 import "./interfaces/ICallDelegator.sol";
@@ -21,6 +20,7 @@ import "./interfaces/ILoanCore.sol";
 import "./FullInterestAmountCalc.sol";
 import "./PromissoryNote.sol";
 import "./vault/OwnableERC721.sol";
+<<<<<<< HEAD
 import {
     LC_LoanDuration,
     LC_CollateralInUse,
@@ -31,6 +31,10 @@ import {
     LC_BalanceGTZero,
     LC_NonceUsed
 } from "./errors/Lending.sol";
+=======
+
+import { LC_ZeroAddress, LC_LoanDuration, LC_CollateralInUse, LC_InterestRate, LC_NumberInstallments, LC_StartInvalidState, LC_NotExpired, LC_BalanceGTZero, LC_NonceUsed } from "./errors/Lending.sol";
+>>>>>>> e8fdcbf (feat(loanid): using loanId instead of noteId)
 
 /**
  * @title LoanCore
@@ -55,7 +59,6 @@ contract LoanCore is
 {
     using CountersUpgradeable for CountersUpgradeable.Counter;
     using SafeERC20Upgradeable for IERC20Upgradeable;
-    using SafeMathUpgradeable for uint256;
 
     // ============================================ STATE ==============================================
 
@@ -100,6 +103,10 @@ contract LoanCore is
      * @param _feeController      The address of the contract governing protocol fees.
      */
     function initialize(IFeeController _feeController, IPromissoryNote _borrowerNote, IPromissoryNote _lenderNote) public initializer {
+        if(address(_feeController) == address(0)) revert LC_ZeroAddress();
+        if(address(_borrowerNote) == address(0)) revert LC_ZeroAddress();
+        if(address(_lenderNote) == address(0)) revert LC_ZeroAddress();
+
         // only those with FEE_CLAIMER_ROLE can update or grant FEE_CLAIMER_ROLE
         __AccessControl_init();
         __UUPSUpgradeable_init_unchained();
@@ -158,7 +165,7 @@ contract LoanCore is
         if (terms.durationSecs < 3600 || terms.durationSecs > 94_608_000) revert LC_LoanDuration(terms.durationSecs);
 
         // check collateral is not already used in a loan.
-        if (collateralInUse[terms.collateralAddress][terms.collateralId] == true)
+        if (collateralInUse[terms.collateralAddress][terms.collateralId])
             revert LC_CollateralInUse(terms.collateralAddress, terms.collateralId);
 
         // interest rate must be greater than or equal to 0.01%
@@ -409,8 +416,8 @@ contract LoanCore is
             return false;
         }
         for (uint256 i = 0; i < borrowerNote.balanceOf(caller); i++) {
-            uint256 borrowerNoteId = borrowerNote.tokenOfOwnerByIndex(caller, i);
-            uint256 loanId = borrowerNote.loanIdByNoteId(borrowerNoteId);
+            uint256 loanId = borrowerNote.tokenOfOwnerByIndex(caller, i);
+
             // if the borrower is currently borrowing against this vault,
             // return true
             if (loans[loanId].terms.collateralId == uint256(uint160(vault))) {
@@ -418,6 +425,20 @@ contract LoanCore is
             }
         }
         return false;
+    }
+
+    /**
+     * @notice Reports whether the given nonce has been previously used by a user. Returning
+     *         false does not mean that the nonce will not clash with another potential off-chain
+     *         signature that is stored somewhere.
+     *
+     * @param user                  The user to check the nonce for.
+     * @param nonce                 The nonce to check.
+     *
+     * @return used                 Whether the nonce has been used.
+     */
+    function isNonceUsed(address user, uint160 nonce) external view override returns (bool) {
+        return usedNonces[user][nonce];
     }
 
     // ======================================== ADMIN FUNCTIONS =========================================
@@ -429,7 +450,11 @@ contract LoanCore is
      * @param _newController        The new fee controller contract.
      */
     function setFeeController(IFeeController _newController) external onlyRole(FEE_CLAIMER_ROLE) {
+        if(address(_newController) == address(0)) revert LC_ZeroAddress();
+
         feeController = _newController;
+
+        emit SetFeeController(address(feeController));
     }
 
     /**
@@ -474,7 +499,7 @@ contract LoanCore is
      * @return principalLessFees    The amount after fees.
      */
     function getPrincipalLessFees(uint256 principal) internal view returns (uint256) {
-        return principal.sub(principal.mul(feeController.getOriginationFee()).div(BPS_DENOMINATOR));
+        return principal - principal * feeController.getOriginationFee() / BPS_DENOMINATOR;
     }
 
     /**
@@ -485,7 +510,7 @@ contract LoanCore is
      * @param nonce                 The nonce to consume.
      */
     function _useNonce(address user, uint160 nonce) internal {
-        if (usedNonces[user][nonce] == true) revert LC_NonceUsed(user, nonce);
+        if (usedNonces[user][nonce]) revert LC_NonceUsed(user, nonce);
         // set nonce to used
         usedNonces[user][nonce] = true;
 

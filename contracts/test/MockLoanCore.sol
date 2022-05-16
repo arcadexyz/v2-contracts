@@ -43,8 +43,8 @@ contract MockLoanCore is ILoanCore, Initializable, AccessControlUpgradeable, UUP
     function initialize(address) public initializer {
         __AccessControl_init();
         __UUPSUpgradeable_init_unchained();
-        borrowerNote = new PromissoryNote("Mock BorrowerNote", "MB");
-        lenderNote = new PromissoryNote("Mock LenderNote", "ML");
+        borrowerNote = new PromissoryNote("Mock BorrowerNote", "MB", address(this));
+        lenderNote = new PromissoryNote("Mock LenderNote", "ML", address(this));
 
         // Avoid having loanId = 0
         loanIdTracker.increment();
@@ -148,6 +148,10 @@ contract MockLoanCore is ILoanCore, Initializable, AccessControlUpgradeable, UUP
      *  - The current time must be beyond the dueDate
      */
     function claim(uint256 loanId) public override {}
+
+    function isNonceUsed(address user, uint160 nonce) external view override returns (bool) {
+        return usedNonces[user][nonce];
+    }
 
     function consumeNonce(address user, uint160 nonce) external override {
         _useNonce(user, nonce);
