@@ -131,10 +131,8 @@ error RC_CannotDereference(uint256 target);
 
 /**
  * @notice Repayment has already been completed for this loan without installments.
- *
- * @param amount                     Balance returned after calculating amount due.
  */
-error RC_NoPaymentDue(uint256 amount);
+error RC_NoPaymentDue();
 
 /**
  * @notice Caller is not the owner of lender note.
@@ -170,14 +168,15 @@ error RC_NoMinPaymentDue(uint256 amount);
  *
  * @param amount                    Amount function call parameter.
  */
-error RC_RepayPartGTZero(uint256 amount);
+error RC_RepayPartZero(uint256 amount);
 
 /**
  * @notice Amount paramater less than the minimum amount due.
  *
  * @param amount                    Amount function call parameter.
+ * @param minAmount                 The minimum amount due.
  */
-error RC_RepayPartGTMin(uint256 amount);
+error RC_RepayPartLTMin(uint256 amount);
 
 // ==================================== Loan Core ======================================
 /// @notice All errors prefixed with LC_, to separate from other contracts in the protocol.

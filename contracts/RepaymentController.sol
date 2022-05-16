@@ -68,7 +68,7 @@ contract RepaymentController is IRepaymentController, FullInterestAmountCalc, Co
 
         // withdraw principal plus interest from borrower and send to loan core
         uint256 total = getFullInterestAmount(terms.principal, terms.interestRate);
-        require(total > 0, "RepaymentCont::repay: No payment due.");
+        if (total == 0) revert RC_NoPaymentDue();
 
         IERC20(terms.payableCurrency).safeTransferFrom(_msgSender(), address(this), total);
         IERC20(terms.payableCurrency).approve(address(loanCore), total);
@@ -105,7 +105,6 @@ contract RepaymentController is IRepaymentController, FullInterestAmountCalc, Co
      *
      * @param loanId                            LoanId, used to locate terms.
      *
-     * @return loanId                           The ID of the loan associated with the borrower note.
      * @return minInterestDue                   The amount of interest due, compounded over missed payments.
      * @return lateFees                         The amount of late fees due, compounded over missed payments.
      * @return _installmentsMissed              The number of overdue installment periods since the last payment.
@@ -117,20 +116,19 @@ contract RepaymentController is IRepaymentController, FullInterestAmountCalc, Co
         returns (
             uint256,
             uint256,
-            uint256,
             uint256
         )
     {
         // load terms from loanId
         LoanLibrary.LoanData memory data = loanCore.getLoan(loanId);
         // get loan from borrower note
-        require(loanId != 0, "RepaymentCont::minPayment: Repay could not dereference loan");
+        if (data.state == LoanLibrary.LoanState.DUMMY_DO_NOT_USE) revert RC_CannotDereference(loanId);
 
-        // local variables
         uint256 startDate = data.startDate;
-        require(startDate < block.timestamp, "RepaymentCont::claim: Loan has not started yet");
+        if (startDate > block.timestamp) revert RC_BeforeStartDate(startDate);
+
         uint256 installments = data.terms.numInstallments;
-        require(installments > 0, "RepaymentCont::minPayment: Loan does not have any installments");
+        if (installments == 0) revert RC_NoInstallments(installments);
 
         // get the current minimum balance due for the installment
         (uint256 minInterestDue, uint256 lateFees, uint256 numMissedPayments) = _calcAmountsDue(
@@ -142,7 +140,7 @@ contract RepaymentController is IRepaymentController, FullInterestAmountCalc, Co
             data.terms.interestRate
         );
 
-        return (loanId, minInterestDue, lateFees, numMissedPayments);
+        return (minInterestDue, lateFees, numMissedPayments);
     }
 
     /**
@@ -152,17 +150,18 @@ contract RepaymentController is IRepaymentController, FullInterestAmountCalc, Co
      *
      * @dev Only pay off the current interest amount and, if applicable, any late fees accrued.
      *
-     * @param borrowerNoteId           Borrower note tokenId, used to locate loan terms.
+     * @param loanId                            LoanId, used to locate terms.
      */
-    function repayPartMinimum(uint256 borrowerNoteId) external override {
+    function repayPartMinimum(uint256 loanId) external override {
         // get current minimum balance due for the installment repayment, based on specific loanId.
-        (uint256 loanId, uint256 minBalanceDue, uint256 lateFees, uint256 numMissedPayments) = getInstallmentMinPayment(
-            borrowerNoteId
+        (uint256 minBalanceDue, uint256 lateFees, uint256 numMissedPayments) = getInstallmentMinPayment(
+            loanId
         );
         // total amount due, interest amount plus any late fees
         uint256 _minAmount = minBalanceDue + lateFees;
         // cannot call repayPartMinimum twice in the same installment period
-        require(_minAmount > 0, "RepaymentCont::repayMin: No interest payment or late fees due");
+        if(_minAmount == 0) revert RC_NoPaymentDue();
+
         // load terms from loanId
         LoanLibrary.LoanData memory data = loanCore.getLoan(loanId);
         // gather minimum payment from _msgSender()
@@ -180,22 +179,22 @@ contract RepaymentController is IRepaymentController, FullInterestAmountCalc, Co
      * @dev Pay off the current interest and, if applicable any late fees accrued, and an additional
      *      amount to be deducted from the loan principal.
      *
-     * @param borrowerNoteId             Borrower note tokenId, used to locate loan terms.
-     * @param amount                     Amount = minBalDue + lateFees + amountToPayOffPrincipal
-     *                                   value must be greater than minBalDue + latefees returned
-     *                                   from getInstallmentMinPayment function call.
+     * @param loanId                            LoanId, used to locate terms.
+     * @param amount                            Amount = minBalDue + lateFees + amountToPayOffPrincipal
+     *                                          value must be greater than minBalDue + latefees returned
+     *                                          from getInstallmentMinPayment function call.
      */
-    function repayPart(uint256 borrowerNoteId, uint256 amount) external override {
+    function repayPart(uint256 loanId, uint256 amount) external override {
+        if (amount == 0) revert RC_RepayPartZero();
+
         // get current minimum balance due for the installment repayment, based on specific loanId.
-        (uint256 loanId, uint256 minBalanceDue, uint256 lateFees, uint256 numMissedPayments) = getInstallmentMinPayment(
-            borrowerNoteId
+        (uint256 minBalanceDue, uint256 lateFees, uint256 numMissedPayments) = getInstallmentMinPayment(
+            loanId
         );
         // total minimum amount due, interest amount plus any late fees
         uint256 _minAmount = minBalanceDue + lateFees;
-        // require amount sent to be larger than 0
-        require(amount > 0, "RepaymentCont::repayPart: Repaid amount must be larger than 0");
         // require amount taken from the _msgSender() to be larger than or equal to minBalanceDue
-        require(amount >= _minAmount, "RepaymentCont::repayPart: Amount less than the min amount due");
+        if (amount < _minAmount) revert RC_RepayPartLTMin(amount, _minAmount);
         // load data from loanId
         LoanLibrary.LoanData memory data = loanCore.getLoan(loanId);
         // calculate the payment to principal after subtracting (minBalanceDue + lateFees)
@@ -216,12 +215,12 @@ contract RepaymentController is IRepaymentController, FullInterestAmountCalc, Co
      * @dev Pay off the current interest and, if applicable any late fees accrued, and the remaining principal
      *      left on the loan.
      *
-     * @param borrowerNoteId             Borrower note tokenId, used to locate loan terms.
+     * @param loanId                            LoanId, used to locate terms.
      */
-    function closeLoan(uint256 borrowerNoteId) external override {
+    function closeLoan(uint256 loanId) external override {
         // get current minimum balance due for the installment repayment, based on specific loanId.
-        (uint256 loanId, uint256 minBalanceDue, uint256 lateFees, uint256 numMissedPayments) = getInstallmentMinPayment(
-            borrowerNoteId
+        (uint256 minBalanceDue, uint256 lateFees, uint256 numMissedPayments) = getInstallmentMinPayment(
+            loanId
         );
         // load data from loanId
         LoanLibrary.LoanData memory data = loanCore.getLoan(loanId);
@@ -245,16 +244,16 @@ contract RepaymentController is IRepaymentController, FullInterestAmountCalc, Co
      * @dev Pay off the current interest and, if applicable any late fees accrued, in addition to any
      *      remaining principal left on the loan.
      *
-     * @param borrowerNoteId                    Borrower note tokenId, used to locate loan terms
+     * @param loanId                            LoanId, used to locate terms.
      *
      * @return amountDue                        The total amount due to close the loan, including principal, interest,
      *                                          and late fees.
      * @return numMissedPayments                The number of overdue installment periods since the last payment.
      */
-    function amountToCloseLoan(uint256 borrowerNoteId) external view override returns (uint256, uint256) {
+    function amountToCloseLoan(uint256 loanId) external view override returns (uint256, uint256) {
         // get current minimum balance due for the installment repayment, based on specific loanId.
-        (uint256 loanId, uint256 minBalanceDue, uint256 lateFees, uint256 numMissedPayments) = getInstallmentMinPayment(
-            borrowerNoteId
+        (uint256 minBalanceDue, uint256 lateFees, uint256 numMissedPayments) = getInstallmentMinPayment(
+            loanId
         );
         // load data from loanId
         LoanLibrary.LoanData memory data = loanCore.getLoan(loanId);
