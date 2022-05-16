@@ -86,12 +86,10 @@ contract MockLoanCore is ILoanCore, Initializable, AccessControlUpgradeable, UUP
         loanId = loanIdTracker.current();
         loanIdTracker.increment();
 
-        uint256 borrowerNoteId = borrowerNote.mint(borrower, loanId);
-        uint256 lenderNoteId = lenderNote.mint(lender, loanId);
+        borrowerNote.mint(borrower, loanId);
+        lenderNote.mint(lender, loanId);
 
         loans[loanId] = LoanLibrary.LoanData(
-            borrowerNoteId,
-            lenderNoteId,
             terms,
             LoanLibrary.LoanState.Active,
             block.timestamp + terms.durationSecs,

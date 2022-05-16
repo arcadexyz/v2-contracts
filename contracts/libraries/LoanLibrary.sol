@@ -88,10 +88,6 @@ library LoanLibrary {
      * @dev The data of a loan. This is stored once the loan is Active
      */
     struct LoanData {
-        // The tokenId of the borrower note
-        uint256 borrowerNoteId;
-        // The tokenId of the lender note
-        uint256 lenderNoteId;
         // The raw terms of the loan
         LoanTerms terms;
         // The current state of the loan

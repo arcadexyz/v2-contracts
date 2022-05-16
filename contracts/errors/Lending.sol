@@ -123,7 +123,7 @@ error IV_NonPositiveAmount20(address asset, uint256 amount);
 /// @notice All errors prefixed with RC_, to separate from other contracts in the protocol.
 
 /**
- * @notice Could not dereference loan from borrowerNoteId.
+ * @notice Could not dereference loan from loan ID.
  *
  * @param target                     The loanId being checked.
  */
@@ -165,10 +165,8 @@ error RC_NoMinPaymentDue(uint256 amount);
 
 /**
  * @notice Repaid amount must be larger than zero.
- *
- * @param amount                    Amount function call parameter.
  */
-error RC_RepayPartZero(uint256 amount);
+error RC_RepayPartZero();
 
 /**
  * @notice Amount paramater less than the minimum amount due.
@@ -176,7 +174,7 @@ error RC_RepayPartZero(uint256 amount);
  * @param amount                    Amount function call parameter.
  * @param minAmount                 The minimum amount due.
  */
-error RC_RepayPartLTMin(uint256 amount);
+error RC_RepayPartLTMin(uint256 amount, uint256 minAmount);
 
 // ==================================== Loan Core ======================================
 /// @notice All errors prefixed with LC_, to separate from other contracts in the protocol.
