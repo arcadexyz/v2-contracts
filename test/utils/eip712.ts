@@ -3,6 +3,7 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-wit
 import { BigNumberish } from "ethers";
 import { LoanTerms, ItemsPayload } from "./types";
 import { fromRpcSig, ECDSASignature } from "ethereumjs-util";
+import { isBigNumberish } from "@ethersproject/bignumber/lib/bignumber";
 
 interface TypeData {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -93,7 +94,7 @@ export async function createLoanTermsSignature(
     terms: LoanTerms,
     signer: SignerWithAddress,
     version = "1",
-    nonce = "1",
+    nonce: BigNumberish,
 ): Promise<ECDSASignature> {
     const data = buildData(verifyingContract, name, version, { ...terms, nonce }, typedLoanTermsData);
     const signature = await signer._signTypedData(data.domain, data.types, data.message);

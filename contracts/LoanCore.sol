@@ -21,8 +21,16 @@ import "./interfaces/ILoanCore.sol";
 import "./FullInterestAmountCalc.sol";
 import "./PromissoryNote.sol";
 import "./vault/OwnableERC721.sol";
-
-import { LC_LoanDuration, LC_CollateralInUse, LC_InterestRate, LC_NumberInstallments, LC_StartInvalidState, LC_NotExpired, LC_BalanceGTZero, LC_NonceUsed } from "./errors/Lending.sol";
+import {
+    LC_LoanDuration,
+    LC_CollateralInUse,
+    LC_InterestRate,
+    LC_NumberInstallments,
+    LC_StartInvalidState,
+    LC_NotExpired,
+    LC_BalanceGTZero,
+    LC_NonceUsed
+} from "./errors/Lending.sol";
 
 /**
  * @title LoanCore
@@ -275,8 +283,9 @@ contract LoanCore is
     function claim(uint256 loanId) external override whenNotPaused onlyRole(REPAYER_ROLE) {
         LoanLibrary.LoanData memory data = loans[loanId];
         // ensure valid initial loan state when starting loan
-        if (data.state == LoanLibrary.LoanState.Active) revert LC_StartInvalidState(data.state);
+        if (data.state != LoanLibrary.LoanState.Active) revert LC_StartInvalidState(data.state);
         // ensure claiming after the loan has ended. block.timstamp must be greater than the dueDate.
+
         if (data.dueDate > block.timestamp) revert LC_NotExpired(data.dueDate);
 
         address lender = lenderNote.ownerOf(data.lenderNoteId);
@@ -290,7 +299,6 @@ contract LoanCore is
 
         // collateral redistribution
         IERC721(data.terms.collateralAddress).transferFrom(address(this), lender, data.terms.collateralId);
-
         emit LoanClaimed(loanId);
     }
 
@@ -434,7 +442,6 @@ contract LoanCore is
         if (!collateralInUse[OwnableERC721(vault).ownershipToken()][uint256(uint160(vault))]) {
             return false;
         }
-
         for (uint256 i = 0; i < borrowerNote.balanceOf(caller); i++) {
             uint256 borrowerNoteId = borrowerNote.tokenOfOwnerByIndex(caller, i);
             uint256 loanId = borrowerNote.loanIdByNoteId(borrowerNoteId);

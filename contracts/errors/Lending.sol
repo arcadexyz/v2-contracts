@@ -10,7 +10,7 @@ import "../libraries/LoanLibrary.sol";
  *
  * This file contains custom errors for the core lending protocol contracts, with errors
  * prefixed by the contract that throws them (e.g., "OC_" for OriginationController).
- * Errors located in one place to make it possible to holistically look at all 
+ * Errors located in one place to make it possible to holistically look at all
  * protocol failure cases.
  */
 
@@ -70,6 +70,13 @@ error OC_CallerNotParticipant(address caller);
  * @notice Two related parameters for batch operations did not match in length.
  */
 error OC_BatchLengthMismatch();
+
+/**
+ * @notice Principal must be greater than 9999 Wei.
+ *
+ * @param principal                     Principal in ether.
+ */
+error OC_PrincipalTooLow(uint256 principal);
 
 // ==================================== ITEMS VERIFIER ======================================
 /// @notice All errors prefixed with IV_, to separate from other contracts in the protocol.

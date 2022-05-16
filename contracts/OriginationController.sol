@@ -21,8 +21,17 @@ import "./interfaces/IVaultFactory.sol";
 import "./interfaces/ISignatureVerifier.sol";
 
 import "./verifiers/ItemsVerifier.sol";
-
-import { OC_ZeroAddress, OC_InvalidVerifier, OC_BatchLengthMismatch, OC_PredicateFailed, OC_SelfApprove, OC_ApprovedOwnLoan, OC_InvalidSignature, OC_CallerNotParticipant } from "./errors/Lending.sol";
+import {
+    OC_ZeroAddress,
+    OC_InvalidVerifier,
+    OC_BatchLengthMismatch,
+    OC_PredicateFailed,
+    OC_SelfApprove,
+    OC_ApprovedOwnLoan,
+    OC_InvalidSignature,
+    OC_CallerNotParticipant,
+    OC_PrincipalTooLow
+} from "./errors/Lending.sol";
 
 /**
  * @title OriginationController
@@ -147,6 +156,9 @@ contract OriginationController is
 
         _validateCounterparties(borrower, lender, msg.sender, externalSigner, sig, sighash);
 
+        // principal must be greater than or equal to 1000 wei
+        if (loanTerms.principal <= 9999) revert OC_PrincipalTooLow(loanTerms.principal);
+
         ILoanCore(loanCore).consumeNonce(externalSigner, nonce);
         loanId = _initialize(loanTerms, borrower, lender);
     }
@@ -236,7 +248,6 @@ contract OriginationController is
             collateralSig.r,
             collateralSig.s
         );
-
         loanId = initializeLoan(loanTerms, borrower, lender, sig, nonce);
     }
 
@@ -342,7 +353,6 @@ contract OriginationController is
         (bool success, bytes memory result) = target.staticcall(
             abi.encodeWithSelector(IERC1271.isValidSignature.selector, sighash, signature)
         );
-
         return (success && result.length == 32 && abi.decode(result, (bytes4)) == IERC1271.isValidSignature.selector);
     }
 

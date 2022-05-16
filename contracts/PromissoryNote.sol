@@ -14,6 +14,7 @@ import "./interfaces/ILoanCore.sol";
 import "./interfaces/IPromissoryNote.sol";
 
 import { PN_MintingRole, PN_BurningRole, PN_ContractPaused } from "./errors/Lending.sol";
+import { ERC721P_InvalidSignature, ERC721P_DeadlineExpired } from "./errors/LendingUtils.sol";
 
 /**
  * @title PromissoryNote
