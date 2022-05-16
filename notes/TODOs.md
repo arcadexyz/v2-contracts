@@ -8,18 +8,17 @@ Safety/Robustness:
 
 Refactoring:
 - Split LoanCore into separate files
-  - (contract too big)
-  - (merge create and start loan)
-  - (if not merging, start clock in startLoan)
+  - (contract too big) - DONE
+  - (merge create and start loan) - DONE
+  - (if not merging, start clock in startLoan) - DONE
   - (check setFeeController for address 0 and emit event)
-  - (add isNonceUsed function)
-  - (remove SafeMath)
+  - (add isNonceUsed function) - DONE
+  - (remove SafeMath) - DONE
 - Run prettier
 
 Features:
 - Installment Claim (and grace period?)
 - Signature expiry
-- Move origination fee to fee controller
 - Native rollovers
 
 Evan:

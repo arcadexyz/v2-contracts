@@ -19,6 +19,7 @@ interface ILoanCore {
     event InstallmentPaymentReceived(uint256 loanId, uint256 repaidAmount, uint256 remBalance);
     event LoanClaimed(uint256 loanId);
     event FeesClaimed(address token, address to, uint256 amount);
+    event SetFeeController(address feeController);
     event NonceUsed(address indexed user, uint160 nonce);
 
     // ============== Lifecycle Operations ==============
@@ -49,6 +50,7 @@ interface ILoanCore {
     // ============== View Functions ==============
 
     function getLoan(uint256 loanId) external view returns (LoanLibrary.LoanData calldata loanData);
+    function isNonceUsed(address user, uint160 nonce) external view returns (bool);
     function borrowerNote() external returns (IPromissoryNote);
     function lenderNote() external returns (IPromissoryNote);
     function feeController() external returns (IFeeController);

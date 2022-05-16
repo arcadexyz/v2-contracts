@@ -74,7 +74,7 @@ contract AssetVault is IAssetVault, OwnableERC721, Initializable, ERC1155Holder,
      *                              arbitrary calls.
      */
     function initialize(address _whitelist) external override initializer {
-        if (withdrawEnabled == true || ownershipToken != address(0)) revert AV_AlreadyInitialized(ownershipToken);
+        if (withdrawEnabled || ownershipToken != address(0)) revert AV_AlreadyInitialized(ownershipToken);
         // set ownership to inherit from the factory who deployed us
         // The factory should have a tokenId == uint256(address(this))
         // whose owner has ownership control over this contract
@@ -202,7 +202,7 @@ contract AssetVault is IAssetVault, OwnableERC721, Initializable, ERC1155Holder,
      * @dev For methods only callable with withdraws enabled (all withdrawal operations).
      */
     modifier onlyWithdrawEnabled() {
-        if (withdrawEnabled == false) revert AV_WithdrawsDisabled();
+        if (!withdrawEnabled) revert AV_WithdrawsDisabled();
         _;
     }
 
@@ -210,7 +210,7 @@ contract AssetVault is IAssetVault, OwnableERC721, Initializable, ERC1155Holder,
      * @dev For methods only callable with withdraws disabled (call operations and enabling withdraws).
      */
     modifier onlyWithdrawDisabled() {
-        if (withdrawEnabled == true) revert AV_WithdrawsEnabled();
+        if (withdrawEnabled) revert AV_WithdrawsEnabled();
         _;
     }
 

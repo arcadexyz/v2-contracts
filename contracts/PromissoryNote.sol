@@ -60,22 +60,22 @@ contract PromissoryNote is
     // ============= Loan State ==============
 
     Counters.Counter private _tokenIdTracker;
-    mapping(uint256 => uint256) public override loanIdByNoteId;
 
     // ========================================= CONSTRUCTOR ===========================================
 
     /**
      * @dev Creates the promissory note contract, granting minter, burner
-     *      and pauser roles to the deployer address (which in practice
+     *      and pauser roles to the specified owner address (which in practice
      *      will be LoanCore).
      *
      * @param name                  The name of the token (see ERC721).
      * @param symbol                The symbol of the token (see ERC721).
+     * @param owner                 The address allowed to mint, burn, and pause.
      */
-    constructor(string memory name, string memory symbol) ERC721(name, symbol) ERC721Permit(name) {
-        _setupRole(BURNER_ROLE, _msgSender());
-        _setupRole(MINTER_ROLE, _msgSender());
-        _setupRole(PAUSER_ROLE, _msgSender());
+    constructor(string memory name, string memory symbol, address owner) ERC721(name, symbol) ERC721Permit(name) {
+        _setupRole(BURNER_ROLE, owner);
+        _setupRole(MINTER_ROLE, owner);
+        _setupRole(PAUSER_ROLE, owner);
 
         // We don't want token IDs of 0
         _tokenIdTracker.increment();
@@ -96,11 +96,10 @@ contract PromissoryNote is
      * @return tokenId              The newly minted token ID.
      */
     function mint(address to, uint256 loanId) external override returns (uint256) {
-        if (hasRole(MINTER_ROLE, _msgSender()) == false) revert PN_MintingRole(_msgSender());
+        if (!hasRole(MINTER_ROLE, _msgSender())) revert PN_MintingRole(_msgSender());
 
         uint256 currentTokenId = _tokenIdTracker.current();
         _mint(to, currentTokenId);
-        loanIdByNoteId[currentTokenId] = loanId;
 
         _tokenIdTracker.increment();
 
@@ -118,9 +117,8 @@ contract PromissoryNote is
      * @param tokenId               The ID of the token to burn, should match a loan.
      */
     function burn(uint256 tokenId) external override {
-        if (hasRole(BURNER_ROLE, _msgSender()) == false) revert PN_BurningRole(_msgSender());
+        if (!hasRole(BURNER_ROLE, _msgSender())) revert PN_BurningRole(_msgSender());
         _burn(tokenId);
-        loanIdByNoteId[tokenId] = 0;
     }
 
     // ===================================== ERC721 UTILITIES ===========================================
@@ -155,6 +153,6 @@ contract PromissoryNote is
     ) internal virtual override(ERC721, ERC721Enumerable, ERC721Pausable) {
         super._beforeTokenTransfer(from, to, tokenId);
 
-        if (paused() == true) revert PN_ContractPaused();
+        if (paused()) revert PN_ContractPaused();
     }
 }
