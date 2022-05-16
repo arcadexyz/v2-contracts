@@ -9,16 +9,21 @@ Features:
 
 #### Evan:
 
-> V2 Protocol Planning/ Progress Report:
+> V2 Protocol Planning/ Progress:
 
-- (IN PROGRESS) Installment claims:
-  - GRACE_PERIOD for late repayments after loanDuration?
-  - MAX_INSTALLMENTS_MISSED_FOR_LENDER_CLAIM?
-    - 3?
-      - How does this effect the various loan terms scenarios?
-  - Is a repayment LATE_FEE of 0.5% what we want?
-- (REVIEW) Loan Terms Restrictions:
-  - durationsSecs and numInstallments
+- (IN PROGRESS) Installment Claims:
+  - MISSED_INSTALLMENTS_FOR_LENDER_CLAIM
+    - 40% the total `numInstallments` in LoanTerms. --> Add custom error to `claim` in repayment controller for loans where `numInstallments != 0` (this indicates an installment loan). For default to be triggered, borrower must miss payments consecutively due to the fact that `numInstallmentsPaid` gets updated every time a payment is made to the current installment period when payment is made.
+      - Remove all `GRACE_PERIOD` variables, new method for determining default.
+      - Implementation:
+        - Create onlyOwner update function for a state variable.
+        - Need to add to LoanTerms struct? Or is this parameter we should add to the LoanLibrary?
+      - Create tests
+- (REVEIW) Is a repayment LATE_FEE of 0.5% what we want? --> Gabe did not have any objection...
+- (IN PROGRESS) Loan Terms Restrictions:
+  - `durationsSecs` and `numInstallments`
+   - Max `numInstallments` in LoanTerms to be changed to 1000 installments.
+   - Need to add more tests around the smaller duration loans after the claiming is implemented.
 
 > Branch Notes:
 
