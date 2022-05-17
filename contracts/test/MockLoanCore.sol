@@ -93,11 +93,11 @@ contract MockLoanCore is ILoanCore, Initializable, AccessControlUpgradeable, UUP
         lenderNote.mint(lender, loanId);
 
         loans[loanId] = LoanLibrary.LoanData(
-            terms,
             LoanLibrary.LoanState.Active,
-            block.timestamp,
-            terms.principal,
             0,
+            uint160(block.timestamp),
+            terms,
+            terms.principal,
             0,
             0
         );
@@ -136,7 +136,7 @@ contract MockLoanCore is ILoanCore, Initializable, AccessControlUpgradeable, UUP
         //console.log("TOTAL PAID FROM BORROWER: ", paymentTotal);
         IERC20Upgradeable(data.terms.payableCurrency).transferFrom(msg.sender, address(this), paymentTotal);
         // use variable.
-        data.numInstallmentsPaid = data.numInstallmentsPaid + _numMissedPayments + 1;
+        data.numInstallmentsPaid += uint24(_numMissedPayments) + 1;
     }
 
     /**

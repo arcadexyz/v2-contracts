@@ -183,7 +183,7 @@ contract LoanCore is
         loans[loanId] = LoanLibrary.LoanData({
             terms: terms,
             state: LoanLibrary.LoanState.Active,
-            startDate: block.timestamp,
+            startDate: uint160(block.timestamp),
             balance: terms.principal,
             balancePaid: 0,
             lateFeesAccrued: 0,
@@ -334,7 +334,7 @@ contract LoanCore is
 
         // update loan state
         data.lateFeesAccrued += _paymentToLateFees;
-        data.numInstallmentsPaid += _currentMissedPayments + 1;
+        data.numInstallmentsPaid += uint24(_currentMissedPayments) + 1;
         data.balance -= _balanceToPay;
         data.balancePaid += boundedPaymentTotal;
 

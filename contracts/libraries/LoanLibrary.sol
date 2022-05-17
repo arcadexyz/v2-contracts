@@ -101,13 +101,18 @@ library LoanLibrary {
      * @dev The data of a loan. This is stored once the loan is Active
      */
     struct LoanData {
-        // The raw terms of the loan
-        LoanTerms terms;
+        /// @dev Packed variables
         // The current state of the loan
         LoanState state;
+        // Number of installment payments made on the loan
+        uint24 numInstallmentsPaid;
         // installment loan specific
         // Start date of the loan, using block.timestamp - for determining installment period
-        uint256 startDate;
+        uint160 startDate;
+
+        /// @dev Full-slot variables
+        // The raw terms of the loan
+        LoanTerms terms;
         // Remaining balance of the loan. Starts as equal to principal. Can reduce based on
         // payments made, can increased based on compounded interest from missed payments and late fees
         uint256 balance;
@@ -115,7 +120,5 @@ library LoanLibrary {
         uint256 balancePaid;
         // Total amount of late fees accrued
         uint256 lateFeesAccrued;
-        // Number of installment payments made on the loan
-        uint256 numInstallmentsPaid;
     }
 }
