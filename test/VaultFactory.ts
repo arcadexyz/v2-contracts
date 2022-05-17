@@ -395,7 +395,7 @@ describe("VaultFactory", () => {
 
                 context("when the given token ID was not tracked by this token", function () {
                     it("reverts", async function () {
-                        await expect(token.ownerOf(BigNumber.from("123412341234"))).to.be.revertedWith(
+                        await expect(token.ownerOf("123412341234")).to.be.revertedWith(
                             "ERC721: owner query for nonexistent token",
                         );
                     });

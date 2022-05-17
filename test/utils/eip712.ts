@@ -1,6 +1,6 @@
 import hre from "hardhat";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
-import { BigNumberish } from "ethers";
+import { BigNumberish, BigNumber } from "ethers";
 import { LoanTerms, ItemsPayload } from "./types";
 import { fromRpcSig, ECDSASignature } from "ethereumjs-util";
 import { isBigNumberish } from "@ethersproject/bignumber/lib/bignumber";
@@ -15,7 +15,7 @@ export interface PermitData {
     owner: string;
     spender: string;
     tokenId: BigNumberish;
-    nonce: number;
+    nonce: BigNumberish;
     deadline: BigNumberish;
 }
 

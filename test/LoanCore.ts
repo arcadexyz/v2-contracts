@@ -212,8 +212,8 @@ describe("LoanCore", () => {
             expect(loanId.gte(ZERO)).to.be.true;
 
             const storedLoanData = await loanCore.getLoan(loanId);
-            expect(storedLoanData.borrowerNoteId).to.equal(BigNumber.from(0));
-            expect(storedLoanData.lenderNoteId).to.equal(BigNumber.from(0));
+            expect(storedLoanData.borrowerNoteId).to.equal(0);
+            expect(storedLoanData.lenderNoteId).to.equal(0);
             expect(storedLoanData.state).to.equal(LoanState.Created);
             assertTermsEquality(storedLoanData.terms, terms);
         });
@@ -301,7 +301,7 @@ describe("LoanCore", () => {
             const receipt = await tx.wait();
             const gasUsed = receipt.gasUsed;
 
-            expect(gasUsed.toString()).to.equal("300015");
+            expect(gasUsed.toString()).to.equal("300027");
         });
     });
 
