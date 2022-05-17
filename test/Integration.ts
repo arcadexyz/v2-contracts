@@ -54,28 +54,27 @@ describe("Integration", () => {
         const vaultFactory = <VaultFactory>(await upgrades.deployProxy(VaultFactoryFactory, [vaultTemplate.address, whitelist.address], { kind: 'uups' })
         );
         const feeController = <FeeController>await deploy("FeeController", admin, []);
+
+        const borrowerNote = <PromissoryNote>await deploy("PromissoryNote", admin, ["Arcade.xyz BorrowerNote", "aBN"]);
+        const lenderNote = <PromissoryNote>await deploy("PromissoryNote", admin, ["Arcade.xyz LenderNote", "aLN"]);
+
         const LoanCore = await hre.ethers.getContractFactory("LoanCore");
         const loanCore = <LoanCore>(
-            await upgrades.deployProxy(LoanCore, [feeController.address], { kind: 'uups' })
+            await upgrades.deployProxy(LoanCore, [feeController.address, borrowerNote.address, lenderNote.address], { kind: 'uups' })
         );
 
-        const borrowerNoteAddress = await loanCore.borrowerNote();
-        const borrowerNote = <PromissoryNote>(
-            (await ethers.getContractFactory("PromissoryNote")).attach(borrowerNoteAddress)
-        );
+        // Grant correct permissions for promissory note
+        for (const note of [borrowerNote, lenderNote]) {
+            await note.connect(admin).initialize(loanCore.address);
+        }
 
         const updateborrowerPermissions = await loanCore.grantRole(ORIGINATOR_ROLE, borrower.address);
         await updateborrowerPermissions.wait();
 
-        const lenderNoteAddress = await loanCore.lenderNote();
-        const lenderNote = <PromissoryNote>(
-            (await ethers.getContractFactory("PromissoryNote")).attach(lenderNoteAddress)
-        );
-
         const mockERC20 = <MockERC20>await deploy("MockERC20", admin, ["Mock ERC20", "MOCK"]);
 
         const repaymentController = <RepaymentController>(
-            await deploy("RepaymentController", admin, [loanCore.address, borrowerNoteAddress, lenderNoteAddress])
+            await deploy("RepaymentController", admin, [loanCore.address, borrowerNote.address, lenderNote.address])
         );
         await repaymentController.deployed();
         const updateRepaymentControllerPermissions = await loanCore.grantRole(
@@ -175,7 +174,6 @@ describe("Integration", () => {
                 .withArgs(await lender.getAddress(), originationController.address, loanTerms.principal)
                 .to.emit(mockERC20, "Transfer")
                 .withArgs(originationController.address, loanCore.address, loanTerms.principal)
-                .to.emit(loanCore, "LoanCreated")
                 .to.emit(loanCore, "LoanStarted");
         });
 
@@ -382,7 +380,7 @@ describe("Integration", () => {
                 .approve(repaymentController.address, loanTerms.principal.add(loanTerms.interestRate));
 
             await expect(repaymentController.connect(borrower).repay(1234)).to.be.revertedWith(
-                "RepaymentCont::repay: repay could not dereference loan",
+                "RC_CannotDereference",
             );
         });
     });
@@ -510,7 +508,7 @@ describe("Integration", () => {
 
             await blockchainTime.increaseTime(20000);
             await expect(repaymentController.connect(borrower).claim(loanId)).to.be.revertedWith(
-                "RepaymentCont::claim: not owner of lender note",
+                "RC_OnlyLender",
             );
         });
     });
