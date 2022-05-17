@@ -30,15 +30,22 @@ library LoanLibrary {
      * @dev The raw terms of a loan.
      */
     struct LoanTerms {
+        /// @dev Packed variables
         // The number of seconds representing relative due date of the loan.
-        uint256 durationSecs;
-        // The amount of principal in terms of the payableCurrency.
-        uint256 principal;
+        /// @dev Max is 94,608,000, fits in 32 bits
+        uint32 durationSecs;
+        // Total number of installment periods within the loan duration.
+        /// @dev Max is 1,000,000, fits in 24 bits
+        uint24 numInstallments;
         // Interest expressed as a rate, unlike V1 gross value.
         // Input conversion: 0.01% = (1 * 10**18) ,  10.00% = (1000 * 10**18)
         // This represents the rate over the lifetime of the loan, not APR.
         // 0.01% is the minimum interest rate allowed by the protocol.
-        uint256 interestRate;
+        uint200 interestRate;
+
+        /// @dev Full-slot variables
+        // The amount of principal in terms of the payableCurrency.
+        uint256 principal;
         // The token ID of the address holding the collateral.
         /// @dev Can be an AssetVault, or the NFT contract for unbundled collateral
         address collateralAddress;
@@ -46,8 +53,6 @@ library LoanLibrary {
         uint256 collateralId;
         // The payable currency for the loan principal and interest.
         address payableCurrency;
-        // Total number of installment periods within the loan duration.
-        uint256 numInstallments;
     }
 
     /**
@@ -56,12 +61,21 @@ library LoanLibrary {
      *      is defined by 'bytes' in items.
      */
     struct LoanTermsWithItems {
-        // The number of seconds representing relative due date of the loan
-        uint256 durationSecs;
-        // The amount of principal in terms of the payableCurrency
+        /// @dev Packed variables
+        // The number of seconds representing relative due date of the loan.
+        /// @dev Max is 94,608,000, fits in 32 bits
+        uint32 durationSecs;
+        // Total number of installment periods within the loan duration.
+        /// @dev Max is 1,000,000, fits in 24 bits
+        uint24 numInstallments;
+        // Interest expressed as a rate, unlike V1 gross value.
+        // Input conversion: 0.01% = (1 * 10**18) ,  10.00% = (1000 * 10**18)
+        // This represents the rate over the lifetime of the loan, not APR.
+        // 0.01% is the minimum interest rate allowed by the protocol.
+        uint200 interestRate;
+
+        /// @dev Full-slot variables
         uint256 principal;
-        // The amount of interest in terms of the payableCurrency
-        uint256 interestRate;
         // The tokenID of the address holding the collateral
         /// @dev Must be an AssetVault for LoanTermsWithItems
         address collateralAddress;
@@ -69,9 +83,6 @@ library LoanLibrary {
         bytes items;
         // The payable currency for the loan principal and interest
         address payableCurrency;
-        // Installment loan specific
-        // Total number of installment periods within the loan duration
-        uint256 numInstallments;
     }
 
     /**

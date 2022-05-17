@@ -63,15 +63,14 @@ contract OriginationController is
     bytes32 private constant _TOKEN_ID_TYPEHASH =
         keccak256(
             // solhint-disable-next-line max-line-length
-            "LoanTerms(uint256 durationSecs,uint256 principal,uint256 interestRate,address collateralAddress,uint256 collateralId,address payableCurrency,uint256 numInstallments,uint160 nonce)"
+            "LoanTerms(uint32 durationSecs,uint24 numInstallments,uint200 interestRate,uint256 principal,address collateralAddress,uint256 collateralId,address payableCurrency,uint160 nonce)"
         );
 
     /// @notice EIP712 type hash for item-based signatures.
     bytes32 private constant _ITEMS_TYPEHASH =
         keccak256(
             // solhint-disable max-line-length
-            "LoanTermsWithItems(uint256 durationSecs,uint256 principal,uint256 interestRate,address collateralAddress,bytes32 itemsHash,address payableCurrency,uint256 numInstallments,uint160 nonce)"
-            // "LoanTermsWithItems(uint256 durationSecs,uint256 principal,uint256 interestRate,address collateralAddress,address payableCurrency)"
+            "LoanTermsWithItems(uint32 durationSecs,uint24 numInstallments,uint200 interestRate,uint256 principal,address collateralAddress,bytes32 itemsHash,address payableCurrency,uint160 nonce)"
         );
 
     // =============== Contract References ===============
@@ -389,12 +388,12 @@ contract OriginationController is
             abi.encode(
                 _TOKEN_ID_TYPEHASH,
                 loanTerms.durationSecs,
-                loanTerms.principal,
+                loanTerms.numInstallments,
                 loanTerms.interestRate,
+                loanTerms.principal,
                 loanTerms.collateralAddress,
                 loanTerms.collateralId,
                 loanTerms.payableCurrency,
-                loanTerms.numInstallments,
                 nonce
             )
         );
@@ -426,12 +425,12 @@ contract OriginationController is
             abi.encode(
                 _ITEMS_TYPEHASH,
                 loanTerms.durationSecs,
-                loanTerms.principal,
+                loanTerms.numInstallments,
                 loanTerms.interestRate,
+                loanTerms.principal,
                 loanTerms.collateralAddress,
                 itemsHash,
                 loanTerms.payableCurrency,
-                loanTerms.numInstallments,
                 nonce
             )
         );

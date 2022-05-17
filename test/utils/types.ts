@@ -20,7 +20,7 @@ export interface ItemsPredicate {
 }
 
 export interface LoanTerms {
-    durationSecs: BigNumber;
+    durationSecs: BigNumberish;
     principal: BigNumber;
     interestRate: BigNumber;
     collateralAddress: string;

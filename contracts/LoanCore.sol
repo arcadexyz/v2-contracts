@@ -99,9 +99,9 @@ contract LoanCore is
      * @param _feeController      The address of the contract governing protocol fees.
      */
     function initialize(IFeeController _feeController, IPromissoryNote _borrowerNote, IPromissoryNote _lenderNote) public initializer {
-        if(address(_feeController) == address(0)) revert LC_ZeroAddress();
-        if(address(_borrowerNote) == address(0)) revert LC_ZeroAddress();
-        if(address(_lenderNote) == address(0)) revert LC_ZeroAddress();
+        if (address(_feeController) == address(0)) revert LC_ZeroAddress();
+        if (address(_borrowerNote) == address(0)) revert LC_ZeroAddress();
+        if (address(_lenderNote) == address(0)) revert LC_ZeroAddress();
 
         // only those with FEE_CLAIMER_ROLE can update or grant FEE_CLAIMER_ROLE
         __AccessControl_init();
@@ -165,7 +165,9 @@ contract LoanCore is
             revert LC_CollateralInUse(terms.collateralAddress, terms.collateralId);
 
         // interest rate must be greater than or equal to 0.01%
+        // and less than 10,000% (1e8 basis points)
         if (terms.interestRate / INTEREST_RATE_DENOMINATOR < 1) revert LC_InterestRate(terms.interestRate);
+        if (terms.interestRate / INTEREST_RATE_DENOMINATOR > 1e8) revert LC_InterestRate(terms.interestRate);
 
         // number of installments must be an even number.
         if (terms.numInstallments % 2 != 0 || terms.numInstallments > 1_000_000)
