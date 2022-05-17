@@ -95,7 +95,6 @@ contract MockLoanCore is ILoanCore, Initializable, AccessControlUpgradeable, UUP
         loans[loanId] = LoanLibrary.LoanData(
             terms,
             LoanLibrary.LoanState.Active,
-            block.timestamp + terms.durationSecs,
             block.timestamp,
             terms.principal,
             0,

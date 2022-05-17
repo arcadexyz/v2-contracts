@@ -77,7 +77,8 @@ contract LoanCore is
 
     CountersUpgradeable.Counter private loanIdTracker;
     mapping(uint256 => LoanLibrary.LoanData) private loans;
-    mapping(address => mapping(uint256 => bool)) private collateralInUse;
+    // key is hash of (collateralAddress, collateralId)
+    mapping(bytes32 => bool) private collateralInUse;
     mapping(address => mapping(uint160 => bool)) public usedNonces;
 
     // ========================================== CONSTRUCTOR ===========================================
@@ -161,7 +162,8 @@ contract LoanCore is
         if (terms.durationSecs < 3600 || terms.durationSecs > 94_608_000) revert LC_LoanDuration(terms.durationSecs);
 
         // check collateral is not already used in a loan.
-        if (collateralInUse[terms.collateralAddress][terms.collateralId])
+        bytes32 collateralKey = keccak256(abi.encode(terms.collateralAddress, terms.collateralId));
+        if (collateralInUse[collateralKey])
             revert LC_CollateralInUse(terms.collateralAddress, terms.collateralId);
 
         // interest rate must be greater than or equal to 0.01%
@@ -181,7 +183,6 @@ contract LoanCore is
         loans[loanId] = LoanLibrary.LoanData({
             terms: terms,
             state: LoanLibrary.LoanState.Active,
-            dueDate: block.timestamp + terms.durationSecs,
             startDate: block.timestamp,
             balance: terms.principal,
             balancePaid: 0,
@@ -189,24 +190,23 @@ contract LoanCore is
             numInstallmentsPaid: 0
         });
 
-        LoanLibrary.LoanData storage data = loans[loanId];
-        collateralInUse[terms.collateralAddress][terms.collateralId] = true;
+        collateralInUse[collateralKey] = true;
 
         // Distribute notes and principal
         borrowerNote.mint(borrower, loanId);
         lenderNote.mint(lender, loanId);
 
-        IERC721Upgradeable(data.terms.collateralAddress).transferFrom(_msgSender(), address(this), data.terms.collateralId);
+        IERC721Upgradeable(terms.collateralAddress).transferFrom(_msgSender(), address(this), terms.collateralId);
 
-        IERC20Upgradeable(data.terms.payableCurrency).safeTransferFrom(
+        IERC20Upgradeable(terms.payableCurrency).safeTransferFrom(
             _msgSender(),
             address(this),
-            data.terms.principal
+            terms.principal
         );
 
-        IERC20Upgradeable(data.terms.payableCurrency).safeTransfer(
+        IERC20Upgradeable(terms.payableCurrency).safeTransfer(
             borrower,
-            getPrincipalLessFees(data.terms.principal)
+            getPrincipalLessFees(terms.principal)
         );
 
         emit LoanStarted(loanId, lender, borrower);
@@ -240,7 +240,7 @@ contract LoanCore is
         // state changes and cleanup
         // NOTE: these must be performed before assets are released to prevent reentrance
         loans[loanId].state = LoanLibrary.LoanState.Repaid;
-        collateralInUse[data.terms.collateralAddress][data.terms.collateralId] = false;
+        collateralInUse[keccak256(abi.encode(data.terms.collateralAddress, data.terms.collateralId))] = false;
 
         lenderNote.burn(loanId);
         borrowerNote.burn(loanId);
@@ -266,13 +266,14 @@ contract LoanCore is
         if (data.state != LoanLibrary.LoanState.Active) revert LC_StartInvalidState(data.state);
         // ensure claiming after the loan has ended. block.timstamp must be greater than the dueDate.
 
-        if (data.dueDate > block.timestamp) revert LC_NotExpired(data.dueDate);
+        uint256 dueDate = data.startDate + data.terms.durationSecs;
+        if (dueDate > block.timestamp) revert LC_NotExpired(dueDate);
 
         address lender = lenderNote.ownerOf(loanId);
 
         // NOTE: these must be performed before assets are released to prevent reentrance
         loans[loanId].state = LoanLibrary.LoanState.Defaulted;
-        collateralInUse[data.terms.collateralAddress][data.terms.collateralId] = false;
+        collateralInUse[keccak256(abi.encode(data.terms.collateralAddress, data.terms.collateralId))] = false;
 
         lenderNote.burn(loanId);
         borrowerNote.burn(loanId);
@@ -323,7 +324,7 @@ contract LoanCore is
 
             // mark loan as closed
             data.state = LoanLibrary.LoanState.Repaid;
-            collateralInUse[data.terms.collateralAddress][data.terms.collateralId] = false;
+            collateralInUse[keccak256(abi.encode(data.terms.collateralAddress, data.terms.collateralId))] = false;
             lenderNote.burn(_loanId);
             borrowerNote.burn(_loanId);
         }
@@ -408,7 +409,7 @@ contract LoanCore is
      */
     function canCallOn(address caller, address vault) external view override returns (bool) {
         // if the collateral is not currently being used in a loan, disallow
-        if (!collateralInUse[OwnableERC721(vault).ownershipToken()][uint256(uint160(vault))]) {
+        if (!collateralInUse[keccak256(abi.encode(OwnableERC721(vault).ownershipToken(), uint256(uint160(vault))))]) {
             return false;
         }
         for (uint256 i = 0; i < borrowerNote.balanceOf(caller); i++) {
