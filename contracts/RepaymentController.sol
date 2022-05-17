@@ -108,7 +108,7 @@ contract RepaymentController is
     function claim(uint256 loanId) external override {
         // make sure that caller owns lender note
         address lender = lenderNote.ownerOf(loanId);
-        if (lender == msg.sender) revert RC_OnlyLender(msg.sender);
+        if (lender != msg.sender) revert RC_OnlyLender(msg.sender);
 
         // call claim function in loan core
         loanCore.claim(loanId);
