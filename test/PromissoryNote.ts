@@ -8,7 +8,6 @@ import {
     OriginationController,
     MockERC20,
     LoanCore,
-    MockERC721,
     PromissoryNote,
     CallWhitelist,
     VaultFactory,
@@ -131,29 +130,26 @@ describe("PromissoryNote", () => {
         };
     };
 
-    // Create Loan
-    const createLoan = async (loanCore: LoanCore, user: Signer, terms: LoanTerms): Promise<BigNumber> => {
-        const transaction = await loanCore.connect(user).createLoan(terms);
-        const receipt = await transaction.wait();
-
-        if (receipt && receipt.events && receipt.events.length === 1 && receipt.events[0].args) {
-            return receipt.events[0].args.loanId;
-        } else {
-            throw new Error("Unable to initialize loan");
-        }
-    };
-
     // Start Loan
     const startLoan = async (
         loanCore: LoanCore,
-        user: Signer,
-        lenderNote: PromissoryNote,
-        borrowerNote: PromissoryNote,
-        loanId: BigNumberish,
-    ) => {
-        const transaction = await loanCore.connect(user).startLoan(lenderNote.address, borrowerNote.address, loanId);
-        await transaction.wait();
-    };
+        lender: string,
+        borrower: string,
+        terms: LoanTerms
+    ): Promise<BigNumber> => {
+        const tx = await loanCore.connect(borrower).startLoan(lender, borrower, terms);
+        const receipt = await tx.wait();
+
+        const loanStartedEvent = receipt?.events?.find(e => e.event === "LoanStarted");
+
+        expect(loanStartedEvent).to.not.be.undefined;
+        expect(loanStartedEvent?.args?.[1]).to.eq(lender);
+        expect(loanStartedEvent?.args?.[2]).to.eq(borrower);
+
+        const loanId = loanStartedEvent?.args?.[0];
+
+        return loanId;
+    }
 
     // Repay Loan
     const repayLoan = async (
@@ -163,7 +159,7 @@ describe("PromissoryNote", () => {
         loanId: BigNumberish,
     ) => {
         const loanData = await loanCore.connect(user).getLoan(loanId);
-        const transaction = await repaymentController.connect(user).repay(loanData.borrowerNoteId);
+        const transaction = await repaymentController.connect(user).repay(loanId);
         await transaction.wait();
     };
 
