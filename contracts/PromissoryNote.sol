@@ -13,7 +13,7 @@ import "./ERC721Permit.sol";
 import "./interfaces/ILoanCore.sol";
 import "./interfaces/IPromissoryNote.sol";
 
-import { PN_MintingRole, PN_BurningRole, PN_ContractPaused } from "./errors/Lending.sol";
+import { PN_MintingRole, PN_BurningRole, PN_ContractPaused, PN_CannotInitialize, PN_AlreadyInitialized } from "./errors/Lending.sol";
 import { ERC721P_InvalidSignature, ERC721P_DeadlineExpired } from "./errors/LendingUtils.sol";
 
 /**
@@ -59,6 +59,10 @@ contract PromissoryNote is
 
     // ============= Loan State ==============
 
+    /// @dev Initially deployer, then account with burn/mint/pause roles (LoanCore).
+    address public owner;
+    bool private initialized;
+
     Counters.Counter private _tokenIdTracker;
 
     // ========================================= CONSTRUCTOR ===========================================
@@ -70,15 +74,12 @@ contract PromissoryNote is
      *
      * @param name                  The name of the token (see ERC721).
      * @param symbol                The symbol of the token (see ERC721).
-     * @param owner                 The address allowed to mint, burn, and pause.
-     */
-    constructor(string memory name, string memory symbol, address owner) ERC721(name, symbol) ERC721Permit(name) {
-        _setupRole(BURNER_ROLE, owner);
-        _setupRole(MINTER_ROLE, owner);
-        _setupRole(PAUSER_ROLE, owner);
-
+å     */
+    constructor(string memory name, string memory symbol) ERC721(name, symbol) ERC721Permit(name) {
         // We don't want token IDs of 0
         _tokenIdTracker.increment();
+
+        owner = msg.sender;
     }
 
     // ======================================= TOKEN OPERATIONS =========================================
@@ -119,6 +120,17 @@ contract PromissoryNote is
     function burn(uint256 tokenId) external override {
         if (!hasRole(BURNER_ROLE, _msgSender())) revert PN_BurningRole(_msgSender());
         _burn(tokenId);
+    }
+
+    function initialize(address loanCore) external {
+        if (initialized) revert PN_AlreadyInitialized();
+        if (_msgSender() != owner) revert PN_CannotInitialize();
+
+        _setupRole(MINTER_ROLE, loanCore);
+        _setupRole(BURNER_ROLE, loanCore);
+        _setupRole(PAUSER_ROLE, loanCore);
+
+        owner = loanCore;
     }
 
     // ===================================== ERC721 UTILITIES ===========================================

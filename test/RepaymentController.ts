@@ -15,7 +15,7 @@ import {
     MockLoanCore,
 } from "../typechain";
 import { BlockchainTime } from "./utils/time";
-import { utils, Signer, BigNumber, BigNumberish } from "ethers";
+import { BigNumber, BigNumberish } from "ethers";
 import { deploy } from "./utils/contracts";
 import { approve, mint } from "./utils/erc20";
 import { LoanTerms, LoanData } from "./utils/types";
@@ -232,7 +232,7 @@ describe("Legacy Repayments with interest parameter as a rate:", () => {
     it("Legacy loan type (no installments), repay interest and principal. 100 ETH principal, 10% interest rate.", async () => {
         const context = await loadFixture(fixture);
         const { repaymentController, vaultFactory, mockERC20, loanCore, borrower } = context;
-        const { loanData, bundleId } = await initializeLoan(
+        const { loanId, bundleId } = await initializeLoan(
             context,
             mockERC20.address,
             BigNumber.from(86400), // durationSecs
@@ -249,7 +249,7 @@ describe("Legacy Repayments with interest parameter as a rate:", () => {
 
         expect(await vaultFactory.ownerOf(bundleId)).to.equal(loanCore.address);
 
-        await repaymentController.connect(borrower).repay(loanData.borrowerNoteId);
+        await repaymentController.connect(borrower).repay(loanId);
 
         expect(await mockERC20.balanceOf(borrower.address)).to.equal(0);
     });
@@ -257,7 +257,7 @@ describe("Legacy Repayments with interest parameter as a rate:", () => {
     it("Legacy loan type (no installments), repay interest and principal. 10 ETH principal, 7.5% interest rate.", async () => {
         const context = await loadFixture(fixture);
         const { repaymentController, vaultFactory, mockERC20, loanCore, borrower } = context;
-        const { loanData, bundleId } = await initializeLoan(
+        const { loanId, bundleId } = await initializeLoan(
             context,
             mockERC20.address,
             BigNumber.from(86400), // durationSecs
@@ -275,7 +275,7 @@ describe("Legacy Repayments with interest parameter as a rate:", () => {
 
         expect(await vaultFactory.ownerOf(bundleId)).to.equal(loanCore.address);
 
-        await repaymentController.connect(borrower).repay(loanData.borrowerNoteId);
+        await repaymentController.connect(borrower).repay(loanId);
 
         expect(await mockERC20.balanceOf(borrower.address)).to.equal(0);
     });
@@ -283,7 +283,7 @@ describe("Legacy Repayments with interest parameter as a rate:", () => {
     it("Legacy loan type (no installments), repay interest and principal. 25 ETH principal, 2.5% interest rate.", async () => {
         const context = await loadFixture(fixture);
         const { repaymentController, vaultFactory, mockERC20, loanCore, borrower } = context;
-        const { loanData, bundleId } = await initializeLoan(
+        const { loanId, bundleId } = await initializeLoan(
             context,
             mockERC20.address,
             BigNumber.from(86400), // durationSecs
@@ -300,7 +300,7 @@ describe("Legacy Repayments with interest parameter as a rate:", () => {
 
         expect(await vaultFactory.ownerOf(bundleId)).to.equal(loanCore.address);
 
-        await repaymentController.connect(borrower).repay(loanData.borrowerNoteId);
+        await repaymentController.connect(borrower).repay(loanId);
 
         expect(await mockERC20.balanceOf(borrower.address)).to.equal(0);
     });
@@ -308,7 +308,7 @@ describe("Legacy Repayments with interest parameter as a rate:", () => {
     it("Legacy loan type (no installments), repay interest and principal. 25 ETH principal, 2.5% interest rate. Borrower tries to repay with insufficient balance. Should revert.", async () => {
         const context = await loadFixture(fixture);
         const { repaymentController, vaultFactory, mockERC20, loanCore, borrower } = context;
-        const { loanData, bundleId } = await initializeLoan(
+        const { loanId, bundleId } = await initializeLoan(
             context,
             mockERC20.address,
             BigNumber.from(86400), // durationSecs
@@ -325,7 +325,7 @@ describe("Legacy Repayments with interest parameter as a rate:", () => {
 
         expect(await vaultFactory.ownerOf(bundleId)).to.equal(loanCore.address);
 
-        await expect(repaymentController.connect(borrower).repay(loanData.borrowerNoteId)).to.be.revertedWith(
+        await expect(repaymentController.connect(borrower).repay(loanId)).to.be.revertedWith(
             "ERC20: transfer amount exceeds balance",
         );
     });
@@ -333,7 +333,7 @@ describe("Legacy Repayments with interest parameter as a rate:", () => {
     it("Legacy loan type (no installments), repay interest and principal. 25 ETH principal, 2.5% interest rate. Borrower tries to repay with insufficient allowance. Should revert.", async () => {
         const context = await loadFixture(fixture);
         const { repaymentController, vaultFactory, mockERC20, loanCore, borrower } = context;
-        const { loanData, bundleId } = await initializeLoan(
+        const { loanId, bundleId } = await initializeLoan(
             context,
             mockERC20.address,
             BigNumber.from(86400), // durationSecs
@@ -349,7 +349,7 @@ describe("Legacy Repayments with interest parameter as a rate:", () => {
 
         expect(await vaultFactory.ownerOf(bundleId)).to.equal(loanCore.address);
 
-        await expect(repaymentController.connect(borrower).repay(loanData.borrowerNoteId)).to.be.revertedWith(
+        await expect(repaymentController.connect(borrower).repay(loanId)).to.be.revertedWith(
             "ERC20: transfer amount exceeds allowance",
         );
     });
@@ -372,7 +372,7 @@ describe("Legacy Repayments with interest parameter as a rate:", () => {
     it("Legacy loan type (no installments), repay interest and principal. 1000 Wei principal, 2.5% interest rate.", async () => {
         const context = await loadFixture(fixture);
         const { repaymentController, vaultFactory, mockERC20, loanCore, borrower } = context;
-        const { loanData, bundleId } = await initializeLoan(
+        const { loanId, bundleId } = await initializeLoan(
             context,
             mockERC20.address,
             BigNumber.from(86400), // durationSecs
@@ -389,7 +389,7 @@ describe("Legacy Repayments with interest parameter as a rate:", () => {
 
         expect(await vaultFactory.ownerOf(bundleId)).to.equal(loanCore.address);
 
-        await repaymentController.connect(borrower).repay(loanData.borrowerNoteId);
+        await repaymentController.connect(borrower).repay(loanId);
 
         expect(await mockERC20.balanceOf(borrower.address)).to.equal(0);
     });

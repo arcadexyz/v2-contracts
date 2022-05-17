@@ -2,10 +2,9 @@ import { BigNumber, BigNumberish } from "ethers";
 
 export enum LoanState {
     DUMMY = 0,
-    Created = 1,
-    Active = 2,
-    Repaid = 3,
-    Defaulted = 4,
+    Active = 1,
+    Repaid = 2,
+    Defaulted = 3,
 }
 
 export interface SignatureItem {

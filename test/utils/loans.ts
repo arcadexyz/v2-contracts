@@ -1,8 +1,11 @@
-import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
+import { expect } from "chai";
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BigNumber, ethers } from "ethers";
 
-import { VaultFactory } from "../../typechain";
+import { LoanCore, VaultFactory } from "../../typechain";
 import { SignatureItem, ItemsPredicate } from "./types";
+import { LoanTerms } from "./types";
+
 
 export const initializeBundle = async (vaultFactory: VaultFactory, user: SignerWithAddress): Promise<BigNumber> => {
 
@@ -35,3 +38,24 @@ export const encodePredicates = (predicates: ItemsPredicate[]): string => {
     const coded = ethers.utils.defaultAbiCoder.encode(types, [values]);
     return ethers.utils.keccak256(coded);
 };
+
+export const startLoan = async (
+    loanCore: LoanCore,
+    originator: SignerWithAddress,
+    lender: string,
+    borrower: string,
+    terms: LoanTerms
+): Promise<BigNumber> => {
+    const tx = await loanCore.connect(originator).startLoan(lender, borrower, terms);
+    const receipt = await tx.wait();
+
+    const loanStartedEvent = receipt?.events?.find(e => e.event === "LoanStarted");
+
+    expect(loanStartedEvent).to.not.be.undefined;
+    expect(loanStartedEvent?.args?.[1]).to.eq(lender);
+    expect(loanStartedEvent?.args?.[2]).to.eq(borrower);
+
+    const loanId = loanStartedEvent?.args?.[0];
+
+    return loanId;
+}

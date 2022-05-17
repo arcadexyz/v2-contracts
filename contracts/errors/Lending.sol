@@ -254,6 +254,16 @@ error FIAC_InterestRate(uint256 interestRate);
 /// @notice All errors prefixed with PN_, to separate from other contracts in the protocol.
 
 /**
+ * @notice Deployer is allowed to initialize roles. Caller is not deployer.
+ */
+error PN_CannotInitialize();
+
+/**
+ * @notice Roles have been initialized.
+ */
+error PN_AlreadyInitialized();
+
+/**
  * @notice Caller of mint function must have the MINTER_ROLE in AccessControl.
  *
  * @param caller                        Address of the function caller.

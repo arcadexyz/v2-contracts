@@ -23,6 +23,9 @@ import { createLoanTermsSignature } from "./utils/eip712";
 
 const ORIGINATOR_ROLE = "0x59abfac6520ec36a6556b2a4dd949cc40007459bcd5cd2507f1e5cc77b6bc97e";
 const REPAYER_ROLE = "0x9c60024347074fd9de2c1e36003080d22dbc76a41ef87444d21e361bcb39118e";
+const BURNER_ROLE = "0x3c11d16cbaffd01df69ce1c404f6340ee057498f5f00246190ea54220576a848";
+const MINTER_ROLE = "0x9f2df0fed2c77648de5860a4cc508cd0818c85b8b8a1ab4ceeef8d981c8956a6";
+const PAUSER_ROLE = "65d7a28e3265b37a6474929f336521b332c1681b933f6cb9f3376673440d862a";
 
 interface TestContext {
     loanCore: LoanCore;
@@ -87,10 +90,19 @@ const fixture = async (): Promise<TestContext> => {
     );
 
     const feeController = <FeeController>await deploy("FeeController", admin, []);
+
+    const borrowerNote = <PromissoryNote>await deploy("PromissoryNote", admin, ["Arcade.xyz BorrowerNote", "aBN"]);
+    const lenderNote = <PromissoryNote>await deploy("PromissoryNote", admin, ["Arcade.xyz LenderNote", "aLN"]);
+
     const LoanCore = await hre.ethers.getContractFactory("LoanCore");
     const loanCore = <LoanCore>(
-        await upgrades.deployProxy(LoanCore, [feeController.address], { kind: 'uups' })
+        await upgrades.deployProxy(LoanCore, [feeController.address, borrowerNote.address, lenderNote.address], { kind: 'uups' })
     );
+
+    // Grant correct permissions for promissory note
+    for (const note of [borrowerNote, lenderNote]) {
+        await note.connect(admin).initialize(loanCore.address);
+    }
 
     const mockERC20 = <MockERC20>await deploy("MockERC20", signers[0], ["Mock ERC20", "MOCK"]);
     const mockERC721 = <MockERC721>await deploy("MockERC721", signers[0], ["Mock ERC721", "MOCK"]);
@@ -101,15 +113,8 @@ const fixture = async (): Promise<TestContext> => {
     );
     await originationController.deployed();
 
-    const borrowerNoteAddress = await loanCore.borrowerNote();
-    const borrowerNote = <PromissoryNote>(
-        (await ethers.getContractFactory("PromissoryNote")).attach(borrowerNoteAddress)
-    );
-
-    const lenderNoteAddress = await loanCore.lenderNote();
-    const lenderNote = <PromissoryNote>(await ethers.getContractFactory("PromissoryNote")).attach(lenderNoteAddress);
     const repaymentController = <RepaymentController>(
-        await deploy("RepaymentController", admin, [loanCore.address, borrowerNoteAddress, lenderNoteAddress])
+        await deploy("RepaymentController", admin, [loanCore.address, borrowerNote.address, lenderNote.address])
     );
     await repaymentController.deployed();
     const updateRepaymentControllerPermissions = await loanCore.grantRole(REPAYER_ROLE, repaymentController.address);
@@ -507,7 +512,7 @@ describe("Installment Repayments", () => {
 
         await expect(
             repaymentController.connect(borrower).getInstallmentMinPayment(loanId),
-        ).to.be.revertedWith("RepaymentCont::minPayment: Loan does not have any installments");
+        ).to.be.revertedWith("RC_NoInstallments");
     });
 
     it("Scenario: numInstallments: 8, durationSecs: 36000, principal: 100, interest: 10%. Repay minimum on first payment.", async () => {

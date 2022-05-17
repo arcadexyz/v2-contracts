@@ -2,6 +2,7 @@ import { expect } from "chai";
 import hre, { ethers, waffle, upgrades } from "hardhat";
 const { loadFixture } = waffle;
 import { BigNumber, BigNumberish, Signer } from "ethers";
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
 import {
     LoanCore,
@@ -16,6 +17,7 @@ import {
 import { BlockchainTime } from "./utils/time";
 import { LoanTerms, LoanState } from "./utils/types";
 import { deploy } from "./utils/contracts";
+import { startLoan } from "./utils/loans";
 
 const ORIGINATOR_ROLE = "0x59abfac6520ec36a6556b2a4dd949cc40007459bcd5cd2507f1e5cc77b6bc97e";
 const REPAYER_ROLE = "0x9c60024347074fd9de2c1e36003080d22dbc76a41ef87444d21e361bcb39118e";
@@ -27,11 +29,11 @@ interface TestContext {
     mockERC20: MockERC20;
     mockBorrowerNote: PromissoryNote;
     mockLenderNote: PromissoryNote;
-    borrower: Signer;
-    lender: Signer;
-    admin: Signer;
-    user: Signer;
-    other: Signer;
+    borrower: SignerWithAddress;
+    lender: SignerWithAddress;
+    admin: SignerWithAddress;
+    user: SignerWithAddress;
+    other: SignerWithAddress;
     signers: Signer[];
     currentTimestamp: number;
     blockchainTime: BlockchainTime;
@@ -79,33 +81,13 @@ describe("LoanCore", () => {
         return vault;
     };
 
-    const startLoan = async (
-        loanCore: LoanCore,
-        lender: string,
-        borrower: string,
-        terms: LoanTerms
-    ): Promise<BigNumber> => {
-        const tx = await loanCore.connect(borrower).startLoan(lender, borrower, terms);
-        const receipt = await tx.wait();
-
-        const loanStartedEvent = receipt?.events?.find(e => e.event === "LoanStarted");
-
-        expect(loanStartedEvent).to.not.be.undefined;
-        expect(loanStartedEvent?.args?.[1]).to.eq(lender);
-        expect(loanStartedEvent?.args?.[2]).to.eq(borrower);
-
-        const loanId = loanStartedEvent?.args?.[0];
-
-        return loanId;
-    }
-
     /**
      * Sets up a test context, deploying new contracts and returning them for use in a test
      */
     const fixture = async (): Promise<TestContext> => {
         const blockchainTime = new BlockchainTime();
         const currentTimestamp = await blockchainTime.secondsFromNow(0);
-        const signers: Signer[] = await hre.ethers.getSigners();
+        const signers: SignerWithAddress[] = await hre.ethers.getSigners();
         const [borrower, lender, admin] = signers;
 
         const whitelist = <CallWhitelist>await deploy("CallWhitelist", signers[0], []);
@@ -195,8 +177,8 @@ describe("LoanCore", () => {
     describe("Start Loan", function () {
         interface StartLoanState extends TestContext {
             terms: LoanTerms;
-            borrower: Signer;
-            lender: Signer;
+            borrower: SignerWithAddress;
+            lender: SignerWithAddress;
         }
 
         const setupLoan = async (context?: TestContext): Promise<StartLoanState> => {
@@ -218,6 +200,7 @@ describe("LoanCore", () => {
                 terms,
                 borrower,
                 lender,
+                user
             } = await setupLoan();
             const { collateralId, principal } = terms;
 
@@ -237,6 +220,7 @@ describe("LoanCore", () => {
 
             const loanId = await startLoan(
                 loanCore,
+                user,
                 await lender.getAddress(),
                 await borrower.getAddress(),
                 terms
@@ -286,6 +270,7 @@ describe("LoanCore", () => {
 
             const loanId = await startLoan(
                 loanCore,
+                borrower,
                 await lender.getAddress(),
                 await borrower.getAddress(),
                 terms
@@ -327,6 +312,7 @@ describe("LoanCore", () => {
 
             await startLoan(
                 loanCore,
+                borrower,
                 await lender.getAddress(),
                 await borrower.getAddress(),
                 terms
@@ -352,6 +338,7 @@ describe("LoanCore", () => {
 
             await startLoan(
                 loanCore,
+                borrower,
                 await lender.getAddress(),
                 await borrower.getAddress(),
                 terms
@@ -381,6 +368,7 @@ describe("LoanCore", () => {
 
             await startLoan(
                 loanCore,
+                borrower,
                 await lender.getAddress(),
                 await borrower.getAddress(),
                 terms
@@ -466,6 +454,7 @@ describe("LoanCore", () => {
 
             const loanId = await startLoan(
                 loanCore,
+                borrower,
                 await lender.getAddress(),
                 await borrower.getAddress(),
                 terms
@@ -506,6 +495,7 @@ describe("LoanCore", () => {
 
             const loanId = await startLoan(
                 loanCore,
+                borrower,
                 await lender.getAddress(),
                 await borrower.getAddress(),
                 terms
@@ -634,8 +624,8 @@ describe("LoanCore", () => {
         interface RepayLoanState extends TestContext {
             loanId: BigNumberish;
             terms: LoanTerms;
-            borrower: Signer;
-            lender: Signer;
+            borrower: SignerWithAddress;
+            lender: SignerWithAddress;
         }
 
         const setupLoan = async (context?: TestContext): Promise<RepayLoanState> => {
@@ -659,6 +649,7 @@ describe("LoanCore", () => {
 
             const loanId = await startLoan(
                 loanCore,
+                borrower,
                 await lender.getAddress(),
                 await borrower.getAddress(),
                 terms
@@ -799,8 +790,8 @@ describe("LoanCore", () => {
         interface RepayLoanState extends TestContext {
             loanId: BigNumberish;
             terms: LoanTerms;
-            borrower: Signer;
-            lender: Signer;
+            borrower: SignerWithAddress;
+            lender: SignerWithAddress;
         }
 
         const setupLoan = async (context?: TestContext): Promise<RepayLoanState> => {
@@ -824,6 +815,7 @@ describe("LoanCore", () => {
 
             const loanId = await startLoan(
                 loanCore,
+                borrower,
                 await lender.getAddress(),
                 await borrower.getAddress(),
                 terms
@@ -962,8 +954,8 @@ describe("LoanCore", () => {
     describe("Claim fees", async () => {
         interface StartLoanState extends TestContext {
             terms: LoanTerms;
-            borrower: Signer;
-            lender: Signer;
+            borrower: SignerWithAddress;
+            lender: SignerWithAddress;
         }
 
         const setupLoan = async (context?: TestContext): Promise<StartLoanState> => {
@@ -1001,6 +993,7 @@ describe("LoanCore", () => {
 
             await startLoan(
                 loanCore,
+                borrower,
                 await lender.getAddress(),
                 await borrower.getAddress(),
                 terms
@@ -1039,6 +1032,7 @@ describe("LoanCore", () => {
 
             await startLoan(
                 loanCore,
+                borrower,
                 await lender.getAddress(),
                 await borrower.getAddress(),
                 terms
@@ -1077,6 +1071,7 @@ describe("LoanCore", () => {
 
             await startLoan(
                 loanCore,
+                borrower,
                 await lender.getAddress(),
                 await borrower.getAddress(),
                 terms
@@ -1098,8 +1093,8 @@ describe("LoanCore", () => {
         interface StartLoanState extends TestContext {
             loanId: BigNumberish;
             terms: LoanTerms;
-            borrower: Signer;
-            lender: Signer;
+            borrower: SignerWithAddress;
+            lender: SignerWithAddress;
         }
 
         const setupLoan = async (): Promise<StartLoanState> => {
@@ -1111,6 +1106,7 @@ describe("LoanCore", () => {
 
             const loanId = await startLoan(
                 loanCore,
+                borrower,
                 await lender.getAddress(),
                 await borrower.getAddress(),
                 terms
@@ -1162,6 +1158,7 @@ describe("LoanCore", () => {
             const terms = createLoanTerms(mockERC20.address, vaultFactory.address, { collateralId });
             await startLoan(
                 loanCore,
+                borrower,
                 await lender.getAddress(),
                 await borrower.getAddress(),
                 terms
@@ -1182,6 +1179,7 @@ describe("LoanCore", () => {
             const terms2 = createLoanTerms(mockERC20.address, vaultFactory.address, { collateralId: collateralId2 });
             await startLoan(
                 loanCore,
+                borrower,
                 await lender.getAddress(),
                 await borrower.getAddress(),
                 terms2
@@ -1262,6 +1260,7 @@ describe("LoanCore", () => {
 
             await startLoan(
                 loanCore,
+                borrower,
                 await lender.getAddress(),
                 await borrower.getAddress(),
                 terms
@@ -1365,6 +1364,7 @@ describe("LoanCore", () => {
             ).to.be.revertedWith(`AccessControl: account ${await (await other.getAddress()).toLocaleLowerCase()} is missing role ${ORIGINATOR_ROLE}`);
         });
 
+        // TODO: Take care of these in signature expiry PR
         it("reverts if attempting to use a nonce that has already been consumed");
         it("consumes a nonce");
         it("reverts if attempting to use a nonce that has already been cancelled");
