@@ -50,7 +50,7 @@ describe("PromissoryNote", () => {
             durationSecs = BigNumber.from(360000),
             principal = hre.ethers.utils.parseEther("100"),
             interestRate = hre.ethers.utils.parseEther("1"),
-            collateralId = BigNumber.from(1),
+            collateralId = 1,
             numInstallments = 0,
         }: Partial<LoanTerms> = {},
     ): LoanTerms => {
@@ -149,7 +149,7 @@ describe("PromissoryNote", () => {
         user: Signer,
         lenderNote: PromissoryNote,
         borrowerNote: PromissoryNote,
-        loanId: BigNumber,
+        loanId: BigNumberish,
     ) => {
         const transaction = await loanCore.connect(user).startLoan(lenderNote.address, borrowerNote.address, loanId);
         await transaction.wait();
@@ -160,7 +160,7 @@ describe("PromissoryNote", () => {
         loanCore: LoanCore,
         repaymentController: RepaymentController,
         user: Signer,
-        loanId: BigNumber,
+        loanId: BigNumberish,
     ) => {
         const loanData = await loanCore.connect(user).getLoan(loanId);
         const transaction = await repaymentController.connect(user).repay(loanData.borrowerNoteId);
@@ -336,7 +336,7 @@ describe("PromissoryNote", () => {
         let promissoryNote: PromissoryNote;
         let user: Signer;
         let other: Signer;
-        let promissoryNoteId: BigNumber;
+        let promissoryNoteId: BigNumberish;
         let signature: string;
         let v: number;
         let r: Buffer;

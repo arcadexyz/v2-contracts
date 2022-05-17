@@ -172,7 +172,7 @@ describe("VaultFactory", () => {
         it("should accept owner signature", async () => {
             const { factory, user, other } = await loadFixture(fixture);
             const vault = await createVault(factory, user);
-            const bundleId = BigNumber.from(vault.address);
+            const bundleId = vault.address;
             const data = buildData(
                 chainId,
                 factory.address,
@@ -314,8 +314,8 @@ describe("VaultFactory", () => {
                 await user.getAddress(),
                 await other.getAddress(),
                 bundleId,
-                0,
-                BigNumber.from("1234"),
+                0, // nonce
+                BigNumber.from("1234"), // deadline
             );
 
             const signature = await user._signTypedData(data.domain, data.types, data.message);
@@ -342,9 +342,9 @@ describe("VaultFactory", () => {
         let token: VaultFactory;
         let user: Signer, other: Signer, signers: Signer[];
 
-        const initializeBundle = async (token: VaultFactory, user: Signer): Promise<BigNumber> => {
+        const initializeBundle = async (token: VaultFactory, user: Signer): Promise<BigNumberish> => {
             const vault = await createVault(token, user);
-            return BigNumber.from(vault.address);
+            return vault.address;
         };
 
         context("with minted tokens", function () {
@@ -409,7 +409,7 @@ describe("VaultFactory", () => {
                         from: Signer,
                         to: Signer,
                         caller: Signer,
-                        tokenId: BigNumber,
+                        tokenId: BigNumberish,
                     ) => {
                         const preSenderBalance = await token.balanceOf(await from.getAddress());
                         const preRecipientBalance = await token.balanceOf(await to.getAddress());
@@ -465,7 +465,7 @@ describe("VaultFactory", () => {
                     });
 
                     describe("properly performs a self-send", async () => {
-                        let tokenId: BigNumber;
+                        let tokenId: BigNumberish;
 
                         beforeEach(async () => {
                             tokenId = await initializeBundle(token, user);
@@ -512,7 +512,7 @@ describe("VaultFactory", () => {
                     });
 
                     it("fails when the token id does not exist", async () => {
-                        const nonexistentTokenId = BigNumber.from("123412341243");
+                        const nonexistentTokenId = 123412341243;
                         await expect(
                             token
                                 .connect(user)

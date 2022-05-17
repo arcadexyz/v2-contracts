@@ -86,7 +86,7 @@ describe("ItemsVerifier", () => {
                     cType: 4 as 0, // 4 is an invalid collateral type
                     asset: mockERC721.address,
                     tokenId,
-                    amount: 0, // not used for 721
+                    amount: BigNumber.from(0), // not used for 721
                 },
             ];
 
@@ -108,7 +108,7 @@ describe("ItemsVerifier", () => {
                     cType: 0,
                     asset: "0x0000000000000000000000000000000000000000",
                     tokenId,
-                    amount: 0, // not used for 721
+                    amount: BigNumber.from(0), // not used for 721
                 },
             ];
 
@@ -133,7 +133,7 @@ describe("ItemsVerifier", () => {
                     cType: 1,
                     asset: mockERC1155.address,
                     tokenId,
-                    amount: 0, // invalid for 1155
+                    amount: BigNumber.from(0), // invalid for 1155
                 },
             ];
 
@@ -158,7 +158,7 @@ describe("ItemsVerifier", () => {
                     cType: 1,
                     asset: mockERC1155.address,
                     tokenId: -1, // invalid for 1155
-                    amount: 5,
+                    amount: BigNumber.from(5),
                 },
             ];
 
@@ -183,7 +183,7 @@ describe("ItemsVerifier", () => {
                     cType: 2,
                     asset: mockERC20.address,
                     tokenId: 0,
-                    amount: 0, // invalid for 20
+                    amount: BigNumber.from(0), // invalid for 20
                 },
             ];
 
@@ -215,7 +215,7 @@ describe("ItemsVerifier", () => {
                     cType: 0,
                     asset: mockERC721.address,
                     tokenId,
-                    amount: 0, // not used for 721
+                    amount: BigNumber.from(0), // not used for 721
                 },
             ];
 
@@ -249,7 +249,7 @@ describe("ItemsVerifier", () => {
                     cType: 0,
                     asset: mockERC721.address,
                     tokenId: -1,
-                    amount: 0, // not used for 721
+                    amount: BigNumber.from(0), // not used for 721
                 },
             ];
 
@@ -290,7 +290,7 @@ describe("ItemsVerifier", () => {
                     cType: 1,
                     asset: mockERC1155.address,
                     tokenId,
-                    amount: 5,
+                    amount: BigNumber.from(5),
                 },
             ];
 
@@ -323,7 +323,7 @@ describe("ItemsVerifier", () => {
                     cType: 2,
                     asset: mockERC20.address,
                     tokenId: 0, // Ignored for 20
-                    amount: 500,
+                    amount: BigNumber.from(500),
                 },
             ];
 
@@ -389,49 +389,49 @@ describe("ItemsVerifier", () => {
                     cType: 2,
                     asset: mockERC20.address,
                     tokenId: 0,
-                    amount: 1000,
+                    amount: BigNumber.from(1000),
                 },
                 {
                     cType: 2,
                     asset: mockERC20_2.address,
                     tokenId: 0,
-                    amount: 500,
+                    amount: BigNumber.from(500),
                 },
                 {
                     cType: 0,
                     asset: mockERC721.address,
                     tokenId: token721Id,
-                    amount: 0,
+                    amount: BigNumber.from(0),
                 },
                 {
                     cType: 0,
                     asset: mockERC721.address,
                     tokenId: token721Id2,
-                    amount: 0,
+                    amount: BigNumber.from(0),
                 },
                 {
                     cType: 0,
                     asset: mockERC721_2.address,
                     tokenId: -1,
-                    amount: 0,
+                    amount: BigNumber.from(0),
                 },
                 {
                     cType: 1,
                     asset: mockERC1155.address,
                     tokenId: token1155Id,
-                    amount: 10,
+                    amount: BigNumber.from(10),
                 },
                 {
                     cType: 1,
                     asset: mockERC1155.address,
                     tokenId: token1155Id2,
-                    amount: 15,
+                    amount: BigNumber.from(15),
                 },
                 {
                     cType: 1,
                     asset: mockERC1155_2.address,
                     tokenId: token1155_2Id,
-                    amount: 50,
+                    amount: BigNumber.from(50),
                 },
             ];
 

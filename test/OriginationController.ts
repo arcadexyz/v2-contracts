@@ -102,7 +102,7 @@ const createLoanTerms = (
         durationSecs = BigNumber.from(360000),
         principal = hre.ethers.utils.parseEther("100"),
         interestRate = hre.ethers.utils.parseEther("1"),
-        collateralId = BigNumber.from("1"),
+        collateralId = "1",
         numInstallments = 0,
     }: Partial<LoanTerms> = {},
 ): LoanTerms => {
@@ -652,7 +652,7 @@ describe("OriginationController", () => {
                     cType: 0,
                     asset: mockERC721.address,
                     tokenId,
-                    amount: 0, // not used for 721
+                    amount: BigNumber.from(0), // not used for 721
                 },
             ];
 
@@ -701,7 +701,7 @@ describe("OriginationController", () => {
                     cType: 0,
                     asset: mockERC721.address,
                     tokenId,
-                    amount: 0, // not used for 721
+                    amount: BigNumber.from(0), // not used for 721
                 },
             ];
 
@@ -753,7 +753,7 @@ describe("OriginationController", () => {
                     cType: 0,
                     asset: mockERC721.address,
                     tokenId,
-                    amount: 0, // not used for 721
+                    amount: BigNumber.from(0), // not used for 721
                 },
             ];
 
@@ -805,7 +805,7 @@ describe("OriginationController", () => {
                     cType: 0,
                     asset: mockERC721.address,
                     tokenId,
-                    amount: 0, // not used for 721
+                    amount: BigNumber.from(0), // not used for 721
                 },
             ];
 
@@ -861,7 +861,7 @@ describe("OriginationController", () => {
                     cType: 0,
                     asset: mockERC721.address,
                     tokenId,
-                    amount: 0, // not used for 721
+                    amount: BigNumber.from(0), // not used for 721
                 },
             ];
 
@@ -913,7 +913,7 @@ describe("OriginationController", () => {
                     cType: 0,
                     asset: mockERC721.address,
                     tokenId,
-                    amount: 0, // not used for 721
+                    amount: BigNumber.from(0), // not used for 721
                 },
             ];
 
@@ -967,7 +967,7 @@ describe("OriginationController", () => {
                     cType: 0,
                     asset: mockERC721.address,
                     tokenId,
-                    amount: 0, // not used for 721
+                    amount: BigNumber.from(0), // not used for 721
                 },
             ];
 
@@ -1030,7 +1030,7 @@ describe("OriginationController", () => {
                     cType: 0,
                     asset: mockERC721.address,
                     tokenId: -1,
-                    amount: 0, // not used for 721
+                    amount: BigNumber.from(0), // not used for 721
                 },
             ];
 
@@ -1109,7 +1109,7 @@ describe("OriginationController", () => {
                         cType: 0,
                         asset: mockERC721.address,
                         tokenId,
-                        amount: 0, // not used for 721
+                        amount: BigNumber.from(0), // not used for 721
                     },
                 ];
 
@@ -1186,7 +1186,7 @@ describe("OriginationController", () => {
                         cType: 0,
                         asset: mockERC721.address,
                         tokenId,
-                        amount: 0, // not used for 721
+                        amount: BigNumber.from(0), // not used for 721
                     },
                 ];
 

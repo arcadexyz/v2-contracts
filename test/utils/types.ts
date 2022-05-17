@@ -12,7 +12,7 @@ export interface SignatureItem {
     cType: 0 | 1 | 2;
     asset: string;
     tokenId: BigNumberish;
-    amount: BigNumberish;
+    amount: BigNumber;
 }
 
 export interface ItemsPredicate {
@@ -25,7 +25,7 @@ export interface LoanTerms {
     principal: BigNumber;
     interestRate: BigNumber;
     collateralAddress: string;
-    collateralId: BigNumber;
+    collateralId: BigNumberish;
     payableCurrency: string;
     numInstallments: BigNumberish;
 }
