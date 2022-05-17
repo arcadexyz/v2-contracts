@@ -105,8 +105,6 @@ library LoanLibrary {
         LoanTerms terms;
         // The current state of the loan
         LoanState state;
-        // Timestamp representing absolute due date date of the loan
-        uint256 dueDate;
         // installment loan specific
         // Start date of the loan, using block.timestamp - for determining installment period
         uint256 startDate;

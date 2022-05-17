@@ -43,7 +43,6 @@ export interface ItemsPayload {
 export interface LoanData {
     terms: LoanTerms;
     state: LoanState;
-    dueDate: BigNumberish;
     startDate: BigNumberish;
     balance: BigNumber;
     balancePaid: BigNumber;
