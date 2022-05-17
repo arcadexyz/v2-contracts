@@ -9,7 +9,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol";
 
 import "../interfaces/ILoanCore.sol";
-import "../interfaces/IPromissoryNote.sol";
+import "../PromissoryNote.sol";
 
 import "../PromissoryNote.sol";
 
@@ -43,8 +43,11 @@ contract MockLoanCore is ILoanCore, Initializable, AccessControlUpgradeable, UUP
     function initialize(address) public initializer {
         __AccessControl_init();
         __UUPSUpgradeable_init_unchained();
-        borrowerNote = new PromissoryNote("Mock BorrowerNote", "MB", address(this));
-        lenderNote = new PromissoryNote("Mock LenderNote", "ML", address(this));
+        borrowerNote = new PromissoryNote("Mock BorrowerNote", "MB");
+        lenderNote = new PromissoryNote("Mock LenderNote", "ML");
+
+        borrowerNote.initialize(address(this));
+        lenderNote.initialize(address(this));
 
         // Avoid having loanId = 0
         loanIdTracker.increment();
