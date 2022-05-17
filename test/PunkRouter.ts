@@ -3,7 +3,18 @@ import hre, { upgrades } from "hardhat";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
 import { BigNumber } from "ethers";
 
-import { VaultFactory, CallWhitelist, AssetVault, PunkRouter, CryptoPunksMarket, WrappedPunk, OriginationController, LoanCore, FeeController } from "../typechain";
+import {
+    PromissoryNote,
+    VaultFactory,
+    CallWhitelist,
+    AssetVault,
+    PunkRouter,
+    CryptoPunksMarket,
+    WrappedPunk,
+    OriginationController,
+    LoanCore,
+    FeeController
+} from "../typechain";
 import { deploy } from "./utils/contracts";
 
 
@@ -49,10 +60,19 @@ describe("PunkRouter", async () => {
 
         const feeController = <FeeController>await deploy("FeeController", signers[0], []);
 
+        const borrowerNote = <PromissoryNote>await deploy("PromissoryNote", signers[0], ["Arcade.xyz BorrowerNote", "aBN"]);
+        const lenderNote = <PromissoryNote>await deploy("PromissoryNote", signers[0], ["Arcade.xyz LenderNote", "aLN"]);
+
         const LoanCore = await hre.ethers.getContractFactory("LoanCore");
         const loanCore = <LoanCore>(
-            await upgrades.deployProxy(LoanCore, [feeController.address], { kind: 'uups' })
+            await upgrades.deployProxy(LoanCore, [feeController.address, borrowerNote.address, lenderNote.address], { kind: 'uups' })
         );
+
+        // Grant correct permissions for promissory note
+        // Giving to user to call PromissoryNote functions directly
+        for (const note of [borrowerNote, lenderNote]) {
+            await note.connect(signers[0]).initialize(loanCore.address);
+        }
 
         const OriginationController = await hre.ethers.getContractFactory("OriginationController");
         const originationController = <OriginationController>(
@@ -129,7 +149,7 @@ describe("PunkRouter", async () => {
             await punks.offerPunkForSaleToAddress(punkIndex, 0, punkRouter.address);
 
             const bundleId = await initializeBundle(vaultFactory, user);
-            expect(await punkRouter.depositPunk(punkIndex, bundleId))
+            await expect(punkRouter.depositPunk(punkIndex, bundleId))
                 .to.emit(wrappedPunks, "Transfer")
                 .withArgs(punkRouter.address, bundleId, punkIndex);
 
