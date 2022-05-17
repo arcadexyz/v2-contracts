@@ -41,6 +41,7 @@ library LoanLibrary {
         // Input conversion: 0.01% = (1 * 10**18) ,  10.00% = (1000 * 10**18)
         // This represents the rate over the lifetime of the loan, not APR.
         // 0.01% is the minimum interest rate allowed by the protocol.
+        /// @dev Max is 10,000%, fits in 200 bits
         uint200 interestRate;
 
         /// @dev Full-slot variables
@@ -72,6 +73,7 @@ library LoanLibrary {
         // Input conversion: 0.01% = (1 * 10**18) ,  10.00% = (1000 * 10**18)
         // This represents the rate over the lifetime of the loan, not APR.
         // 0.01% is the minimum interest rate allowed by the protocol.
+        /// @dev Max is 10,000%, fits in 200 bits
         uint200 interestRate;
 
         /// @dev Full-slot variables
