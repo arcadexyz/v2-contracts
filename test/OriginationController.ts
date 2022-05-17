@@ -49,10 +49,18 @@ const fixture = async (): Promise<TestContext> => {
 
     const feeController = <FeeController>await deploy("FeeController", signers[0], []);
 
+    const borrowerNote = <PromissoryNote>await deploy("PromissoryNote", deployer, ["Arcade.xyz BorrowerNote", "aBN"]);
+    const lenderNote = <PromissoryNote>await deploy("PromissoryNote", deployer, ["Arcade.xyz LenderNote", "aLN"]);
+
     const LoanCore = await hre.ethers.getContractFactory("LoanCore");
     const loanCore = <LoanCore>(
-        await upgrades.deployProxy(LoanCore, [feeController.address], { kind: 'uups' })
+        await upgrades.deployProxy(LoanCore, [feeController.address, borrowerNote.address, lenderNote.address], { kind: 'uups' })
     );
+
+    // Grant correct permissions for promissory note
+    for (const note of [borrowerNote, lenderNote]) {
+        await note.connect(deployer).initialize(loanCore.address);
+    }
 
     const whitelist = <CallWhitelist>await deploy("CallWhitelist", deployer, []);
     const vaultTemplate = <AssetVault>await deploy("AssetVault", deployer, []);
@@ -74,20 +82,13 @@ const fixture = async (): Promise<TestContext> => {
     );
     await updateOriginationControllerPermissions.wait();
 
-    const borrowerNoteAddress = await loanCore.borrowerNote();
-    const lenderNoteAddress = await loanCore.lenderNote();
-
-    const noteFactory = await hre.ethers.getContractFactory("PromissoryNote");
-    const borrowerPromissoryNote = <PromissoryNote>await noteFactory.attach(borrowerNoteAddress);
-    const lenderPromissoryNote = <PromissoryNote>await noteFactory.attach(lenderNoteAddress);
-
     return {
         originationController,
         mockERC20,
         mockERC721,
         vaultFactory,
-        lenderPromissoryNote,
-        borrowerPromissoryNote,
+        lenderPromissoryNote: lenderNote,
+        borrowerPromissoryNote: borrowerNote,
         loanCore,
         user: deployer,
         other: signers[1],
@@ -137,6 +138,7 @@ describe("OriginationController", () => {
             expect(await originationController.loanCore()).to.equal(loanCore.address);
         });
     });
+
     describe("Upgradeability", async () => {
         let ctx: TestContext;
 
