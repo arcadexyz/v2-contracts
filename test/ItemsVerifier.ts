@@ -86,7 +86,7 @@ describe("ItemsVerifier", () => {
                     cType: 4 as 0, // 4 is an invalid collateral type
                     asset: mockERC721.address,
                     tokenId,
-                    amount: BigNumber.from(0), // not used for 721
+                    amount: 0, // not used for 721
                 },
             ];
 
@@ -108,7 +108,7 @@ describe("ItemsVerifier", () => {
                     cType: 0,
                     asset: "0x0000000000000000000000000000000000000000",
                     tokenId,
-                    amount: BigNumber.from(0), // not used for 721
+                    amount: 0, // not used for 721
                 },
             ];
 
@@ -133,7 +133,7 @@ describe("ItemsVerifier", () => {
                     cType: 1,
                     asset: mockERC1155.address,
                     tokenId,
-                    amount: BigNumber.from(0), // invalid for 1155
+                    amount: 0, // invalid for 1155
                 },
             ];
 
@@ -158,7 +158,7 @@ describe("ItemsVerifier", () => {
                     cType: 1,
                     asset: mockERC1155.address,
                     tokenId: -1, // invalid for 1155
-                    amount: BigNumber.from(5),
+                    amount: 5,
                 },
             ];
 
@@ -174,7 +174,7 @@ describe("ItemsVerifier", () => {
             const bundleId = await initializeBundle(vaultFactory, user);
             const bundleAddress = await vaultFactory.instanceAt(bundleId);
 
-            await mint20(mockERC20, user, BigNumber.from(1000));
+            await mint20(mockERC20, user, 1000);
             await mockERC20.connect(user).transfer(bundleAddress, 1000);
 
             // Create predicate for a single ID
@@ -183,7 +183,7 @@ describe("ItemsVerifier", () => {
                     cType: 2,
                     asset: mockERC20.address,
                     tokenId: 0,
-                    amount: BigNumber.from(0), // invalid for 20
+                    amount: 0, // invalid for 20
                 },
             ];
 
@@ -215,7 +215,7 @@ describe("ItemsVerifier", () => {
                     cType: 0,
                     asset: mockERC721.address,
                     tokenId,
-                    amount: BigNumber.from(0), // not used for 721
+                    amount: 0, // not used for 721
                 },
             ];
 
@@ -249,7 +249,7 @@ describe("ItemsVerifier", () => {
                     cType: 0,
                     asset: mockERC721.address,
                     tokenId: -1,
-                    amount: BigNumber.from(0), // not used for 721
+                    amount: 0, // not used for 721
                 },
             ];
 
@@ -290,7 +290,7 @@ describe("ItemsVerifier", () => {
                     cType: 1,
                     asset: mockERC1155.address,
                     tokenId,
-                    amount: BigNumber.from(5),
+                    amount: 5,
                 },
             ];
 
@@ -313,7 +313,7 @@ describe("ItemsVerifier", () => {
 
             // Fund a bundle with sufficient amount
             // Fund a bundle with not enough amount
-            await mint20(mockERC20, user, BigNumber.from(1000));
+            await mint20(mockERC20, user, 1000);
 
             await mockERC20.connect(user).transfer(bundleAddress, 1000);
 
@@ -323,7 +323,7 @@ describe("ItemsVerifier", () => {
                     cType: 2,
                     asset: mockERC20.address,
                     tokenId: 0, // Ignored for 20
-                    amount: BigNumber.from(500),
+                    amount: 500,
                 },
             ];
 
@@ -389,49 +389,49 @@ describe("ItemsVerifier", () => {
                     cType: 2,
                     asset: mockERC20.address,
                     tokenId: 0,
-                    amount: BigNumber.from(1000),
+                    amount: 1000,
                 },
                 {
                     cType: 2,
                     asset: mockERC20_2.address,
                     tokenId: 0,
-                    amount: BigNumber.from(500),
+                    amount: 500,
                 },
                 {
                     cType: 0,
                     asset: mockERC721.address,
                     tokenId: token721Id,
-                    amount: BigNumber.from(0),
+                    amount: 0,
                 },
                 {
                     cType: 0,
                     asset: mockERC721.address,
                     tokenId: token721Id2,
-                    amount: BigNumber.from(0),
+                    amount: 0,
                 },
                 {
                     cType: 0,
                     asset: mockERC721_2.address,
                     tokenId: -1,
-                    amount: BigNumber.from(0),
+                    amount: 0,
                 },
                 {
                     cType: 1,
                     asset: mockERC1155.address,
                     tokenId: token1155Id,
-                    amount: BigNumber.from(10),
+                    amount: 10,
                 },
                 {
                     cType: 1,
                     asset: mockERC1155.address,
                     tokenId: token1155Id2,
-                    amount: BigNumber.from(15),
+                    amount: 15,
                 },
                 {
                     cType: 1,
                     asset: mockERC1155_2.address,
                     tokenId: token1155_2Id,
-                    amount: BigNumber.from(50),
+                    amount: 50,
                 },
             ];
 

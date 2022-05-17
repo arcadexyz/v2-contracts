@@ -498,7 +498,7 @@ describe("PromissoryNote", () => {
                     await user.getAddress(),
                     await other.getAddress(),
                     promissoryNoteId,
-                    BigNumber.from("1234"),
+                    "1234",
                     v,
                     r,
                     s,

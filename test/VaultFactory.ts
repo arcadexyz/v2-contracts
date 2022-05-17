@@ -329,7 +329,7 @@ describe("VaultFactory", () => {
                     await user.getAddress(),
                     await other.getAddress(),
                     bundleId,
-                    BigNumber.from("1234"),
+                    "1234",
                     v,
                     r,
                     s,
