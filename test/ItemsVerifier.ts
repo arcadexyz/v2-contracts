@@ -174,7 +174,7 @@ describe("ItemsVerifier", () => {
             const bundleId = await initializeBundle(vaultFactory, user);
             const bundleAddress = await vaultFactory.instanceAt(bundleId);
 
-            await mint20(mockERC20, user, BigNumber.from(1000));
+            await mint20(mockERC20, user, 1000);
             await mockERC20.connect(user).transfer(bundleAddress, 1000);
 
             // Create predicate for a single ID
@@ -313,7 +313,7 @@ describe("ItemsVerifier", () => {
 
             // Fund a bundle with sufficient amount
             // Fund a bundle with not enough amount
-            await mint20(mockERC20, user, BigNumber.from(1000));
+            await mint20(mockERC20, user, 1000);
 
             await mockERC20.connect(user).transfer(bundleAddress, 1000);
 

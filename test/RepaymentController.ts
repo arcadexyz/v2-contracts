@@ -15,7 +15,7 @@ import {
     MockLoanCore,
 } from "../typechain";
 import { BlockchainTime } from "./utils/time";
-import { utils, Signer, BigNumber } from "ethers";
+import { utils, Signer, BigNumber, BigNumberish } from "ethers";
 import { deploy } from "./utils/contracts";
 import { approve, mint } from "./utils/erc20";
 import { LoanTerms, LoanData } from "./utils/types";
@@ -147,7 +147,7 @@ const createLoanTerms = (
     interestRate: BigNumber,
     collateralAddress: string,
     numInstallments: number,
-    { collateralId = BigNumber.from(1) }: Partial<LoanTerms> = {},
+    { collateralId = 1 }: Partial<LoanTerms> = {},
 ): LoanTerms => {
     return {
         durationSecs,
@@ -165,7 +165,7 @@ const createLoanTerms = (
  */
 interface LoanDef {
     loanId: string;
-    bundleId: BigNumber;
+    bundleId: BigNumberish;
     loanTerms: LoanTerms;
     loanData: LoanData;
 }

@@ -25,7 +25,7 @@ export interface LoanTerms {
     principal: BigNumber;
     interestRate: BigNumber;
     collateralAddress: string;
-    collateralId: BigNumber;
+    collateralId: BigNumberish;
     payableCurrency: string;
     numInstallments: BigNumberish;
 }
@@ -43,8 +43,8 @@ export interface ItemsPayload {
 
 export interface LoanData {
     terms: LoanTerms;
-    borrowerNoteId: BigNumber;
-    lenderNoteId: BigNumber;
+    borrowerNoteId: BigNumberish;
+    lenderNoteId: BigNumberish;
     state: LoanState;
     dueDate: BigNumberish;
     startDate: BigNumberish;

@@ -2,7 +2,7 @@ import { expect } from "chai";
 import hre, { ethers, waffle, upgrades } from "hardhat";
 const { loadFixture } = waffle;
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
-import { BigNumber } from "ethers";
+import { BigNumber, BigNumberish } from "ethers";
 import {
     OriginationController,
     PromissoryNote,
@@ -42,7 +42,7 @@ interface TestContext {
 
 interface LoanDef {
     loanId: string;
-    bundleId: BigNumber;
+    bundleId: BigNumberish;
     loanTerms: LoanTerms;
     loanData: LoanData;
 }
@@ -148,7 +148,7 @@ const createLoanTerms = (
         durationSecs = BigNumber.from(3600000),
         principal = hre.ethers.utils.parseEther("100"),
         interestRate = hre.ethers.utils.parseEther("1"),
-        collateralId = BigNumber.from(1),
+        collateralId = 1,
         numInstallments = 0,
     }: Partial<LoanTerms> = {},
 ): LoanTerms => {
@@ -173,7 +173,7 @@ const createInstallmentLoanTerms = (
     interestRate: BigNumber,
     collateralAddress: string,
     numInstallments: number,
-    { collateralId = BigNumber.from(1) }: Partial<LoanTerms> = {},
+    { collateralId = 1 }: Partial<LoanTerms> = {},
 ): LoanTerms => {
     return {
         durationSecs,

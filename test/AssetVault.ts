@@ -2,7 +2,7 @@ import { expect } from "chai";
 import hre, { ethers, waffle, upgrades } from "hardhat";
 const { loadFixture } = waffle;
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
-import { BigNumber } from "ethers";
+import { BigNumber, BigNumberish } from "ethers";
 
 import {
     AssetVault,
@@ -24,7 +24,7 @@ interface TestContext {
     vault: AssetVault;
     nft: VaultFactory;
     whitelist: CallWhitelist;
-    bundleId: BigNumber;
+    bundleId: BigNumberish;
     mockERC20: MockERC20;
     mockERC721: MockERC721;
     mockERC1155: MockERC1155;
@@ -74,7 +74,7 @@ describe("AssetVault", () => {
             nft: factory,
             vault,
             whitelist,
-            bundleId: BigNumber.from(vault.address),
+            bundleId: vault.address,
             mockERC20,
             mockERC721,
             mockERC1155,

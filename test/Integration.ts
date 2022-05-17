@@ -2,7 +2,7 @@ import { expect } from "chai";
 import hre, { ethers, waffle, upgrades } from "hardhat";
 const { loadFixture } = waffle;
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
-import { BigNumber, BigNumberish } from "ethers";
+import { BigNumber } from "ethers";
 
 import {
     VaultFactory,
@@ -119,7 +119,7 @@ describe("Integration", () => {
             durationSecs = BigNumber.from(3600000),
             principal = hre.ethers.utils.parseEther("100"),
             interestRate = hre.ethers.utils.parseEther("1"),
-            collateralId = BigNumber.from(1),
+            collateralId = 1,
             numInstallments = 0,
         }: Partial<LoanTerms> = {},
     ): LoanTerms => {
@@ -210,7 +210,7 @@ describe("Integration", () => {
             const { originationController, mockERC20, lender, borrower, vaultFactory } = await loadFixture(fixture);
 
             const mockOpenVault = await deploy("MockOpenVault", borrower, []);
-            const bundleId = BigNumber.from(mockOpenVault.address);
+            const bundleId = mockOpenVault.address;
             const loanTerms = createLoanTerms(mockERC20.address, vaultFactory.address, { collateralId: bundleId });
             await mint(mockERC20, lender, loanTerms.principal);
 
@@ -352,7 +352,7 @@ describe("Integration", () => {
 
             // create a new loan with the same bundleId
             const { loanId: newLoanId } = await initializeLoan(context, 2, {
-                collateralId: hre.ethers.BigNumber.from(bundleId),
+                collateralId: bundleId,
             });
 
             // initializeLoan asserts loan created successfully based on logs, so test that new loan is a new instance
@@ -477,7 +477,7 @@ describe("Integration", () => {
                 .connect(lender)
                 .transferFrom(await lender.getAddress(), await borrower.getAddress(), bundleId);
             const { loanId: newLoanId } = await initializeLoan(context, 20, {
-                collateralId: hre.ethers.BigNumber.from(bundleId),
+                collateralId: bundleId,
             });
             // initializeLoan asserts loan created successfully based on logs, so test that new loan is a new instance
             expect(newLoanId !== loanId);

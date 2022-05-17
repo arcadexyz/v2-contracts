@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import hre, { ethers, waffle, upgrades } from "hardhat";
 const { loadFixture } = waffle;
-import { BigNumber, Signer } from "ethers";
+import { BigNumber, BigNumberish, Signer } from "ethers";
 
 import {
     LoanCore,
@@ -161,7 +161,7 @@ describe("LoanCore", () => {
             durationSecs = BigNumber.from(360000),
             principal = hre.ethers.utils.parseEther("100"),
             interestRate = hre.ethers.utils.parseEther("1"),
-            collateralId = BigNumber.from(1),
+            collateralId = 1,
             numInstallments = 0,
         }: Partial<LoanTerms> = {},
     ): LoanTerms => {
@@ -212,8 +212,8 @@ describe("LoanCore", () => {
             expect(loanId.gte(ZERO)).to.be.true;
 
             const storedLoanData = await loanCore.getLoan(loanId);
-            expect(storedLoanData.borrowerNoteId).to.equal(BigNumber.from(0));
-            expect(storedLoanData.lenderNoteId).to.equal(BigNumber.from(0));
+            expect(storedLoanData.borrowerNoteId).to.equal(0);
+            expect(storedLoanData.lenderNoteId).to.equal(0);
             expect(storedLoanData.state).to.equal(LoanState.Created);
             assertTermsEquality(storedLoanData.terms, terms);
         });
@@ -307,7 +307,7 @@ describe("LoanCore", () => {
 
     describe("Start Loan", function () {
         interface StartLoanState extends TestContext {
-            loanId: BigNumber;
+            loanId: BigNumberish;
             terms: LoanTerms;
             borrower: Signer;
             lender: Signer;
@@ -513,7 +513,7 @@ describe("LoanCore", () => {
 
         it("rejects calls from non-originator", async () => {
             const { loanCore, user: borrower, other: lender } = await setupLoan();
-            const loanId = BigNumber.from("123412341324");
+            const loanId = "123412341324";
             await expect(
                 loanCore.connect(lender).startLoan(await borrower.getAddress(), await lender.getAddress(), loanId),
             ).to.be.revertedWith(
@@ -525,7 +525,7 @@ describe("LoanCore", () => {
 
         it("should fail to start a loan that is not created", async () => {
             const { loanCore, user: borrower, other: lender } = await setupLoan();
-            const loanId = BigNumber.from("123412341324");
+            const loanId = "123412341324";
             await expect(
                 loanCore.connect(borrower).startLoan(await lender.getAddress(), await borrower.getAddress(), loanId),
             ).to.be.revertedWith("LC_StartInvalidState");
@@ -732,7 +732,7 @@ describe("LoanCore", () => {
 
     describe("Repay Loan", function () {
         interface RepayLoanState extends TestContext {
-            loanId: BigNumber;
+            loanId: BigNumberish;
             terms: LoanTerms;
             borrower: Signer;
             lender: Signer;
@@ -800,7 +800,7 @@ describe("LoanCore", () => {
 
         it("should fail if the loan does not exist", async () => {
             const { loanCore, user: borrower } = await setupLoan();
-            const loanId = BigNumber.from("123412341324");
+            const loanId = "123412341324";
             await expect(loanCore.connect(borrower).repay(loanId)).to.be.revertedWith(
                 "LC_StartInvalidState",
             );
@@ -898,7 +898,7 @@ describe("LoanCore", () => {
 
     describe("Claim Loan", async function () {
         interface RepayLoanState extends TestContext {
-            loanId: BigNumber;
+            loanId: BigNumberish;
             terms: LoanTerms;
             borrower: Signer;
             lender: Signer;
@@ -966,7 +966,7 @@ describe("LoanCore", () => {
 
         it("should fail if loan doesnt exist", async () => {
             const { loanCore, user: borrower } = await setupLoan();
-            const loanId = BigNumber.from("123412341324");
+            const loanId = "123412341324";
             await expect(loanCore.connect(borrower).claim(loanId)).to.be.revertedWith(
                 "LC_StartInvalidState",
             );
@@ -1203,7 +1203,7 @@ describe("LoanCore", () => {
 
     describe("canCallOn", function () {
         interface StartLoanState extends TestContext {
-            loanId: BigNumber;
+            loanId: BigNumberish;
             terms: LoanTerms;
             borrower: Signer;
             lender: Signer;
