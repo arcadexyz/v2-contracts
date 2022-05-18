@@ -160,9 +160,6 @@ contract OriginationController is
 
         _validateCounterparties(borrower, lender, msg.sender, externalSigner, sig, sighash);
 
-        // principal must be greater than or equal to 10000 wei
-        if (loanTerms.principal < 10_000) revert OC_PrincipalTooLow(loanTerms.principal);
-
         ILoanCore(loanCore).consumeNonce(externalSigner, nonce);
         loanId = _initialize(loanTerms, borrower, lender);
     }
@@ -503,6 +500,9 @@ contract OriginationController is
     function _validateLoanTerms(
         LoanLibrary.LoanTerms memory terms
     ) internal pure {
+        // principal must be greater than or equal to 10000 wei
+        if (terms.principal < 10_000) revert OC_PrincipalTooLow(terms.principal);
+
         // loan duration must be greater than 1 hr and less than 3 years
         if (terms.durationSecs < 3600 || terms.durationSecs > 94_608_000) revert OC_LoanDuration(terms.durationSecs);
 
