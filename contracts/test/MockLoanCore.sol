@@ -149,20 +149,14 @@ contract MockLoanCore is ILoanCore, Initializable, AccessControlUpgradeable, UUP
      */
     function claim(uint256 loanId, uint256 currentInstallmentPeriod) public override {}
 
-
-    /**
-     * @dev Claim the collateral of the given delinquent loan
-     *
-     * Requirements:
-     *  - The caller must be a holder of the lenderNote
-     *  - The loan must be in state Active
-     *  - The current time must be beyond the dueDate
-     */
     function rollover(
         uint256 oldLoanId,
         address borrower,
         address lender,
-        LoanLibrary.LoanTerms calldata terms
+        LoanLibrary.LoanTerms calldata terms,
+        uint256 _amountToOldLender,
+        uint256 _amountToLender,
+        uint256 _amountToBorrower
     ) public override returns (uint256 newLoanId) {}
 
     function isNonceUsed(address user, uint160 nonce) external view override returns (bool) {

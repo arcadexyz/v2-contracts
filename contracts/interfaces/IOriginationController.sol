@@ -58,6 +58,14 @@ interface IOriginationController {
         LoanLibrary.Predicate[] calldata itemPredicates
     ) external returns (uint256 loanId);
 
+    function rolloverLoan(
+        uint256 oldLoanId,
+        LoanLibrary.LoanTerms calldata loanTerms,
+        address lender,
+        Signature calldata sig,
+        uint160 nonce
+    ) external returns (uint256 newLoanId);
+
     // ================ Permission Management =================
 
     function approve(address signer, bool approved) external;

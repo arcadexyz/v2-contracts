@@ -64,10 +64,13 @@ contract LoanCore is
     bytes32 public constant REPAYER_ROLE = keccak256("REPAYER_ROLE");
     bytes32 public constant FEE_CLAIMER_ROLE = keccak256("FEE_CLAIMER_ROLE");
 
+<<<<<<< HEAD
     // 10k bps per whole
     uint256 private constant BPS_DENOMINATOR = 10_000;
     uint256 private constant PERCENT_MISSED_FOR_LENDER_CLAIM = 4000;
 
+=======
+>>>>>>> c266c47 (fix(rollover): trying to compile, local variable issue)
     // =============== Contract References ================
 
     IPromissoryNote public override borrowerNote;
@@ -235,7 +238,9 @@ contract LoanCore is
         borrowerNote.burn(loanId);
 
         // asset and collateral redistribution
-        IERC20Upgradeable(data.terms.payableCurrency).safeTransfer(lender, returnAmount);
+        // Not using safeTransfer to prevent lenders from blocking
+        // loan receipt and forcing a default
+        IERC20Upgradeable(data.terms.payableCurrency).transfer(lender, returnAmount);
         IERC721Upgradeable(data.terms.collateralAddress).transferFrom(address(this), borrower, data.terms.collateralId);
 
         emit LoanRepaid(loanId);
@@ -289,7 +294,10 @@ contract LoanCore is
         uint256 oldLoanId,
         address borrower,
         address lender,
-        LoanLibrary.LoanTerms calldata terms
+        LoanLibrary.LoanTerms calldata terms,
+        uint256 _amountToOldLender,
+        uint256 _amountToLender,
+        uint256 _amountToBorrower
     )
         external
         override
@@ -307,11 +315,9 @@ contract LoanCore is
         if (data.state != LoanLibrary.LoanState.Active) revert LC_InvalidState(data.state);
         data.state = LoanLibrary.LoanState.Repaid;
         address oldLender = lenderNote.ownerOf(oldLoanId);
+        IERC20Upgradeable payableCurrency = IERC20Upgradeable(data.terms.payableCurrency);
 
-        uint256 repayAmount;
-        if (data.terms.numInstallments == 0) {
-            repayAmount = getFullInterestAmount(data.terms.principal, data.terms.interestRate);
-        } else {
+        if (data.terms.numInstallments > 0) {
             (uint256 interestDue, uint256 lateFees, uint256 numMissedPayments) = _calcAmountsDue(
                 data.balance,
                 data.startDate,
@@ -321,12 +327,10 @@ contract LoanCore is
                 data.terms.interestRate
             );
 
-            repayAmount = data.balance + interestDue + lateFees;
-
             data.lateFeesAccrued += lateFees;
             data.numInstallmentsPaid += uint24(numMissedPayments) + 1;
             data.balance = 0;
-            data.balancePaid += repayAmount;
+            data.balancePaid += data.balance + interestDue + lateFees;
         }
 
         lenderNote.burn(oldLoanId);
@@ -350,59 +354,21 @@ contract LoanCore is
         borrowerNote.mint(borrower, newLoanId);
         lenderNote.mint(lender, newLoanId);
 
-        uint256 fee = terms.principal * feeController.getRolloverFee() / BPS_DENOMINATOR;
-        uint256 newPrincipal = terms.principal - fee;
-
-        // Settle amounts
-        uint256 needFromBorrower;
-        uint256 leftoverPrincipal;
-
-        if (repayAmount > newPrincipal) {
-            needFromBorrower = repayAmount - newPrincipal;
-        } else if (newPrincipal > repayAmount) {
-            leftoverPrincipal = newPrincipal - repayAmount;
+        if (_amountToOldLender > 0) {
+            // Not using safeTransfer to prevent lenders from blocking
+            // loan receipt and forcing a default
+            payableCurrency.transfer(oldLender, _amountToOldLender);
         }
 
-        {
-            IERC20Upgradeable payableCurrency = IERC20Upgradeable(terms.payableCurrency);
-
-            // Collect funds
-            if (lender != oldLender) {
-                // Take new principal from lender
-                // OriginationController should have collected
-                payableCurrency.safeTransferFrom(_msgSender(), address(this), terms.principal);
-            }
-
-            if (needFromBorrower > 0) {
-                // Borrower must pay difference
-                // OriginationController should have collected
-                payableCurrency.safeTransferFrom(_msgSender(), address(this), needFromBorrower);
-            } else if (leftoverPrincipal > 0 && lender == oldLender) {
-                // Lender must pay difference
-                // OriginationController should have collected
-                // Make sure to collect fee
-                payableCurrency.safeTransferFrom(_msgSender(), address(this), leftoverPrincipal);
-            }
-
-            // Make payouts
-            if (lender != oldLender) {
-                // Repay old lender
-                payableCurrency.safeTransfer(
-                    oldLender,
-                    repayAmount
-                );
-            } else if (needFromBorrower > 0) {
-                // Repay new lender
-                payableCurrency.safeTransfer(
-                    lender,
-                    repayAmount - terms.principal
-                );
-            } else if (leftoverPrincipal > 0) {
-                payableCurrency.safeTransfer(
-                    borrower,
-                    leftoverPrincipal
-                );
-            }
+        if (_amountToLender > 0) {
+            // Not using safeTransfer to prevent lenders from blocking
+            // loan receipt and forcing a default
+            payableCurrency.transfer(lender, _amountToLender);
+        }
+        if (_amountToBorrower > 0) {
+            // Not using safeTransfer to prevent lenders from blocking
+            // loan receipt and forcing a default
+            payableCurrency.transfer(borrower, _amountToBorrower);
         }
 
         emit LoanRepaid(oldLoanId);
@@ -465,7 +431,9 @@ contract LoanCore is
         data.balancePaid += boundedPaymentTotal;
 
         // Send payment to lender.
-        IERC20Upgradeable(data.terms.payableCurrency).safeTransfer(lender, boundedPaymentTotal);
+        // Not using safeTransfer to prevent lenders from blocking
+        // loan receipt and forcing a default
+        IERC20Upgradeable(data.terms.payableCurrency).transfer(lender, boundedPaymentTotal);
 
         // If repaid, send collateral to borrower
         if (data.state == LoanLibrary.LoanState.Repaid) {
@@ -622,7 +590,7 @@ contract LoanCore is
      * @return principalLessFees    The amount after fees.
      */
     function _getPrincipalLessFees(uint256 principal) internal view returns (uint256) {
-        return principal - principal * feeController.getOriginationFee() / BPS_DENOMINATOR;
+        return principal - principal * feeController.getOriginationFee() / BASIS_POINTS_DENOMINATOR;
     }
 
     /**

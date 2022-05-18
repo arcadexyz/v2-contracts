@@ -20,6 +20,7 @@ import "./interfaces/IAssetVault.sol";
 import "./interfaces/IVaultFactory.sol";
 import "./interfaces/ISignatureVerifier.sol";
 
+import "./FullInterestAmountCalc.sol";
 import "./verifiers/ItemsVerifier.sol";
 import {
     OC_ZeroAddress,
@@ -35,6 +36,8 @@ import {
     OC_InterestRate,
     OC_NumberInstallments,
     OC_SignatureIsExpired
+    OC_RolloverCurrencyMismatch,
+    OC_RolloverCollateralMismatch
 } from "./errors/Lending.sol";
 
 /**
@@ -50,6 +53,7 @@ import {
  */
 contract OriginationController is
     Initializable,
+    FullInterestAmountCalc,
     ContextUpgradeable,
     IOriginationController,
     EIP712Upgradeable,
@@ -297,6 +301,28 @@ contract OriginationController is
         loanId = initializeLoanWithItems(loanTerms, borrower, lender, sig, nonce, itemPredicates);
     }
 
+    function rolloverLoan(
+        uint256 oldLoanId,
+        LoanLibrary.LoanTerms calldata loanTerms,
+        address lender,
+        Signature calldata sig,
+        uint160 nonce
+    ) public override returns (uint256 newLoanId) {
+        _validateLoanTerms(loanTerms);
+
+        LoanLibrary.LoanData memory data = ILoanCore(loanCore).getLoan(oldLoanId);
+        _validateRollover(data.terms, loanTerms);
+
+        (bytes32 sighash, address externalSigner) = recoverTokenSignature(loanTerms, sig, nonce);
+
+        address borrower = IERC721(ILoanCore(loanCore).borrowerNote()).ownerOf(oldLoanId);
+        _validateCounterparties(borrower, lender, msg.sender, externalSigner, sig, sighash);
+
+        ILoanCore(loanCore).consumeNonce(externalSigner, nonce);
+
+        newLoanId = _rollover(oldLoanId, loanTerms, borrower, lender);
+    }
+
     // ==================================== PERMISSION MANAGEMENT =======================================
 
     /**
@@ -521,6 +547,25 @@ contract OriginationController is
         if (terms.deadline < block.timestamp) revert OC_SignatureIsExpired(terms.deadline);
     }
 
+    function _validateRollover(
+        LoanLibrary.LoanTerms memory oldTerms,
+        LoanLibrary.LoanTerms memory newTerms
+    ) internal pure {
+        if (newTerms.payableCurrency != oldTerms.payableCurrency)
+            revert OC_RolloverCurrencyMismatch(oldTerms.payableCurrency, newTerms.payableCurrency);
+
+        if (
+            newTerms.collateralAddress != oldTerms.collateralAddress
+            || newTerms.collateralId != oldTerms.collateralId
+        )
+            revert OC_RolloverCollateralMismatch(
+                oldTerms.collateralAddress,
+                oldTerms.collateralId,
+                newTerms.collateralAddress,
+                newTerms.collateralId
+            );
+    }
+
     /**
      * @dev Ensure that one counterparty has signed the loan terms, and the other
      *      has initiated the transaction.
@@ -580,5 +625,118 @@ contract OriginationController is
 
         // Start loan
         loanId = ILoanCore(loanCore).startLoan(lender, borrower, loanTerms);
+    }
+
+    /**
+     * @dev Perform loan rollover. Take custody of both principal and
+     *      collateral, and tell LoanCore to roll over the existing loan.
+     *
+     * @param oldLoanId                     The ID of the loan to be rolled over.
+     * @param newTerms                      The terms agreed by the lender and borrower.
+     * @param borrower                      Address of the borrower.
+     * @param lender                        Address of the lender.
+     *
+     * @return loanId                       The unique ID of the new loan.
+     */
+    function _rollover(
+        uint256 oldLoanId,
+        LoanLibrary.LoanTerms calldata newTerms,
+        address borrower,
+        address lender
+    ) internal nonReentrant returns (uint256 loanId) {
+        LoanLibrary.LoanData memory oldLoanData = ILoanCore(loanCore).getLoan(oldLoanId);
+        LoanLibrary.LoanTerms memory oldTerms = oldLoanData.terms;
+
+        address oldLender = ILoanCore(loanCore).lenderNote().ownerOf(oldLoanId);
+        IERC20Upgradeable payableCurrency = IERC20Upgradeable(oldTerms.payableCurrency);
+        uint256 rolloverFee = ILoanCore(loanCore).feeController().getRolloverFee();
+
+        // Settle amounts
+        (
+            uint256 needFromBorrower,
+            uint256 leftoverPrincipal,
+            uint256 amountToOldLender,
+            uint256 amountToLender
+        ) = _calculateRolloverAmounts(oldLoanData, newTerms, lender, oldLender, rolloverFee);
+
+        // Collect funds
+        if (lender != oldLender) {
+            // Take new principal from lender
+            // OriginationController should have collected
+            payableCurrency.safeTransferFrom(lender, address(this), newTerms.principal);
+        }
+
+        if (needFromBorrower > 0) {
+            // Borrower must pay difference
+            // OriginationController should have collected
+            payableCurrency.safeTransferFrom(borrower, address(this), needFromBorrower);
+        } else if (leftoverPrincipal > 0 && lender == oldLender) {
+            // Lender must pay difference
+            // OriginationController should have collected
+            // Make sure to collect fee
+            payableCurrency.safeTransferFrom(lender, address(this), leftoverPrincipal);
+        }
+
+        {
+            loanId = ILoanCore(loanCore).rollover(
+                oldLoanId,
+                borrower,
+                lender,
+                newTerms,
+                amountToOldLender,
+                amountToLender,
+                leftoverPrincipal
+            );
+        }
+    }
+
+    function _calculateRolloverAmounts(
+        LoanLibrary.LoanData memory oldLoanData,
+        LoanLibrary.LoanTerms calldata newTerms,
+        address lender,
+        address oldLender,
+        uint256 rolloverFee
+    ) internal view returns (
+        uint256 needFromBorrower,
+        uint256 leftoverPrincipal,
+        uint256 amountToOldLender,
+        uint256 amountToLender
+    ) {
+        LoanLibrary.LoanTerms memory oldTerms = oldLoanData.terms;
+
+        uint256 repayAmount;
+        if (oldTerms.numInstallments == 0) {
+            repayAmount = getFullInterestAmount(oldTerms.principal, oldTerms.interestRate);
+        } else {
+            (uint256 interestDue, uint256 lateFees,) = _calcAmountsDue(
+                oldLoanData.balance,
+                oldLoanData.startDate,
+                oldTerms.durationSecs,
+                oldTerms.numInstallments,
+                oldLoanData.numInstallmentsPaid,
+                oldTerms.interestRate
+            );
+
+            repayAmount = oldLoanData.balance + interestDue + lateFees;
+        }
+
+        uint256 fee = newTerms.principal * rolloverFee / BASIS_POINTS_DENOMINATOR;
+        uint256 newPrincipal = newTerms.principal - fee;
+
+        // Settle amounts
+        if (repayAmount > newPrincipal) {
+            needFromBorrower = repayAmount - newPrincipal;
+        } else if (newPrincipal > repayAmount) {
+            leftoverPrincipal = newPrincipal - repayAmount;
+        }
+
+        // Collect funds
+        if (lender != oldLender) {
+            amountToOldLender = repayAmount;
+            amountToLender = 0;
+        } else {
+            amountToOldLender = 0;
+            amountToLender = repayAmount - newTerms.principal;
+        }
     }
 }

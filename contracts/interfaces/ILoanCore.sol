@@ -47,7 +47,10 @@ interface ILoanCore {
         uint256 oldLoanId,
         address borrower,
         address lender,
-        LoanLibrary.LoanTerms calldata terms
+        LoanLibrary.LoanTerms calldata terms,
+        uint256 _amountToOldLender,
+        uint256 _amountToLender,
+        uint256 _amountToBorrower
     ) external returns (uint256 newLoanId);
 
     // ============== Nonce Management ==============
