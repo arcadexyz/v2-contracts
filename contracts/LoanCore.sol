@@ -284,7 +284,11 @@ contract LoanCore is
         emit LoanClaimed(loanId);
     }
 
-    // ===================================== INSTALLMENT OPERATIONS =====================================
+    function rollover(uint256 loanId, address newLender, LoanLibrary.LoanTerms calldata terms) {
+
+    }
+
+    // ===================================== INSTALLMENT OPERATI\ONS =====================================
 
     /**
      * @notice Called from RepaymentController when paying back an installment loan.

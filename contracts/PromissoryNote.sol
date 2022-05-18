@@ -53,9 +53,7 @@ contract PromissoryNote is
 
     // =================== Constants =====================
 
-    bytes32 public constant BURNER_ROLE = keccak256("BURNER_ROLE");
-    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
-    bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
+    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
 
     // ============= Loan State ==============
 
@@ -82,6 +80,23 @@ contract PromissoryNote is
         owner = msg.sender;
     }
 
+    /**
+     * @notice Grants owner access to the specified address, which should be an
+     *         instance of LoanCore. Once admin role is set, it is immutable,
+     *         and cannot be set again.
+     *
+     * @param loanCore              The address of the admin.
+     */
+    function initialize(address loanCore) external {
+        if (initialized) revert PN_AlreadyInitialized();
+        if (_msgSender() != owner) revert PN_CannotInitialize();
+
+        _setupRole(ADMIN_ROLE, loanCore);
+
+        owner = loanCore;
+    }
+
+
     // ======================================= TOKEN OPERATIONS =========================================
 
     /**
@@ -97,14 +112,10 @@ contract PromissoryNote is
      * @return tokenId              The newly minted token ID.
      */
     function mint(address to, uint256 loanId) external override returns (uint256) {
-        if (!hasRole(MINTER_ROLE, _msgSender())) revert PN_MintingRole(_msgSender());
+        if (!hasRole(ADMIN_ROLE, _msgSender())) revert PN_MintingRole(_msgSender());
+        _mint(to, loanId);
 
-        uint256 currentTokenId = _tokenIdTracker.current();
-        _mint(to, currentTokenId);
-
-        _tokenIdTracker.increment();
-
-        return currentTokenId;
+        return loanId;
     }
 
     /**
@@ -118,19 +129,8 @@ contract PromissoryNote is
      * @param tokenId               The ID of the token to burn, should match a loan.
      */
     function burn(uint256 tokenId) external override {
-        if (!hasRole(BURNER_ROLE, _msgSender())) revert PN_BurningRole(_msgSender());
+        if (!hasRole(ADMIN_ROLE, _msgSender())) revert PN_BurningRole(_msgSender());
         _burn(tokenId);
-    }
-
-    function initialize(address loanCore) external {
-        if (initialized) revert PN_AlreadyInitialized();
-        if (_msgSender() != owner) revert PN_CannotInitialize();
-
-        _setupRole(MINTER_ROLE, loanCore);
-        _setupRole(BURNER_ROLE, loanCore);
-        _setupRole(PAUSER_ROLE, loanCore);
-
-        owner = loanCore;
     }
 
     // ===================================== ERC721 UTILITIES ===========================================
