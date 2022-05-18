@@ -9,7 +9,6 @@ import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol"
 import "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol";
 
 import "./interfaces/ICallDelegator.sol";
@@ -22,10 +21,8 @@ import "./FullInterestAmountCalc.sol";
 import "./PromissoryNote.sol";
 import "./vault/OwnableERC721.sol";
 import {
-    LC_LoanDuration,
+    LC_ZeroAddress,
     LC_CollateralInUse,
-    LC_InterestRate,
-    LC_NumberInstallments,
     LC_StartInvalidState,
     LC_NotExpired,
     LC_BalanceGTZero,
@@ -55,7 +52,6 @@ contract LoanCore is
 {
     using CountersUpgradeable for CountersUpgradeable.Counter;
     using SafeERC20Upgradeable for IERC20Upgradeable;
-    using SafeMathUpgradeable for uint256;
 
     // ============================================ STATE ==============================================
 
@@ -78,7 +74,8 @@ contract LoanCore is
 
     CountersUpgradeable.Counter private loanIdTracker;
     mapping(uint256 => LoanLibrary.LoanData) private loans;
-    mapping(address => mapping(uint256 => bool)) private collateralInUse;
+    // key is hash of (collateralAddress, collateralId)
+    mapping(bytes32 => bool) private collateralInUse;
     mapping(address => mapping(uint160 => bool)) public usedNonces;
 
     // ========================================== CONSTRUCTOR ===========================================
@@ -99,7 +96,11 @@ contract LoanCore is
      *
      * @param _feeController      The address of the contract governing protocol fees.
      */
-    function initialize(IFeeController _feeController) public initializer {
+    function initialize(IFeeController _feeController, IPromissoryNote _borrowerNote, IPromissoryNote _lenderNote) public initializer {
+        if (address(_feeController) == address(0)) revert LC_ZeroAddress();
+        if (address(_borrowerNote) == address(0)) revert LC_ZeroAddress();
+        if (address(_lenderNote) == address(0)) revert LC_ZeroAddress();
+
         // only those with FEE_CLAIMER_ROLE can update or grant FEE_CLAIMER_ROLE
         __AccessControl_init();
         __UUPSUpgradeable_init_unchained();
@@ -110,10 +111,11 @@ contract LoanCore is
 
         feeController = _feeController;
 
-        // TODO: Why are these deployed? Can these be provided beforehand?
-        //       Even updatable with note addresses going in LoanData?
-        borrowerNote = new PromissoryNote("PawnFi Borrower Note", "pBN");
-        lenderNote = new PromissoryNote("PawnFi Lender Note", "pLN");
+        /// @dev Although using references for both promissory notes, these
+        ///      must be fresh versions and cannot be re-used across multiple
+        ///      loanCore instances, to ensure loanId <> tokenID parity
+        borrowerNote = _borrowerNote;
+        lenderNote = _lenderNote;
 
         // Avoid having loanId = 0
         loanIdTracker.increment();
@@ -131,103 +133,65 @@ contract LoanCore is
     // ====================================== LIFECYCLE OPERATIONS ======================================
 
     /**
-     * @notice Create and store a loan object with the given terms.
-     *         Performs check on terms validity and creates a LoanData
-     *         struct in storage.
-     *
-     * @param terms                 The terms of the loan.
-     *
-     * @return loanId               The ID of the newly created loan.
-     */
-    function createLoan(LoanLibrary.LoanTerms calldata terms)
-        external
-        override
-        whenNotPaused
-        onlyRole(ORIGINATOR_ROLE)
-        returns (uint256 loanId)
-    {
-        // loan duration must be greater than 1 hr and less than 3 years
-        if (terms.durationSecs < 3600 || terms.durationSecs > 94608000) revert LC_LoanDuration(terms.durationSecs);
-        // check collateral is not already used in a loan.
-        if (collateralInUse[terms.collateralAddress][terms.collateralId] == true)
-            revert LC_CollateralInUse(terms.collateralAddress, terms.collateralId);
-        // interest rate must be greater than or equal to 0.01%
-        if (terms.interestRate / INTEREST_RATE_DENOMINATOR < 1) revert LC_InterestRate(terms.interestRate);
-        // number of installments must be an even number.
-        if (terms.numInstallments % 2 != 0 || terms.numInstallments > 1000000)
-            revert LC_NumberInstallments(terms.numInstallments);
-
-        // get current loanId and increment for next function call
-        loanId = loanIdTracker.current();
-        loanIdTracker.increment();
-        // Using loanId, set inital LoanData state
-        loans[loanId] = LoanLibrary.LoanData({
-            borrowerNoteId: 0,
-            lenderNoteId: 0,
-            terms: terms,
-            state: LoanLibrary.LoanState.Created,
-            dueDate: block.timestamp + terms.durationSecs,
-            startDate: block.timestamp,
-            balance: terms.principal,
-            balancePaid: 0,
-            lateFeesAccrued: 0,
-            numInstallmentsPaid: 0
-        });
-        // set collateral to in use.
-        collateralInUse[terms.collateralAddress][terms.collateralId] = true;
-
-        emit LoanCreated(terms, loanId);
-    }
-
-    /**
-     * @notice Start a loan, matching a stored set of terms, with a given
+     * @notice Start a loan, matching a set of terms, with a given
      *         lender and borrower. Collects collateral and distributes
      *         principal, along with collecting an origination fee for the
      *         protocol. Can only be called by OriginationController.
      *
      * @param lender                The lender for the loan.
      * @param borrower              The borrower for the loan.
-     * @param loanId                The ID of the loan to start.
+     * @param terms                 The terms of the loan.
+     *
+     * @return loanId               The ID of the newly created loan.
      */
     function startLoan(
         address lender,
         address borrower,
-        uint256 loanId
-    ) external override whenNotPaused onlyRole(ORIGINATOR_ROLE) {
-        LoanLibrary.LoanData memory data = loans[loanId];
+        LoanLibrary.LoanTerms calldata terms
+    )
+        external
+        override
+        whenNotPaused
+        onlyRole(ORIGINATOR_ROLE)
+        returns (uint256 loanId)
+    {
+        // check collateral is not already used in a loan.
+        bytes32 collateralKey = keccak256(abi.encode(terms.collateralAddress, terms.collateralId));
+        if (collateralInUse[collateralKey])
+            revert LC_CollateralInUse(terms.collateralAddress, terms.collateralId);
 
-        // Ensure valid initial loan state
-        if (data.state != LoanLibrary.LoanState.Created) revert LC_StartInvalidState(data.state);
+        // get current loanId and increment for next function call
+        loanId = loanIdTracker.current();
+        loanIdTracker.increment();
 
-        // Pull collateral token and principal
-        IERC721(data.terms.collateralAddress).transferFrom(_msgSender(), address(this), data.terms.collateralId);
-        IERC20Upgradeable(data.terms.payableCurrency).safeTransferFrom(
+        // Initiate loan state
+        loans[loanId] = LoanLibrary.LoanData({
+            terms: terms,
+            state: LoanLibrary.LoanState.Active,
+            startDate: uint160(block.timestamp),
+            balance: terms.principal,
+            balancePaid: 0,
+            lateFeesAccrued: 0,
+            numInstallmentsPaid: 0
+        });
+
+        collateralInUse[collateralKey] = true;
+
+        // Distribute notes and principal
+        borrowerNote.mint(borrower, loanId);
+        lenderNote.mint(lender, loanId);
+
+        IERC721Upgradeable(terms.collateralAddress).transferFrom(_msgSender(), address(this), terms.collateralId);
+
+        IERC20Upgradeable(terms.payableCurrency).safeTransferFrom(
             _msgSender(),
             address(this),
-            data.terms.principal
+            terms.principal
         );
 
-        // Distribute notes and principal, initiate loan state
-        loans[loanId].state = LoanLibrary.LoanState.Active;
-        uint256 borrowerNoteId = borrowerNote.mint(borrower, loanId);
-        uint256 lenderNoteId = lenderNote.mint(lender, loanId);
-
-        loans[loanId] = LoanLibrary.LoanData(
-            borrowerNoteId,
-            lenderNoteId,
-            data.terms,
-            LoanLibrary.LoanState.Active,
-            data.dueDate,
-            data.startDate,
-            data.balance,
-            data.balancePaid,
-            data.lateFeesAccrued,
-            data.numInstallmentsPaid
-        );
-
-        IERC20Upgradeable(data.terms.payableCurrency).safeTransfer(
+        IERC20Upgradeable(terms.payableCurrency).safeTransfer(
             borrower,
-            getPrincipalLessFees(data.terms.principal)
+            getPrincipalLessFees(terms.principal)
         );
 
         emit LoanStarted(loanId, lender, borrower);
@@ -249,25 +213,26 @@ contract LoanCore is
 
         uint256 returnAmount = getFullInterestAmount(data.terms.principal, data.terms.interestRate);
         // ensure balance to be paid is greater than zero
-        if (returnAmount <= 0) revert LC_BalanceGTZero(returnAmount);
+        if (returnAmount == 0) revert LC_BalanceGTZero(returnAmount);
+
         // transfer from msg.sender to this contract
         IERC20Upgradeable(data.terms.payableCurrency).safeTransferFrom(_msgSender(), address(this), returnAmount);
 
         // get promissory notes from two parties involved
-        address lender = lenderNote.ownerOf(data.lenderNoteId);
-        address borrower = borrowerNote.ownerOf(data.borrowerNoteId);
+        address lender = lenderNote.ownerOf(loanId);
+        address borrower = borrowerNote.ownerOf(loanId);
 
         // state changes and cleanup
         // NOTE: these must be performed before assets are released to prevent reentrance
         loans[loanId].state = LoanLibrary.LoanState.Repaid;
-        collateralInUse[data.terms.collateralAddress][data.terms.collateralId] = false;
+        collateralInUse[keccak256(abi.encode(data.terms.collateralAddress, data.terms.collateralId))] = false;
 
-        lenderNote.burn(data.lenderNoteId);
-        borrowerNote.burn(data.borrowerNoteId);
+        lenderNote.burn(loanId);
+        borrowerNote.burn(loanId);
 
         // asset and collateral redistribution
         IERC20Upgradeable(data.terms.payableCurrency).safeTransfer(lender, returnAmount);
-        IERC721(data.terms.collateralAddress).transferFrom(address(this), borrower, data.terms.collateralId);
+        IERC721Upgradeable(data.terms.collateralAddress).transferFrom(address(this), borrower, data.terms.collateralId);
 
         emit LoanRepaid(loanId);
     }
@@ -286,19 +251,21 @@ contract LoanCore is
         if (data.state != LoanLibrary.LoanState.Active) revert LC_StartInvalidState(data.state);
         // ensure claiming after the loan has ended. block.timstamp must be greater than the dueDate.
 
-        if (data.dueDate > block.timestamp) revert LC_NotExpired(data.dueDate);
+        uint256 dueDate = data.startDate + data.terms.durationSecs;
+        if (dueDate > block.timestamp) revert LC_NotExpired(dueDate);
 
-        address lender = lenderNote.ownerOf(data.lenderNoteId);
+        address lender = lenderNote.ownerOf(loanId);
 
         // NOTE: these must be performed before assets are released to prevent reentrance
         loans[loanId].state = LoanLibrary.LoanState.Defaulted;
-        collateralInUse[data.terms.collateralAddress][data.terms.collateralId] = false;
+        collateralInUse[keccak256(abi.encode(data.terms.collateralAddress, data.terms.collateralId))] = false;
 
-        lenderNote.burn(data.lenderNoteId);
-        borrowerNote.burn(data.borrowerNoteId);
+        lenderNote.burn(loanId);
+        borrowerNote.burn(loanId);
 
         // collateral redistribution
-        IERC721(data.terms.collateralAddress).transferFrom(address(this), lender, data.terms.collateralId);
+        IERC721Upgradeable(data.terms.collateralAddress).transferFrom(address(this), lender, data.terms.collateralId);
+
         emit LoanClaimed(loanId);
     }
 
@@ -327,61 +294,49 @@ contract LoanCore is
         LoanLibrary.LoanData storage data = loans[_loanId];
         // ensure valid initial loan state when repaying loan
         if (data.state != LoanLibrary.LoanState.Active) revert LC_StartInvalidState(data.state);
+
         // calculate total sent by borrower and transferFrom repayment controller to this address
         uint256 paymentTotal = _paymentToPrincipal + _paymentToLateFees + _paymentToInterest;
         IERC20Upgradeable(data.terms.payableCurrency).safeTransferFrom(_msgSender(), address(this), paymentTotal);
+
         // get the lender and borrower
-        address lender = lenderNote.ownerOf(data.lenderNoteId);
-        address borrower = borrowerNote.ownerOf(data.borrowerNoteId);
-        // update common state
-        data.lateFeesAccrued = data.lateFeesAccrued + _paymentToLateFees;
-        data.numInstallmentsPaid = data.numInstallmentsPaid + _currentMissedPayments + 1;
+        address lender = lenderNote.ownerOf(_loanId);
+        address borrower = borrowerNote.ownerOf(_loanId);
 
-        // * If payment sent is exact or extra than remaining principal
-        if (_paymentToPrincipal > data.balance || _paymentToPrincipal == data.balance) {
-            // set the loan state to repaid
+        uint256 _balanceToPay = _paymentToPrincipal;
+        if (_balanceToPay >= data.balance) {
+            _balanceToPay = data.balance;
+
+            // mark loan as closed
             data.state = LoanLibrary.LoanState.Repaid;
-            collateralInUse[data.terms.collateralAddress][data.terms.collateralId] = false;
+            collateralInUse[keccak256(abi.encode(data.terms.collateralAddress, data.terms.collateralId))] = false;
+            lenderNote.burn(_loanId);
+            borrowerNote.burn(_loanId);
+        }
 
-            // state changes and cleanup
-            lenderNote.burn(data.lenderNoteId);
-            borrowerNote.burn(data.borrowerNoteId);
+        // Unlike paymentTotal, cannot go over maximum amount owed
+        uint256 boundedPaymentTotal = _balanceToPay + _paymentToLateFees + _paymentToInterest;
 
-            // return the difference to borrower
-            if (_paymentToPrincipal > data.balance) {
-                uint256 diffAmount = _paymentToPrincipal - data.balance;
-                // update balance state balancePaid is the current principal
-                data.balance = 0;
-                data.balancePaid += paymentTotal - diffAmount;
-                // update paymentTotal since extra amount sent
-                IERC20Upgradeable(data.terms.payableCurrency).safeTransfer(borrower, diffAmount);
-                // Loan is fully repaid, redistribute asset and collateral.
-                IERC20Upgradeable(data.terms.payableCurrency).safeTransfer(lender, paymentTotal - diffAmount);
-                IERC721(data.terms.collateralAddress).transferFrom(address(this), borrower, data.terms.collateralId);
-            }
-            // exact amount sent, no difference calculation necessary
-            else {
-                // update balance
-                data.balance = 0;
-                data.balancePaid += paymentTotal;
+        // update loan state
+        data.lateFeesAccrued += _paymentToLateFees;
+        data.numInstallmentsPaid += uint24(_currentMissedPayments) + 1;
+        data.balance -= _balanceToPay;
+        data.balancePaid += boundedPaymentTotal;
 
-                // Loan is fully repaid, redistribute asset and collateral.
-                IERC20Upgradeable(data.terms.payableCurrency).safeTransfer(lender, paymentTotal);
+        // Send payment to lender.
+        IERC20Upgradeable(data.terms.payableCurrency).safeTransfer(lender, boundedPaymentTotal);
 
-                IERC721(data.terms.collateralAddress).transferFrom(address(this), borrower, data.terms.collateralId);
+        // If repaid, send collateral to borrower
+        if (data.state == LoanLibrary.LoanState.Repaid) {
+            IERC721Upgradeable(data.terms.collateralAddress).transferFrom(address(this), borrower, data.terms.collateralId);
+
+            if (_paymentToPrincipal > _balanceToPay) {
+                // Borrower overpaid, so send refund
+                IERC20Upgradeable(data.terms.payableCurrency).safeTransfer(borrower, _paymentToPrincipal - _balanceToPay);
             }
 
             emit LoanRepaid(_loanId);
-        }
-        // * Else, (mid loan payment)
-        else {
-            // update balance state
-            data.balance -= _paymentToPrincipal;
-            data.balancePaid += paymentTotal;
-
-            // Loan partial payment, redistribute asset to lender.
-            IERC20Upgradeable(data.terms.payableCurrency).safeTransfer(lender, paymentTotal);
-
+        } else {
             // minimum repayment events will emit 0 and unchanged principal
             emit InstallmentPaymentReceived(_loanId, _paymentToPrincipal, data.balance);
         }
@@ -439,12 +394,12 @@ contract LoanCore is
      */
     function canCallOn(address caller, address vault) external view override returns (bool) {
         // if the collateral is not currently being used in a loan, disallow
-        if (!collateralInUse[OwnableERC721(vault).ownershipToken()][uint256(uint160(vault))]) {
+        if (!collateralInUse[keccak256(abi.encode(OwnableERC721(vault).ownershipToken(), uint256(uint160(vault))))]) {
             return false;
         }
         for (uint256 i = 0; i < borrowerNote.balanceOf(caller); i++) {
-            uint256 borrowerNoteId = borrowerNote.tokenOfOwnerByIndex(caller, i);
-            uint256 loanId = borrowerNote.loanIdByNoteId(borrowerNoteId);
+            uint256 loanId = borrowerNote.tokenOfOwnerByIndex(caller, i);
+
             // if the borrower is currently borrowing against this vault,
             // return true
             if (loans[loanId].terms.collateralId == uint256(uint160(vault))) {
@@ -452,6 +407,20 @@ contract LoanCore is
             }
         }
         return false;
+    }
+
+    /**
+     * @notice Reports whether the given nonce has been previously used by a user. Returning
+     *         false does not mean that the nonce will not clash with another potential off-chain
+     *         signature that is stored somewhere.
+     *
+     * @param user                  The user to check the nonce for.
+     * @param nonce                 The nonce to check.
+     *
+     * @return used                 Whether the nonce has been used.
+     */
+    function isNonceUsed(address user, uint160 nonce) external view override returns (bool) {
+        return usedNonces[user][nonce];
     }
 
     // ======================================== ADMIN FUNCTIONS =========================================
@@ -463,7 +432,11 @@ contract LoanCore is
      * @param _newController        The new fee controller contract.
      */
     function setFeeController(IFeeController _newController) external onlyRole(FEE_CLAIMER_ROLE) {
+        if(address(_newController) == address(0)) revert LC_ZeroAddress();
+
         feeController = _newController;
+
+        emit SetFeeController(address(feeController));
     }
 
     /**
@@ -508,7 +481,7 @@ contract LoanCore is
      * @return principalLessFees    The amount after fees.
      */
     function getPrincipalLessFees(uint256 principal) internal view returns (uint256) {
-        return principal.sub(principal.mul(feeController.getOriginationFee()).div(BPS_DENOMINATOR));
+        return principal - principal * feeController.getOriginationFee() / BPS_DENOMINATOR;
     }
 
     /**
@@ -519,7 +492,7 @@ contract LoanCore is
      * @param nonce                 The nonce to consume.
      */
     function _useNonce(address user, uint160 nonce) internal {
-        if (usedNonces[user][nonce] == true) revert LC_NonceUsed(user, nonce);
+        if (usedNonces[user][nonce]) revert LC_NonceUsed(user, nonce);
         // set nonce to used
         usedNonces[user][nonce] = true;
 

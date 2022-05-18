@@ -9,11 +9,9 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol";
 
 import "../interfaces/ILoanCore.sol";
-import "../interfaces/IPromissoryNote.sol";
-
 import "../PromissoryNote.sol";
 
-// TODO: Proper natspec
+import "../PromissoryNote.sol";
 
 /**
  * @dev Interface for the LoanCore contract
@@ -48,6 +46,9 @@ contract MockLoanCore is ILoanCore, Initializable, AccessControlUpgradeable, UUP
         borrowerNote = new PromissoryNote("Mock BorrowerNote", "MB");
         lenderNote = new PromissoryNote("Mock LenderNote", "ML");
 
+        borrowerNote.initialize(address(this));
+        lenderNote.initialize(address(this));
+
         // Avoid having loanId = 0
         loanIdTracker.increment();
     }
@@ -73,43 +74,6 @@ contract MockLoanCore is ILoanCore, Initializable, AccessControlUpgradeable, UUP
     }
 
     /**
-     * @dev Create store a loan object with some given terms
-     */
-    function createLoan(LoanLibrary.LoanTerms calldata terms) external override returns (uint256 loanId) {
-        LoanLibrary.LoanTerms memory _loanTerms = LoanLibrary.LoanTerms(
-            terms.durationSecs,
-            terms.principal,
-            terms.interestRate,
-            terms.collateralAddress,
-            terms.collateralId,
-            terms.payableCurrency,
-            terms.numInstallments
-        );
-
-        LoanLibrary.LoanData memory _loanData = LoanLibrary.LoanData(
-            0,
-            0,
-            _loanTerms,
-            LoanLibrary.LoanState.Created,
-            terms.durationSecs,
-            block.timestamp,
-            terms.principal,
-            0,
-            0,
-            0
-        );
-
-        loanId = loanIdTracker.current();
-        loanIdTracker.increment();
-
-        loans[loanId] = _loanData;
-
-        emit LoanCreated(terms, loanId);
-
-        return loanId;
-    }
-
-    /**
      * @dev Start a loan with the given borrower and lender
      *  Distributes the principal less the protocol fee to the borrower
      *
@@ -120,21 +84,20 @@ contract MockLoanCore is ILoanCore, Initializable, AccessControlUpgradeable, UUP
     function startLoan(
         address lender,
         address borrower,
-        uint256 loanId
-    ) public override {
-        uint256 borrowerNoteId = borrowerNote.mint(borrower, loanId);
-        uint256 lenderNoteId = lenderNote.mint(lender, loanId);
+        LoanLibrary.LoanTerms calldata terms
+    ) public override returns (uint256 loanId) {
+        loanId = loanIdTracker.current();
+        loanIdTracker.increment();
 
-        LoanLibrary.LoanData memory data = loans[loanId];
+        borrowerNote.mint(borrower, loanId);
+        lenderNote.mint(lender, loanId);
+
         loans[loanId] = LoanLibrary.LoanData(
-            borrowerNoteId,
-            lenderNoteId,
-            data.terms,
             LoanLibrary.LoanState.Active,
-            data.dueDate,
-            data.startDate,
-            data.terms.principal,
             0,
+            uint160(block.timestamp),
+            terms,
+            terms.principal,
             0,
             0
         );
@@ -173,7 +136,7 @@ contract MockLoanCore is ILoanCore, Initializable, AccessControlUpgradeable, UUP
         //console.log("TOTAL PAID FROM BORROWER: ", paymentTotal);
         IERC20Upgradeable(data.terms.payableCurrency).transferFrom(msg.sender, address(this), paymentTotal);
         // use variable.
-        data.numInstallmentsPaid = data.numInstallmentsPaid + _numMissedPayments + 1;
+        data.numInstallmentsPaid += uint24(_numMissedPayments) + 1;
     }
 
     /**
@@ -185,6 +148,10 @@ contract MockLoanCore is ILoanCore, Initializable, AccessControlUpgradeable, UUP
      *  - The current time must be beyond the dueDate
      */
     function claim(uint256 loanId) public override {}
+
+    function isNonceUsed(address user, uint160 nonce) external view override returns (bool) {
+        return usedNonces[user][nonce];
+    }
 
     function consumeNonce(address user, uint160 nonce) external override {
         _useNonce(user, nonce);

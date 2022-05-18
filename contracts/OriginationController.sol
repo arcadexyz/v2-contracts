@@ -30,7 +30,10 @@ import {
     OC_ApprovedOwnLoan,
     OC_InvalidSignature,
     OC_CallerNotParticipant,
-    OC_PrincipalTooLow
+    OC_PrincipalTooLow,
+    OC_LoanDuration,
+    OC_InterestRate,
+    OC_NumberInstallments
 } from "./errors/Lending.sol";
 
 /**
@@ -63,15 +66,14 @@ contract OriginationController is
     bytes32 private constant _TOKEN_ID_TYPEHASH =
         keccak256(
             // solhint-disable-next-line max-line-length
-            "LoanTerms(uint256 durationSecs,uint256 principal,uint256 interestRate,address collateralAddress,uint256 collateralId,address payableCurrency,uint256 numInstallments,uint160 nonce)"
+            "LoanTerms(uint32 durationSecs,uint24 numInstallments,uint200 interestRate,uint256 principal,address collateralAddress,uint256 collateralId,address payableCurrency,uint160 nonce)"
         );
 
     /// @notice EIP712 type hash for item-based signatures.
     bytes32 private constant _ITEMS_TYPEHASH =
         keccak256(
             // solhint-disable max-line-length
-            "LoanTermsWithItems(uint256 durationSecs,uint256 principal,uint256 interestRate,address collateralAddress,bytes32 itemsHash,address payableCurrency,uint256 numInstallments,uint160 nonce)"
-            // "LoanTermsWithItems(uint256 durationSecs,uint256 principal,uint256 interestRate,address collateralAddress,address payableCurrency)"
+            "LoanTermsWithItems(uint32 durationSecs,uint24 numInstallments,uint200 interestRate,uint256 principal,address collateralAddress,bytes32 itemsHash,address payableCurrency,uint160 nonce)"
         );
 
     // =============== Contract References ===============
@@ -152,12 +154,11 @@ contract OriginationController is
         Signature calldata sig,
         uint160 nonce
     ) public override returns (uint256 loanId) {
+        _validateLoanTerms(loanTerms);
+
         (bytes32 sighash, address externalSigner) = recoverTokenSignature(loanTerms, sig, nonce);
 
         _validateCounterparties(borrower, lender, msg.sender, externalSigner, sig, sighash);
-
-        // principal must be greater than or equal to 1000 wei
-        if (loanTerms.principal <= 9999) revert OC_PrincipalTooLow(loanTerms.principal);
 
         ILoanCore(loanCore).consumeNonce(externalSigner, nonce);
         loanId = _initialize(loanTerms, borrower, lender);
@@ -189,6 +190,8 @@ contract OriginationController is
         uint160 nonce,
         LoanLibrary.Predicate[] calldata itemPredicates
     ) public override returns (uint256 loanId) {
+        _validateLoanTerms(loanTerms);
+
         address vault = IVaultFactory(loanTerms.collateralAddress).instanceAt(loanTerms.collateralId);
         (bytes32 sighash, address externalSigner) = recoverItemsSignature(
             loanTerms,
@@ -389,12 +392,12 @@ contract OriginationController is
             abi.encode(
                 _TOKEN_ID_TYPEHASH,
                 loanTerms.durationSecs,
-                loanTerms.principal,
+                loanTerms.numInstallments,
                 loanTerms.interestRate,
+                loanTerms.principal,
                 loanTerms.collateralAddress,
                 loanTerms.collateralId,
                 loanTerms.payableCurrency,
-                loanTerms.numInstallments,
                 nonce
             )
         );
@@ -426,12 +429,12 @@ contract OriginationController is
             abi.encode(
                 _ITEMS_TYPEHASH,
                 loanTerms.durationSecs,
-                loanTerms.principal,
+                loanTerms.numInstallments,
                 loanTerms.interestRate,
+                loanTerms.principal,
                 loanTerms.collateralAddress,
                 itemsHash,
                 loanTerms.payableCurrency,
-                loanTerms.numInstallments,
                 nonce
             )
         );
@@ -487,6 +490,30 @@ contract OriginationController is
     }
 
     // =========================================== HELPERS ==============================================
+
+
+    /**
+     * @dev Validates argument bounds for the loan terms.
+     *
+     * @param terms                     The terms of the loan.
+     */
+    function _validateLoanTerms(
+        LoanLibrary.LoanTerms memory terms
+    ) internal pure {
+        // principal must be greater than or equal to 10000 wei
+        if (terms.principal < 10_000) revert OC_PrincipalTooLow(terms.principal);
+
+        // loan duration must be greater than 1 hr and less than 3 years
+        if (terms.durationSecs < 3600 || terms.durationSecs > 94_608_000) revert OC_LoanDuration(terms.durationSecs);
+
+        // interest rate must be greater than or equal to 0.01%
+        // and less than 10,000% (1e8 basis points)
+        if (terms.interestRate < 1e18 || terms.interestRate > 1e26) revert OC_InterestRate(terms.interestRate);
+
+        // number of installments must be an even number.
+        if (terms.numInstallments % 2 != 0 || terms.numInstallments > 1_000_000)
+            revert OC_NumberInstallments(terms.numInstallments);
+    }
 
     /**
      * @dev Ensure that one counterparty has signed the loan terms, and the other
@@ -546,7 +573,6 @@ contract OriginationController is
         IERC721(loanTerms.collateralAddress).approve(loanCore, loanTerms.collateralId);
 
         // Start loan
-        loanId = ILoanCore(loanCore).createLoan(loanTerms);
-        ILoanCore(loanCore).startLoan(lender, borrower, loanId);
+        loanId = ILoanCore(loanCore).startLoan(lender, borrower, loanTerms);
     }
 }

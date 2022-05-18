@@ -3,12 +3,11 @@ import hre, { waffle, upgrades } from "hardhat";
 const { loadFixture } = waffle;
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
 import { BigNumber, BigNumberish } from "ethers";
-import { initializeBundle } from "./utils/loans";
+import { initializeBundle, startLoan } from "./utils/loans";
 import {
     OriginationController,
     MockERC20,
     LoanCore,
-    MockERC721,
     PromissoryNote,
     CallWhitelist,
     VaultFactory,
@@ -72,16 +71,26 @@ describe("PromissoryNote", () => {
         const whitelist = <CallWhitelist>await deploy("CallWhitelist", signers[0], []);
         const vaultTemplate = <AssetVault>await deploy("AssetVault", signers[0], []);
         const VaultFactoryFactory = await hre.ethers.getContractFactory("VaultFactory");
-    const vaultFactory = <VaultFactory>(await upgrades.deployProxy(VaultFactoryFactory, [vaultTemplate.address, whitelist.address], { kind: 'uups' })
-    );
+        const vaultFactory = <VaultFactory>(await upgrades.deployProxy(
+            VaultFactoryFactory, [vaultTemplate.address, whitelist.address], { kind: 'uups' })
+        );
         const mockERC20 = <MockERC20>await deploy("MockERC20", signers[0], ["Mock ERC20", "MOCK"]);
 
         const feeController = <FeeController>await deploy("FeeController", signers[0], []);
 
+        const borrowerNote = <PromissoryNote>await deploy("PromissoryNote", signers[0], ["Arcade.xyz BorrowerNote", "aBN"]);
+        const lenderNote = <PromissoryNote>await deploy("PromissoryNote", signers[0], ["Arcade.xyz LenderNote", "aLN"]);
+
         const LoanCore = await hre.ethers.getContractFactory("LoanCore");
         const loanCore = <LoanCore>(
-            await upgrades.deployProxy(LoanCore, [feeController.address], { kind: 'uups' })
+            await upgrades.deployProxy(LoanCore, [feeController.address, borrowerNote.address, lenderNote.address], { kind: 'uups' })
         );
+
+        // Grant correct permissions for promissory note
+        // Giving to user to call PromissoryNote functions directly
+        for (const note of [borrowerNote, lenderNote]) {
+            await note.connect(signers[0]).initialize(signers[0].address);
+        }
 
         const OriginationController = await hre.ethers.getContractFactory("OriginationController");
         const originationController = <OriginationController>(
@@ -94,18 +103,11 @@ describe("PromissoryNote", () => {
         await loanCore.connect(signers[0]).grantRole(ORIGINATOR_ROLE, await originator.getAddress());
         await loanCore.connect(signers[0]).grantRole(REPAYER_ROLE, await repayer.getAddress());
 
-        const lenderPromissoryNote = <PromissoryNote>(
-            await deploy("PromissoryNote", signers[0], ["PromissoryNote - Lender", "PBL"])
-        );
-        const borrowerPromissoryNote = <PromissoryNote>(
-            await deploy("PromissoryNote", signers[0], ["PromissoryNote - Borrower", "PBNs"])
-        );
-
         const repaymentController = <RepaymentController>(
             await deploy("RepaymentController", signers[0], [
                 loanCore.address,
-                borrowerPromissoryNote.address,
-                lenderPromissoryNote.address,
+                borrowerNote.address,
+                lenderNote.address,
             ])
         );
         await repaymentController.deployed();
@@ -116,8 +118,8 @@ describe("PromissoryNote", () => {
         await updateRepaymentControllerPermissions.wait();
 
         return {
-            borrowerPromissoryNote,
-            lenderPromissoryNote,
+            borrowerPromissoryNote: borrowerNote,
+            lenderPromissoryNote: lenderNote,
             loanCore,
             repaymentController,
             originationController,
@@ -131,39 +133,13 @@ describe("PromissoryNote", () => {
         };
     };
 
-    // Create Loan
-    const createLoan = async (loanCore: LoanCore, user: Signer, terms: LoanTerms): Promise<BigNumber> => {
-        const transaction = await loanCore.connect(user).createLoan(terms);
-        const receipt = await transaction.wait();
-
-        if (receipt && receipt.events && receipt.events.length === 1 && receipt.events[0].args) {
-            return receipt.events[0].args.loanId;
-        } else {
-            throw new Error("Unable to initialize loan");
-        }
-    };
-
-    // Start Loan
-    const startLoan = async (
-        loanCore: LoanCore,
-        user: Signer,
-        lenderNote: PromissoryNote,
-        borrowerNote: PromissoryNote,
-        loanId: BigNumberish,
-    ) => {
-        const transaction = await loanCore.connect(user).startLoan(lenderNote.address, borrowerNote.address, loanId);
-        await transaction.wait();
-    };
-
     // Repay Loan
     const repayLoan = async (
-        loanCore: LoanCore,
         repaymentController: RepaymentController,
         user: Signer,
         loanId: BigNumberish,
     ) => {
-        const loanData = await loanCore.connect(user).getLoan(loanId);
-        const transaction = await repaymentController.connect(user).repay(loanData.borrowerNoteId);
+        const transaction = await repaymentController.connect(user).repay(loanId);
         await transaction.wait();
     };
 
@@ -191,10 +167,10 @@ describe("PromissoryNote", () => {
     });
 
     describe("mint", () => {
-        it("Reverts if sender is not loanCore", async () => {
+        it("Reverts if sender is not an assigned minter", async () => {
             const { lenderPromissoryNote: promissoryNote, user, other } = await loadFixture(fixture);
             const transaction = promissoryNote.connect(other).mint(await user.getAddress(), 1);
-            await expect(transaction).to.be.reverted;
+            await expect(transaction).to.be.revertedWith("PN_MintingRole");
         });
 
         it("Assigns a PromissoryNote NFT to the recipient", async () => {
@@ -214,81 +190,21 @@ describe("PromissoryNote", () => {
         it("Reverts if sender does not own the note", async () => {
             const {
                 borrowerPromissoryNote: promissoryNote,
-                lenderPromissoryNote,
-                loanCore,
-                repaymentController,
-                originationController,
-                vaultFactory,
                 user,
-                other,
-                repayer,
-                originator,
-                mockERC20,
+                other
             } = await loadFixture(fixture);
-            // init bundle using vault factory
-            const bundleId = await initializeBundle(vaultFactory, user);
-            // create loan terms
-            const loanTerms = createLoanTerms(mockERC20.address, vaultFactory.address, { collateralId: bundleId });
-            const promissoryNoteId = await mintPromissoryNote(promissoryNote, user);
-            const loanId = await createLoan(loanCore, user, loanTerms);
-            // Approve loanCore to take vault when loan starts
-            await vaultFactory.connect(user).approve(loanCore.address, bundleId);
-            // Mint principal to lender, lender then approves loanCore to take amount
-            await mockERC20.connect(other).mint(await other.getAddress(), loanTerms.principal);
-            await mockERC20.connect(other).transfer(await originator.getAddress(), loanTerms.principal);
-            await mockERC20.connect(originator).approve(loanCore.address, loanTerms.principal);
-            // LoanCore starts loan, with originator as the msg.sender. Mint user principal to emulate the tx
-            await startLoan(loanCore, originator, lenderPromissoryNote, promissoryNote, loanId);
-            // enough for principal and int
-            await mockERC20.connect(user).mint(await user.getAddress(), loanTerms.principal.mul(2));
-            const loanData = await loanCore.connect(user).getLoan(loanId);
-            expect(loanData.state).to.equal(LoanState.Active);
-            // Repay loan with repayment controller, approve first
-            await mockERC20.connect(user).approve(repaymentController.address, hre.ethers.utils.parseEther("100.01"));
-            await repayLoan(loanCore, repaymentController, user, loanId);
-            const loanDataAfterRepay = await loanCore.connect(user).getLoan(loanId);
-            expect(loanDataAfterRepay.state).to.equal(LoanState.Repaid);
 
-            await expect(promissoryNote.connect(other).burn(promissoryNoteId)).to.be.reverted;
+            const promissoryNoteId = await mintPromissoryNote(promissoryNote, user);
+            await expect(promissoryNote.connect(other).burn(promissoryNoteId)).to.be.revertedWith("PN_BurningRole");
         });
 
         it("Burns a PromissoryNote NFT", async () => {
             const {
                 borrowerPromissoryNote: promissoryNote,
-                lenderPromissoryNote,
-                loanCore,
-                originationController,
-                repaymentController,
-                vaultFactory,
-                repayer,
-                originator,
-                other,
-                user,
-                mockERC20,
+                user
             } = await loadFixture(fixture);
-            // init bundle using vault factory
-            const bundleId = await initializeBundle(vaultFactory, user);
-            // create loan terms
-            const loanTerms = createLoanTerms(mockERC20.address, vaultFactory.address, { collateralId: bundleId });
+
             const promissoryNoteId = await mintPromissoryNote(promissoryNote, user);
-            const loanId = await createLoan(loanCore, user, loanTerms);
-            // Approve loanCore to take vault when loan starts
-            await vaultFactory.connect(user).approve(loanCore.address, bundleId);
-            // Mint principal to lender, lender then approves loanCore to take amount
-            await mockERC20.connect(other).mint(await other.getAddress(), loanTerms.principal);
-            await mockERC20.connect(other).transfer(await originator.getAddress(), loanTerms.principal);
-            await mockERC20.connect(originator).approve(loanCore.address, loanTerms.principal);
-            // LoanCore starts loan, with originator as the msg.sender. Mint user principal to emulate the tx
-            await startLoan(loanCore, originator, lenderPromissoryNote, promissoryNote, loanId);
-            // enough for principal and int
-            await mockERC20.connect(user).mint(await user.getAddress(), loanTerms.principal.mul(2));
-            const loanData = await loanCore.connect(user).getLoan(loanId);
-            expect(loanData.state).to.equal(LoanState.Active);
-            // Repay loan with repayment controller, approve first
-            await mockERC20.connect(user).approve(repaymentController.address, hre.ethers.utils.parseEther("100.01"));
-            await repayLoan(loanCore, repaymentController, user, loanId);
-            const loanDataAfterRepay = await loanCore.connect(user).getLoan(loanId);
-            expect(loanDataAfterRepay.state).to.equal(LoanState.Repaid);
             await expect(promissoryNote.connect(user).burn(promissoryNoteId)).to.not.be.reverted;
         });
     });

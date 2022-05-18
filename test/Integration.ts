@@ -54,28 +54,27 @@ describe("Integration", () => {
         const vaultFactory = <VaultFactory>(await upgrades.deployProxy(VaultFactoryFactory, [vaultTemplate.address, whitelist.address], { kind: 'uups' })
         );
         const feeController = <FeeController>await deploy("FeeController", admin, []);
+
+        const borrowerNote = <PromissoryNote>await deploy("PromissoryNote", admin, ["Arcade.xyz BorrowerNote", "aBN"]);
+        const lenderNote = <PromissoryNote>await deploy("PromissoryNote", admin, ["Arcade.xyz LenderNote", "aLN"]);
+
         const LoanCore = await hre.ethers.getContractFactory("LoanCore");
         const loanCore = <LoanCore>(
-            await upgrades.deployProxy(LoanCore, [feeController.address], { kind: 'uups' })
+            await upgrades.deployProxy(LoanCore, [feeController.address, borrowerNote.address, lenderNote.address], { kind: 'uups' })
         );
 
-        const borrowerNoteAddress = await loanCore.borrowerNote();
-        const borrowerNote = <PromissoryNote>(
-            (await ethers.getContractFactory("PromissoryNote")).attach(borrowerNoteAddress)
-        );
+        // Grant correct permissions for promissory note
+        for (const note of [borrowerNote, lenderNote]) {
+            await note.connect(admin).initialize(loanCore.address);
+        }
 
         const updateborrowerPermissions = await loanCore.grantRole(ORIGINATOR_ROLE, borrower.address);
         await updateborrowerPermissions.wait();
 
-        const lenderNoteAddress = await loanCore.lenderNote();
-        const lenderNote = <PromissoryNote>(
-            (await ethers.getContractFactory("PromissoryNote")).attach(lenderNoteAddress)
-        );
-
         const mockERC20 = <MockERC20>await deploy("MockERC20", admin, ["Mock ERC20", "MOCK"]);
 
         const repaymentController = <RepaymentController>(
-            await deploy("RepaymentController", admin, [loanCore.address, borrowerNoteAddress, lenderNoteAddress])
+            await deploy("RepaymentController", admin, [loanCore.address, borrowerNote.address, lenderNote.address])
         );
         await repaymentController.deployed();
         const updateRepaymentControllerPermissions = await loanCore.grantRole(
@@ -175,7 +174,6 @@ describe("Integration", () => {
                 .withArgs(await lender.getAddress(), originationController.address, loanTerms.principal)
                 .to.emit(mockERC20, "Transfer")
                 .withArgs(originationController.address, loanCore.address, loanTerms.principal)
-                .to.emit(loanCore, "LoanCreated")
                 .to.emit(loanCore, "LoanStarted");
         });
 
@@ -255,7 +253,7 @@ describe("Integration", () => {
                 originationController
                     .connect(lender)
                     .initializeLoan(loanTerms, await borrower.getAddress(), await lender.getAddress(), sig, 1),
-            ).to.be.revertedWith("LC_LoanDuration");
+            ).to.be.revertedWith("OC_LoanDuration");
         });
     });
 
@@ -314,7 +312,7 @@ describe("Integration", () => {
         it("should successfully repay loan", async () => {
             const context = await loadFixture(fixture);
             const { repaymentController, vaultFactory, mockERC20, loanCore, borrower, lender } = context;
-            const { loanId, loanTerms, loanData, bundleId } = await initializeLoan(context, 1);
+            const { loanId, loanTerms, bundleId } = await initializeLoan(context, 1);
 
             await mint(mockERC20, borrower, loanTerms.principal.add(loanTerms.interestRate));
             await mockERC20
@@ -325,7 +323,7 @@ describe("Integration", () => {
             expect(await vaultFactory.ownerOf(bundleId)).to.equal(loanCore.address);
             const preLenderBalance = await mockERC20.balanceOf(await lender.getAddress());
 
-            await expect(repaymentController.connect(borrower).repay(loanData.borrowerNoteId))
+            await expect(repaymentController.connect(borrower).repay(loanId))
                 .to.emit(loanCore, "LoanRepaid")
                 .withArgs(loanId);
 
@@ -338,7 +336,7 @@ describe("Integration", () => {
         it("should allow the collateral to be reused after repay", async () => {
             const context = await loadFixture(fixture);
             const { repaymentController, mockERC20, loanCore, borrower } = context;
-            const { loanId, loanTerms, loanData, bundleId } = await initializeLoan(context, 1);
+            const { loanId, loanTerms, bundleId } = await initializeLoan(context, 1);
 
             await mint(mockERC20, borrower, loanTerms.principal.add(loanTerms.interestRate));
 
@@ -346,7 +344,7 @@ describe("Integration", () => {
                 .connect(borrower)
                 .approve(repaymentController.address, loanTerms.principal.add(loanTerms.interestRate));
 
-            await expect(repaymentController.connect(borrower).repay(loanData.borrowerNoteId))
+            await expect(repaymentController.connect(borrower).repay(loanId))
                 .to.emit(loanCore, "LoanRepaid")
                 .withArgs(loanId);
 
@@ -362,11 +360,11 @@ describe("Integration", () => {
         it("fails if payable currency is not approved", async () => {
             const context = await loadFixture(fixture);
             const { repaymentController, mockERC20, borrower } = context;
-            const { loanTerms, loanData } = await initializeLoan(context, 1);
+            const { loanTerms, loanId } = await initializeLoan(context, 1);
 
             await mint(mockERC20, borrower, loanTerms.principal.add(loanTerms.interestRate));
 
-            await expect(repaymentController.connect(borrower).repay(loanData.borrowerNoteId)).to.be.revertedWith(
+            await expect(repaymentController.connect(borrower).repay(loanId)).to.be.revertedWith(
                 "ERC20: transfer amount exceeds allowance",
             );
         });
@@ -382,7 +380,7 @@ describe("Integration", () => {
                 .approve(repaymentController.address, loanTerms.principal.add(loanTerms.interestRate));
 
             await expect(repaymentController.connect(borrower).repay(1234)).to.be.revertedWith(
-                "RepaymentCont::repay: repay could not dereference loan",
+                "RC_CannotDereference",
             );
         });
     });
@@ -444,7 +442,7 @@ describe("Integration", () => {
         it("should successfully claim loan", async () => {
             const context = await loadFixture(fixture);
             const { repaymentController, vaultFactory, loanCore, lender } = context;
-            const { loanId, loanData, bundleId } = await initializeLoan(context, 1);
+            const { loanId, bundleId } = await initializeLoan(context, 1);
 
             // pre-repaid state
             expect(await vaultFactory.ownerOf(bundleId)).to.equal(loanCore.address);
@@ -461,13 +459,13 @@ describe("Integration", () => {
         it("should allow the collateral to be reused after claim", async () => {
             const context = await loadFixture(fixture);
             const { repaymentController, vaultFactory, loanCore, lender, borrower } = context;
-            const { loanId, loanData, bundleId } = await initializeLoan(context, 1);
+            const { loanId, bundleId } = await initializeLoan(context, 1);
 
             // pre-repaid state
             expect(await vaultFactory.ownerOf(bundleId)).to.equal(loanCore.address);
             await blockchainTime.increaseTime(5000);
 
-            await expect(repaymentController.connect(lender).claim(loanData.lenderNoteId))
+            await expect(repaymentController.connect(lender).claim(loanId))
                 .to.emit(loanCore, "LoanClaimed")
                 .withArgs(loanId);
 
@@ -486,9 +484,9 @@ describe("Integration", () => {
         it("fails if not past durationSecs", async () => {
             const context = await loadFixture(fixture);
             const { repaymentController, lender } = context;
-            const { loanData } = await initializeLoan(context, 1);
+            const { loanId } = await initializeLoan(context, 1);
 
-            await expect(repaymentController.connect(lender).claim(loanData.lenderNoteId)).to.be.revertedWith(
+            await expect(repaymentController.connect(lender).claim(loanId)).to.be.revertedWith(
                 "LC_NotExpired",
             );
         });
@@ -506,11 +504,11 @@ describe("Integration", () => {
         it("fails if not called by lender", async () => {
             const context = await loadFixture(fixture);
             const { repaymentController, borrower } = context;
-            const { loanData } = await initializeLoan(context, 1);
+            const { loanId } = await initializeLoan(context, 1);
 
             await blockchainTime.increaseTime(20000);
-            await expect(repaymentController.connect(borrower).claim(loanData.lenderNoteId)).to.be.revertedWith(
-                "RepaymentCont::claim: not owner of lender note",
+            await expect(repaymentController.connect(borrower).claim(loanId)).to.be.revertedWith(
+                "RC_OnlyLender",
             );
         });
     });

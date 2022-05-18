@@ -35,13 +35,13 @@ const typedPermitData: TypeData = {
 const typedLoanTermsData: TypeData = {
     types: {
         LoanTerms: [
-            { name: "durationSecs", type: "uint256" },
+            { name: "durationSecs", type: "uint32" },
+            { name: "numInstallments", type: "uint24" },
+            { name: "interestRate", type: "uint200" },
             { name: "principal", type: "uint256" },
-            { name: "interestRate", type: "uint256" },
             { name: "collateralAddress", type: "address" },
             { name: "collateralId", type: "uint256" },
             { name: "payableCurrency", type: "address" },
-            { name: "numInstallments", type: "uint256" },
             { name: "nonce", type: "uint160" },
         ],
     },
@@ -51,13 +51,13 @@ const typedLoanTermsData: TypeData = {
 const typedLoanItemsData: TypeData = {
     types: {
         LoanTermsWithItems: [
-            { name: "durationSecs", type: "uint256" },
+            { name: "durationSecs", type: "uint32" },
+            { name: "numInstallments", type: "uint24" },
+            { name: "interestRate", type: "uint200" },
             { name: "principal", type: "uint256" },
-            { name: "interestRate", type: "uint256" },
             { name: "collateralAddress", type: "address" },
             { name: "itemsHash", type: "bytes32" },
             { name: "payableCurrency", type: "address" },
-            { name: "numInstallments", type: "uint256" },
             { name: "nonce", type: "uint160" },
         ],
     },

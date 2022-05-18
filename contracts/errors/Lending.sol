@@ -21,6 +21,27 @@ import "../libraries/LoanLibrary.sol";
 error OC_ZeroAddress();
 
 /**
+ * @notice Loan duration must be greater than 1hr and less than 3yrs.
+ *
+ * @param durationSecs                 Total amount of time in seconds.
+ */
+error OC_LoanDuration(uint256 durationSecs);
+
+/**
+ * @notice Interest must be greater than 0.01%. (interestRate / 1e18 >= 1)
+ *
+ * @param interestRate                  InterestRate with 1e18 multiplier.
+ */
+error OC_InterestRate(uint256 interestRate);
+
+/**
+ * @notice Loan terms must have even number of installments and intallment periods must be < 1000000.
+ *
+ * @param numInstallments               Number of installment periods in loan.
+ */
+error OC_NumberInstallments(uint256 numInstallments);
+
+/**
  * @notice One of the predicates for item verification failed.
  *
  * @param verifier                      The address of the verifier contract.
@@ -123,7 +144,7 @@ error IV_NonPositiveAmount20(address asset, uint256 amount);
 /// @notice All errors prefixed with RC_, to separate from other contracts in the protocol.
 
 /**
- * @notice Could not dereference loan from borrowerNoteId.
+ * @notice Could not dereference loan from loan ID.
  *
  * @param target                     The loanId being checked.
  */
@@ -131,10 +152,8 @@ error RC_CannotDereference(uint256 target);
 
 /**
  * @notice Repayment has already been completed for this loan without installments.
- *
- * @param amount                     Balance returned after calculating amount due.
  */
-error RC_NoPaymentDue(uint256 amount);
+error RC_NoPaymentDue();
 
 /**
  * @notice Caller is not the owner of lender note.
@@ -167,27 +186,22 @@ error RC_NoMinPaymentDue(uint256 amount);
 
 /**
  * @notice Repaid amount must be larger than zero.
- *
- * @param amount                    Amount function call parameter.
  */
-error RC_RepayPartGTZero(uint256 amount);
+error RC_RepayPartZero();
 
 /**
  * @notice Amount paramater less than the minimum amount due.
  *
  * @param amount                    Amount function call parameter.
+ * @param minAmount                 The minimum amount due.
  */
-error RC_RepayPartGTMin(uint256 amount);
+error RC_RepayPartLTMin(uint256 amount, uint256 minAmount);
 
 // ==================================== Loan Core ======================================
 /// @notice All errors prefixed with LC_, to separate from other contracts in the protocol.
 
-/**
- * @notice Loan duration must be greater than 1hr and less than 3yrs.
- *
- * @param durationSecs                 Total amount of time in seconds.
- */
-error LC_LoanDuration(uint256 durationSecs);
+/// @notice Zero address passed in where not allowed.
+error LC_ZeroAddress();
 
 /**
  * @notice Check collateral is not already used in a active loan.
@@ -196,20 +210,6 @@ error LC_LoanDuration(uint256 durationSecs);
  * @param collateralId                  ID of the collateral token.
  */
 error LC_CollateralInUse(address collateralAddress, uint256 collateralId);
-
-/**
- * @notice Interest must be greater than 0.01%. (interestRate / 1e18 >= 1)
- *
- * @param interestRate                  InterestRate with 1e18 multiplier.
- */
-error LC_InterestRate(uint256 interestRate);
-
-/**
- * @notice Loan terms must have even number of installments and intallment periods must be < 1000000.
- *
- * @param numInstallments               Number of installment periods in loan.
- */
-error LC_NumberInstallments(uint256 numInstallments);
 
 /**
  * @notice Ensure valid initial loan state when starting loan.
@@ -252,6 +252,16 @@ error FIAC_InterestRate(uint256 interestRate);
 
 // ==================================== Promissory Note ======================================
 /// @notice All errors prefixed with PN_, to separate from other contracts in the protocol.
+
+/**
+ * @notice Deployer is allowed to initialize roles. Caller is not deployer.
+ */
+error PN_CannotInitialize();
+
+/**
+ * @notice Roles have been initialized.
+ */
+error PN_AlreadyInitialized();
 
 /**
  * @notice Caller of mint function must have the MINTER_ROLE in AccessControl.

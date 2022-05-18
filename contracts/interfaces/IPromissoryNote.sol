@@ -10,7 +10,7 @@ interface IPromissoryNote is IERC721Enumerable {
     function mint(address to, uint256 loanId) external returns (uint256);
     function burn(uint256 tokenId) external;
 
-    // ============== View Functions ==============
+    // ============== Initializer ==============
 
-    function loanIdByNoteId(uint256 noteId) external view returns (uint256);
+    function initialize(address loanCore) external;
 }
