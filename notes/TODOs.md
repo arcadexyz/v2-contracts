@@ -2,24 +2,15 @@
 
 MAY 9 WHATS LEFT:
 
-Safety/Robustness:
-
-- Fix test suite and ensure 100% coverage or as close as possible
-
-Refactoring:
-- Split LoanCore into separate files
-  - (contract too big) - DONE
-  - (merge create and start loan) - DONE
-  - (if not merging, start clock in startLoan) - DONE
-  - (check setFeeController for address 0 and emit event)
-  - (add isNonceUsed function) - DONE
-  - (remove SafeMath) - DONE
-- Run prettier
-
 Features:
 - Installment Claim (and grace period?)
 - Signature expiry
 - Native rollovers
+
+Final Cleanup:
+- Get 100% test coverage
+- Run prettier
+
 
 Evan:
 
