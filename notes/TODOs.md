@@ -3,18 +3,14 @@
 MAY 9 WHATS LEFT:
 
 Features:
-- Installment Claim (and grace period?)
-- Signature expiry
 - Native rollovers
 
- Evan:
-
-> V2 Protocol Planning/ Progress:
-
-- (DONE) Installment Claims
-- Rollover Review
-- Test coverage
-
+Final Cleanup:
+- Pending nonce tests
+- Get 100% test coverage
+- More gas optimization
+- Remove compiler warnings
+- Run prettier
 
 Mouzayan:
 
