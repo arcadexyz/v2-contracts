@@ -99,6 +99,13 @@ error OC_BatchLengthMismatch();
  */
 error OC_PrincipalTooLow(uint256 principal);
 
+/**
+ * @notice Signature must not be expired
+ *
+ * @param deadline                      Deadline in seconds.
+ */
+error OC_SignatureIsExpired(uint256 deadline);
+
 // ==================================== ITEMS VERIFIER ======================================
 /// @notice All errors prefixed with IV_, to separate from other contracts in the protocol.
 

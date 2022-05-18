@@ -105,6 +105,7 @@ const createLoanTerms = (
         interestRate = hre.ethers.utils.parseEther("1"),
         collateralId = "1",
         numInstallments = 0,
+        deadline = BigNumber.from(859200),
     }: Partial<LoanTerms> = {},
 ): LoanTerms => {
     return {
@@ -115,6 +116,7 @@ const createLoanTerms = (
         collateralAddress,
         payableCurrency,
         numInstallments,
+        deadline,
     };
 };
 
@@ -687,13 +689,13 @@ describe("OriginationController", () => {
             ).to.be.revertedWith("function selector was not recognized and there's no fallback function");
         });
 
-        it("Reverts if the required predicates fail", async () => {
+        it.only("Reverts if the required predicates fail", async () => {
             const { originationController, mockERC20, mockERC721, vaultFactory, user: lender, other: borrower } = ctx;
-
+console.log('1 ---------------------------------------------')
             const bundleId = await initializeBundle(vaultFactory, borrower);
             const tokenId = await mint721(mockERC721, borrower);
             // Do not transfer erc721 to bundle
-
+console.log('2 ---------------------------------------------')
             const loanTerms = createLoanTerms(mockERC20.address, vaultFactory.address, { collateralId: bundleId });
             const signatureItems: SignatureItem[] = [
                 {
@@ -703,16 +705,16 @@ describe("OriginationController", () => {
                     amount: 0, // not used for 721
                 },
             ];
-
+console.log('3 ---------------------------------------------')
             const predicates: ItemsPredicate[] = [
                 {
                     verifier: verifier.address,
                     data: encodeSignatureItems(signatureItems),
                 },
             ];
-
+console.log('4 ---------------------------------------------')
             await mint(mockERC20, lender, loanTerms.principal);
-
+console.log('5 ---------------------------------------------')
             const sig = await createLoanItemsSignature(
                 originationController.address,
                 "OriginationController",
@@ -721,7 +723,7 @@ describe("OriginationController", () => {
                 lender,
                 "2",
             );
-
+console.log('6 ---------------------------------------------')
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
             await vaultFactory.connect(borrower).approve(originationController.address, bundleId);
             await expect(
@@ -735,7 +737,9 @@ describe("OriginationController", () => {
                         1,
                         predicates,
                     ),
-            ).to.be.revertedWith("OC_PredicateFailed");
+            )
+            //.to.be.revertedWith("OC_PredicateFailed");
+            console.log('7 ---------------------------------------------')
         });
 
         it("Reverts for an invalid nonce", async () => {
