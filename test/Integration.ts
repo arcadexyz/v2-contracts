@@ -253,7 +253,7 @@ describe("Integration", () => {
                 originationController
                     .connect(lender)
                     .initializeLoan(loanTerms, await borrower.getAddress(), await lender.getAddress(), sig, 1),
-            ).to.be.revertedWith("LC_LoanDuration");
+            ).to.be.revertedWith("OC_LoanDuration");
         });
     });
 

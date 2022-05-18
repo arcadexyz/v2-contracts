@@ -620,7 +620,7 @@ describe("LoanCore", () => {
                 .startLoan(await lender.getAddress(), await borrower.getAddress(), terms);
             const receipt = await tx.wait();
             const gasUsed = receipt.gasUsed;
-            expect(gasUsed.toString()).to.equal("618485");
+            expect(gasUsed.toString()).to.equal("617155");
         });
     });
 

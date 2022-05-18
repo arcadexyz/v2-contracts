@@ -22,10 +22,7 @@ import "./PromissoryNote.sol";
 import "./vault/OwnableERC721.sol";
 import {
     LC_ZeroAddress,
-    LC_LoanDuration,
     LC_CollateralInUse,
-    LC_InterestRate,
-    LC_NumberInstallments,
     LC_StartInvalidState,
     LC_NotExpired,
     LC_BalanceGTZero,
@@ -158,22 +155,10 @@ contract LoanCore is
         onlyRole(ORIGINATOR_ROLE)
         returns (uint256 loanId)
     {
-        // loan duration must be greater than 1 hr and less than 3 years
-        if (terms.durationSecs < 3600 || terms.durationSecs > 94_608_000) revert LC_LoanDuration(terms.durationSecs);
-
         // check collateral is not already used in a loan.
         bytes32 collateralKey = keccak256(abi.encode(terms.collateralAddress, terms.collateralId));
         if (collateralInUse[collateralKey])
             revert LC_CollateralInUse(terms.collateralAddress, terms.collateralId);
-
-        // interest rate must be greater than or equal to 0.01%
-        // and less than 10,000% (1e8 basis points)
-        if (terms.interestRate / INTEREST_RATE_DENOMINATOR < 1) revert LC_InterestRate(terms.interestRate);
-        if (terms.interestRate / INTEREST_RATE_DENOMINATOR > 1e8) revert LC_InterestRate(terms.interestRate);
-
-        // number of installments must be an even number.
-        if (terms.numInstallments % 2 != 0 || terms.numInstallments > 1_000_000)
-            revert LC_NumberInstallments(terms.numInstallments);
 
         // get current loanId and increment for next function call
         loanId = loanIdTracker.current();

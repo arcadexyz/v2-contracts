@@ -30,7 +30,10 @@ import {
     OC_ApprovedOwnLoan,
     OC_InvalidSignature,
     OC_CallerNotParticipant,
-    OC_PrincipalTooLow
+    OC_PrincipalTooLow,
+    OC_LoanDuration,
+    OC_InterestRate,
+    OC_NumberInstallments
 } from "./errors/Lending.sol";
 
 /**
@@ -151,6 +154,8 @@ contract OriginationController is
         Signature calldata sig,
         uint160 nonce
     ) public override returns (uint256 loanId) {
+        _validateLoanTerms(loanTerms);
+
         (bytes32 sighash, address externalSigner) = recoverTokenSignature(loanTerms, sig, nonce);
 
         _validateCounterparties(borrower, lender, msg.sender, externalSigner, sig, sighash);
@@ -188,6 +193,8 @@ contract OriginationController is
         uint160 nonce,
         LoanLibrary.Predicate[] calldata itemPredicates
     ) public override returns (uint256 loanId) {
+        _validateLoanTerms(loanTerms);
+
         address vault = IVaultFactory(loanTerms.collateralAddress).instanceAt(loanTerms.collateralId);
         (bytes32 sighash, address externalSigner) = recoverItemsSignature(
             loanTerms,
@@ -486,6 +493,28 @@ contract OriginationController is
     }
 
     // =========================================== HELPERS ==============================================
+
+
+    /**
+     * @dev Validates argument bounds for the loan terms.
+     *
+     * @param terms                     The terms of the loan.
+     */
+    function _validateLoanTerms(
+        LoanLibrary.LoanTerms memory terms
+    ) internal pure {
+        // loan duration must be greater than 1 hr and less than 3 years
+        if (terms.durationSecs < 3600 || terms.durationSecs > 94_608_000) revert OC_LoanDuration(terms.durationSecs);
+
+        // interest rate must be greater than or equal to 0.01%
+        // and less than 10,000% (1e8 basis points)
+        if (terms.interestRate < 1e18) revert OC_InterestRate(terms.interestRate);
+        if (terms.interestRate > 1e26) revert OC_InterestRate(terms.interestRate);
+
+        // number of installments must be an even number.
+        if (terms.numInstallments % 2 != 0 || terms.numInstallments > 1_000_000)
+            revert OC_NumberInstallments(terms.numInstallments);
+    }
 
     /**
      * @dev Ensure that one counterparty has signed the loan terms, and the other

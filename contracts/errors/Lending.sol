@@ -21,6 +21,27 @@ import "../libraries/LoanLibrary.sol";
 error OC_ZeroAddress();
 
 /**
+ * @notice Loan duration must be greater than 1hr and less than 3yrs.
+ *
+ * @param durationSecs                 Total amount of time in seconds.
+ */
+error OC_LoanDuration(uint256 durationSecs);
+
+/**
+ * @notice Interest must be greater than 0.01%. (interestRate / 1e18 >= 1)
+ *
+ * @param interestRate                  InterestRate with 1e18 multiplier.
+ */
+error OC_InterestRate(uint256 interestRate);
+
+/**
+ * @notice Loan terms must have even number of installments and intallment periods must be < 1000000.
+ *
+ * @param numInstallments               Number of installment periods in loan.
+ */
+error OC_NumberInstallments(uint256 numInstallments);
+
+/**
  * @notice One of the predicates for item verification failed.
  *
  * @param verifier                      The address of the verifier contract.
@@ -183,33 +204,12 @@ error RC_RepayPartLTMin(uint256 amount, uint256 minAmount);
 error LC_ZeroAddress();
 
 /**
- * @notice Loan duration must be greater than 1hr and less than 3yrs.
- *
- * @param durationSecs                 Total amount of time in seconds.
- */
-error LC_LoanDuration(uint256 durationSecs);
-
-/**
  * @notice Check collateral is not already used in a active loan.
  *
  * @param collateralAddress             Address of the collateral.
  * @param collateralId                  ID of the collateral token.
  */
 error LC_CollateralInUse(address collateralAddress, uint256 collateralId);
-
-/**
- * @notice Interest must be greater than 0.01%. (interestRate / 1e18 >= 1)
- *
- * @param interestRate                  InterestRate with 1e18 multiplier.
- */
-error LC_InterestRate(uint256 interestRate);
-
-/**
- * @notice Loan terms must have even number of installments and intallment periods must be < 1000000.
- *
- * @param numInstallments               Number of installment periods in loan.
- */
-error LC_NumberInstallments(uint256 numInstallments);
 
 /**
  * @notice Ensure valid initial loan state when starting loan.
