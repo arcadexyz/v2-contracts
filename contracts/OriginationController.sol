@@ -155,8 +155,8 @@ contract OriginationController is
 
         _validateCounterparties(borrower, lender, msg.sender, externalSigner, sig, sighash);
 
-        // principal must be greater than or equal to 1000 wei
-        if (loanTerms.principal <= 9999) revert OC_PrincipalTooLow(loanTerms.principal);
+        // principal must be greater than or equal to 10000 wei
+        if (loanTerms.principal < 10_000) revert OC_PrincipalTooLow(loanTerms.principal);
 
         ILoanCore(loanCore).consumeNonce(externalSigner, nonce);
         loanId = _initialize(loanTerms, borrower, lender);

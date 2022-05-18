@@ -415,7 +415,7 @@ contract RepaymentController is
         // *** Time related to number of installments paid
         if (numInstallmentsPaid >= _installmentPeriod) {
             // When numInstallmentsPaid is greater than or equal to the _installmentPeriod
-            // this indicates that the minimum interesta and any late fees for this installment period
+            // this indicates that the minimum interest and any late fees for this installment period
             // have alread been repaid. Any additional amount sent in this installment period goes to principal
             return (0, 0, 0);
         } else {
