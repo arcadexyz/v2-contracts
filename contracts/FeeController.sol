@@ -20,8 +20,10 @@ import "./interfaces/IFeeController.sol";
 contract FeeController is AccessControlEnumerable, IFeeController, Ownable {
     // ============================================ STATE ==============================================
 
-    /// @dev Fee for origination - default is 0.03%
-    uint256 private originationFee = 300;
+    /// @dev Fee for origination - default is 0.5%
+    uint256 private originationFee = 50;
+    /// @dev Fee for rollovers - default is 0.1%
+    uint256 private rolloverFee = 10;
 
     // ========================================= FEE SETTERS ===========================================
 
@@ -36,6 +38,17 @@ contract FeeController is AccessControlEnumerable, IFeeController, Ownable {
         emit UpdateOriginationFee(_originationFee);
     }
 
+    /**
+     * @notice Set the origination fee to the given value. The caller
+     *         must be the owner of the contract.
+     *
+     * @param _rolloverFee          The new rollover fee, in bps.
+     */
+    function setRolloverFee(uint256 _rolloverFee) external override onlyOwner {
+        rolloverFee = _rolloverFee;
+        emit UpdateRolloverFee(_rolloverFee);
+    }
+
     // ========================================= FEE GETTERS ===========================================
 
     /**
@@ -45,5 +58,16 @@ contract FeeController is AccessControlEnumerable, IFeeController, Ownable {
      */
     function getOriginationFee() public view override returns (uint256) {
         return originationFee;
+    }
+
+    // ========================================= FEE GETTERS ===========================================
+
+    /**
+     * @notice Get the current origination fee in bps.
+     *
+     * @return rolloverFee       The current fee in bps.
+     */
+    function getRolloverFee() public view override returns (uint256) {
+        return rolloverFee;
     }
 }
