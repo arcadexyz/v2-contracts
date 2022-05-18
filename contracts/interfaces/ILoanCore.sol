@@ -40,7 +40,7 @@ interface ILoanCore {
         uint256 _paymentToLateFees
     ) external;
 
-    function claim(uint256 loanId) external;
+    function claim(uint256 loanId, uint256 currentInstallmentPeriod) external;
 
     // ============== Nonce Management ==============
 
