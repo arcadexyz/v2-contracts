@@ -29,7 +29,17 @@ import "./interfaces/IPromissoryNote.sol";
 import "./interfaces/ILoanCore.sol";
 import "./interfaces/IRepaymentController.sol";
 
-import { RC_CannotDereference, RC_NoPaymentDue, RC_OnlyLender, RC_BeforeStartDate, RC_NoInstallments, RC_NoMinPaymentDue, RC_RepayPartZero, RC_RepayPartLTMin } from "./errors/Lending.sol";
+import {
+    RC_CannotDereference,
+    RC_NoPaymentDue,
+    RC_OnlyLender,
+    RC_BeforeStartDate,
+    RC_NoInstallments,
+    RC_NoMinPaymentDue,
+    RC_RepayPartZero,
+    RC_RepayPartLTMin,
+    RC_HasInstallments
+ } from "./errors/Lending.sol";
 
 /**
  * @title RepaymentController
@@ -58,9 +68,7 @@ contract RepaymentController is
     // Interest rate parameter
     uint256 public constant INSTALLMENT_PERIOD_MULTIPLIER = 1_000_000;
 
-    // Installment parameters
-    // * * * NOTE!!! Finish implementation of grace period
-    uint256 public constant GRACE_PERIOD = 604800; // 60*60*24*7 // 1 week
+    // Installment parameter
     uint256 public constant LATE_FEE = 50; // 50/BASIS_POINTS_DENOMINATOR = 0.5%
 
     constructor(
@@ -85,6 +93,9 @@ contract RepaymentController is
     function repay(uint256 loanId) external override {
         LoanLibrary.LoanTerms memory terms = loanCore.getLoan(loanId).terms;
         if (terms.durationSecs == 0) revert RC_CannotDereference(loanId);
+
+        //cannot use for installment loans, call repayPart or repayPartMinimum
+        if(terms.numInstallments != 0) revert RC_HasInstallments(terms.numInstallments);
 
         // withdraw principal plus interest from borrower and send to loan core
         uint256 total = getFullInterestAmount(terms.principal, terms.interestRate);

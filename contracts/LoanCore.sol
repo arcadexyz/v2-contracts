@@ -26,8 +26,10 @@ import {
     LC_StartInvalidState,
     LC_NotExpired,
     LC_BalanceGTZero,
-    LC_NonceUsed
+    LC_NonceUsed,
+    LC_LoanNotDefaulted
 } from "./errors/Lending.sol";
+
 
 /**
  * @title LoanCore
@@ -263,9 +265,7 @@ contract LoanCore is
             _verifyDefaultedLoan(
                 data.terms.numInstallments,
                 data.numInstallmentsPaid,
-                currentInstallmentPeriod,
-                data.startDate,
-                data.terms.durationSecs
+                currentInstallmentPeriod
             );
         }
 
@@ -515,32 +515,32 @@ contract LoanCore is
     }
 
     /**
-     * @notice Check if the loan is available for collateral claim via default.
+     * @notice Check collateral is available to claim via default.
      *         This function passes when the last payment made by the borrower
-     *         was over 40% of the total number of installment periods in the loan terms.
+     *         was made over 40% of the total number of installment periods previously.
+     *         For example a loan with 10 installment periods. The borrower would
+     *         have to miss 4 consecutive payments during the loan to default.
      *
      * @dev Missed payments checked are consecutive due how the numInstallmentsPaid
      *      value in LoanData is being updated to the current installment period
      *      everytime a repayment at any time is made for an installment loan.
-     *      (numInstallmentsPaid += _currentMissedPayments + 1)
+     *      (numInstallmentsPaid += _currentMissedPayments + 1).
      *
      * @param numInstallments                  Total number of installments in loan.
      * @param numInstallmentsPaid              Installment period of the last installment payment.
      * @param currentInstallmentPeriod         Current installment period call made in.
-     * @param startDate                        Timestamp of the start of the loan.
-     * @param durationSecs                     Duration of the loan in seconds.
      */
-    function _verifyDefaultedLoan(uint256 numInstallments, uint256 numInstallmentsPaid, uint256 currentInstallmentPeriod, uint256 startDate, uint256 durationSecs) internal view {
+    function _verifyDefaultedLoan(uint256 numInstallments, uint256 numInstallmentsPaid, uint256 currentInstallmentPeriod) internal view {
+        // make sure if called in the same installment period as payment was made,
+        // does not get to currentInstallmentsMissed calculation. needs to be first.
+        if(numInstallmentsPaid == currentInstallmentPeriod) revert LC_LoanNotDefaulted();
         // get installments missed necessary for loan default (*1000)
         uint256 installmentsMissedForDefault = ((numInstallments * PERCENT_MISSED_FOR_LENDER_CLAIM) * 1000) / BPS_DENOMINATOR;
+        // get current installments missed (*1000)
+        // one added to numInstallmentsPaid for a grace period on the current installment.
+        uint256 currentInstallmentsMissed =((currentInstallmentPeriod) * 1000) - ((numInstallmentsPaid + 1) * 1000);
         // check if the number of missed payments is greater than
-        // 40% the total number of installment periods AND check the current time into loan
-        // ((block.timestamp - startDate) * 1000) is greater than (installmentsMissedForDefault * secondsPerInstallment)
-        require(numInstallmentsPaid < installmentsMissedForDefault, "Default");
-        // get current time into loan in seconds (*1000)
-        uint256 _currentTimeInLoan = (block.timestamp - startDate) * 1000;
-        // get time needed to default using installments missed, this value already has the multiplier attached
-        uint256 _timeNeededForDefault = (installmentsMissedForDefault * durationSecs) / numInstallments;
-        require(_currentTimeInLoan > _timeNeededForDefault, "Default");
+        // 40% the total number of installment periods
+        if(currentInstallmentsMissed < installmentsMissedForDefault) revert LC_LoanNotDefaulted();
     }
 }

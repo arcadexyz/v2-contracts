@@ -11,32 +11,28 @@ Features:
 
 > V2 Protocol Planning/ Progress:
 
-- (IN PROGRESS) Installment Claims:
+- (REVIEW) Installment Claims:
   - MISSED_INSTALLMENTS_FOR_LENDER_CLAIM
-    - 40% the total `numInstallments` in LoanTerms. --> Add custom error to `claim` in repayment controller for loans where `numInstallments != 0` (this indicates an installment loan). For default to be triggered, borrower must miss payments consecutively due to the fact that `numInstallmentsPaid` gets updated every time a payment is made to the current installment period when payment is made.
-      - Remove all `GRACE_PERIOD` variables, new method for determining default.
+    - 40% the total `numInstallments` in LoanTerms. --> Add custom error for loans where `numInstallments != 0` (this indicates an installment loan). For default to be triggered, borrower must miss payments consecutively due to the fact that `numInstallmentsPaid` gets updated every time a payment is made to the current installment period when payment is made.
+      - (DONE) Remove all `GRACE_PERIOD` variables, new method for determining default.
       - Implementation:
-        - Create onlyOwner update function for a state variable.
-        - Need to add to LoanTerms struct? Or is this parameter we should add to the LoanLibrary?
+        - new internal function in loan core
       - Create tests
-- (REVEIW) Is a repayment LATE_FEE of 0.5% what we want? --> Gabe did not have any objection...
+  - Added custom error to repay to restrict to only legacy loan types.
+- (REVEIW) Repayment LATE_FEE  --> Should this be in the feeController? Potential PR
 - (IN PROGRESS) Loan Terms Restrictions:
   - `durationsSecs` and `numInstallments`
-   - Max `numInstallments` in LoanTerms to be changed to 1000 installments.
+   - (NEXT PR) Max `numInstallments` in LoanTerms changed to 1000 installments.
    - Need to add more tests around the smaller duration loans after the claiming is implemented.
 
 > Branch Notes:
 
 - `installment-claims` branch:
-  1. Claiming after (x) amount of CONSECUTIVE missed installment payments.
-  2. Global late fee adjustment, Currently (0.5%)
-  3. Restrictions around LATE_FEE and numInstallments when creating a loan.
-  4. How to differentiate between legacy loan claims and installment claim scenarios
-  5. Tests for installment loan claiming scenarios
+  - Global late fee adjustment (0.4%)
+  - I chose to stay away from creating a onlyOwner set function for one main reason. If we did this, and changed the value while there are active loans, that would be breach of trust with the lending parties especially the borrower. The second reason is due to the solution to the previous problem. This is that in order to overcome this we would be adding this global value to either LoanTerms or LoanData. We don't like LoanTerms because this is something else to agree upon, and it doesn't really fit into LoanData as a static value only updated by contract owner. 
+  - Tests for installment loan claiming scenarios
     - Number of installments missed for claiming, consecutive an non-consecutive...
-    - Calling before and after the repayment grace period...
     - Legacy vs installments lender claiming scenarios, protections from overlap...
-    - If the LATE_FEE parameter is changed, lots of installment calculations regarding late fees will need re-calculation
 
 Mouzayan:
 
