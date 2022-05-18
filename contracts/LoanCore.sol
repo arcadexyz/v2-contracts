@@ -23,6 +23,7 @@ import "./vault/OwnableERC721.sol";
 import {
     LC_ZeroAddress,
     LC_CollateralInUse,
+    LC_CollateralNotInUse,
     LC_InvalidState,
     LC_NotExpired,
     LC_BalanceGTZero,
@@ -284,8 +285,129 @@ contract LoanCore is
         emit LoanClaimed(loanId);
     }
 
-    function rollover(uint256 loanId, address newLender, LoanLibrary.LoanTerms calldata terms) {
+    function rollover(
+        uint256 oldLoanId,
+        address borrower,
+        address lender,
+        LoanLibrary.LoanTerms calldata terms
+    )
+        external
+        override
+        whenNotPaused
+        onlyRole(ORIGINATOR_ROLE)
+        returns (uint256 newLoanId)
+    {
+        bytes32 collateralKey = keccak256(abi.encode(terms.collateralAddress, terms.collateralId));
+        if (!collateralInUse[collateralKey]) revert LC_CollateralNotInUse();
 
+        // Repay loan
+
+        LoanLibrary.LoanData memory data = loans[oldLoanId];
+        // ensure valid initial loan state when starting loan
+        if (data.state != LoanLibrary.LoanState.Active) revert LC_InvalidState(data.state);
+        data.state = LoanLibrary.LoanState.Repaid;
+        address oldLender = lenderNote.ownerOf(oldLoanId);
+
+        uint256 repayAmount;
+        if (data.terms.numInstallments == 0) {
+            repayAmount = getFullInterestAmount(data.terms.principal, data.terms.interestRate);
+        } else {
+            (uint256 interestDue, uint256 lateFees, uint256 numMissedPayments) = _calcAmountsDue(
+                data.balance,
+                data.startDate,
+                data.terms.durationSecs,
+                data.terms.numInstallments,
+                data.numInstallmentsPaid,
+                data.terms.interestRate
+            );
+
+            repayAmount = data.balance + interestDue + lateFees;
+
+            data.lateFeesAccrued += lateFees;
+            data.numInstallmentsPaid += uint24(numMissedPayments) + 1;
+            data.balance = 0;
+            data.balancePaid += repayAmount;
+        }
+
+        lenderNote.burn(oldLoanId);
+        borrowerNote.burn(oldLoanId);
+
+        // Set up new loan
+        newLoanId = loanIdTracker.current();
+        loanIdTracker.increment();
+
+        loans[newLoanId] = LoanLibrary.LoanData({
+            terms: terms,
+            state: LoanLibrary.LoanState.Active,
+            startDate: uint160(block.timestamp),
+            balance: terms.principal,
+            balancePaid: 0,
+            lateFeesAccrued: 0,
+            numInstallmentsPaid: 0
+        });
+
+        // Distribute notes and principal
+        borrowerNote.mint(borrower, newLoanId);
+        lenderNote.mint(lender, newLoanId);
+
+        uint256 fee = terms.principal * feeController.getRolloverFee() / BPS_DENOMINATOR;
+        uint256 newPrincipal = terms.principal - fee;
+
+        // Settle amounts
+        uint256 needFromBorrower;
+        uint256 leftoverPrincipal;
+
+        if (repayAmount > newPrincipal) {
+            needFromBorrower = repayAmount - newPrincipal;
+        } else if (newPrincipal > repayAmount) {
+            leftoverPrincipal = newPrincipal - repayAmount;
+        }
+
+        {
+            IERC20Upgradeable payableCurrency = IERC20Upgradeable(terms.payableCurrency);
+
+            // Collect funds
+            if (lender != oldLender) {
+                // Take new principal from lender
+                // OriginationController should have collected
+                payableCurrency.safeTransferFrom(_msgSender(), address(this), terms.principal);
+            }
+
+            if (needFromBorrower > 0) {
+                // Borrower must pay difference
+                // OriginationController should have collected
+                payableCurrency.safeTransferFrom(_msgSender(), address(this), needFromBorrower);
+            } else if (leftoverPrincipal > 0 && lender == oldLender) {
+                // Lender must pay difference
+                // OriginationController should have collected
+                // Make sure to collect fee
+                payableCurrency.safeTransferFrom(_msgSender(), address(this), leftoverPrincipal);
+            }
+
+            // Make payouts
+            if (lender != oldLender) {
+                // Repay old lender
+                payableCurrency.safeTransfer(
+                    oldLender,
+                    repayAmount
+                );
+            } else if (needFromBorrower > 0) {
+                // Repay new lender
+                payableCurrency.safeTransfer(
+                    lender,
+                    repayAmount - terms.principal
+                );
+            } else if (leftoverPrincipal > 0) {
+                payableCurrency.safeTransfer(
+                    borrower,
+                    leftoverPrincipal
+                );
+            }
+        }
+
+        emit LoanRepaid(oldLoanId);
+        emit LoanStarted(newLoanId, lender, borrower);
+        emit LoanRolledOver(oldLoanId, newLoanId);
     }
 
     // ===================================== INSTALLMENT OPERATI\ONS =====================================

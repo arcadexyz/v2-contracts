@@ -226,6 +226,11 @@ error LC_ZeroAddress();
 error LC_CollateralInUse(address collateralAddress, uint256 collateralId);
 
 /**
+ * @notice Collateral is not in use for an attempted rollover.
+ */
+error LC_CollateralNotInUse();
+
+/**
  * @notice Ensure valid loan state for loan lifceycle operations.
  *
  * @param state                         Current state of a loan according to LoanState enum.
