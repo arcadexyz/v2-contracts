@@ -153,14 +153,15 @@ contract OriginationController is
         address borrower,
         address lender,
         Signature calldata sig,
-        uint160 nonce
+        uint160 nonce,
+        uint256 signatureDate // timestamp from when signature was created on the FE
     ) public override returns (uint256 loanId) {
         _validateLoanTerms(loanTerms);
 
         (bytes32 sighash, address externalSigner) = recoverTokenSignature(loanTerms, sig, nonce);
 
         // signature must not have already expired
-        if ((block.timestamp + loanTerms.deadline) < block.timestamp) revert OC_SignatureIsExpired(loanTerms.deadline);
+        if ((signatureDate + loanTerms.deadline) < block.timestamp) revert OC_SignatureIsExpired(loanTerms.deadline);
 
         _validateCounterparties(borrower, lender, msg.sender, externalSigner, sig, sighash);
 
@@ -192,6 +193,7 @@ contract OriginationController is
         address lender,
         Signature calldata sig,
         uint160 nonce,
+        uint256 signatureDate, // timestamp from when signature was created on the FE
         LoanLibrary.Predicate[] calldata itemPredicates
     ) public override returns (uint256 loanId) {
         _validateLoanTerms(loanTerms);
@@ -203,9 +205,8 @@ contract OriginationController is
             nonce,
             keccak256(abi.encode(itemPredicates))
         );
-
         // signature must not have already expired
-        if (loanTerms.deadline < block.timestamp) revert OC_SignatureIsExpired(loanTerms.deadline);
+        if ((signatureDate + loanTerms.deadline) < block.timestamp) revert OC_SignatureIsExpired(loanTerms.deadline);
 
         _validateCounterparties(borrower, lender, msg.sender, externalSigner, sig, sighash);
 
@@ -247,6 +248,7 @@ contract OriginationController is
         Signature calldata sig,
         uint160 nonce,
         Signature calldata collateralSig,
+        uint256 signatureDate, // timestamp from when signature was created on the FE
         uint256 permitDeadline
     ) external override returns (uint256 loanId) {
         IERC721Permit(loanTerms.collateralAddress).permit(
@@ -258,7 +260,7 @@ contract OriginationController is
             collateralSig.r,
             collateralSig.s
         );
-        loanId = initializeLoan(loanTerms, borrower, lender, sig, nonce);
+        loanId = initializeLoan(loanTerms, borrower, lender, sig, nonce, signatureDate);
     }
 
     /**
@@ -287,6 +289,7 @@ contract OriginationController is
         Signature calldata sig,
         uint160 nonce,
         Signature calldata collateralSig,
+        uint256 signatureDate, // timestamp from when signature was created on the FE
         uint256 permitDeadline,
         LoanLibrary.Predicate[] calldata itemPredicates
     ) external override returns (uint256 loanId) {
@@ -300,7 +303,7 @@ contract OriginationController is
             collateralSig.s
         );
 
-        loanId = initializeLoanWithItems(loanTerms, borrower, lender, sig, nonce, itemPredicates);
+        loanId = initializeLoanWithItems(loanTerms, borrower, lender, sig, nonce, signatureDate, itemPredicates);
     }
 
     // ==================================== PERMISSION MANAGEMENT =======================================
@@ -584,4 +587,18 @@ contract OriginationController is
         // Start loan
         loanId = ILoanCore(loanCore).startLoan(lender, borrower, loanTerms);
     }
+
+    //  /**
+    //  * @dev Set signature deadline to inform initializeLoan and initializeLoanWithItems if
+    //  *      the loanterms signature deadline has expired.
+    //  *
+    //  * @param deadline                      The time in seconds for signature expiry, agreed by the lender and borrower.
+    //  * @param borrower                      Address of the borrower.
+    //  * @param lender                        Address of the lender.
+    //  *
+    //  * @return loanId                       The unique ID of the new loan.
+    //  */
+    // function setDeadline(uint256 deadline) public {
+    //     deadline = block.timestamp + deadline;
+    // }
 }

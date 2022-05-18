@@ -40,6 +40,7 @@ interface TestContext {
     currentTimestamp: number;
     blockchainTime: BlockchainTime;
     mockLoanCore: MockLoanCore;
+    signatureDate: number;
 }
 
 /**
@@ -67,6 +68,7 @@ const initializeBundle = async (vaultFactory: VaultFactory, user: SignerWithAddr
 const fixture = async (): Promise<TestContext> => {
     const blockchainTime = new BlockchainTime();
     const currentTimestamp = await blockchainTime.secondsFromNow(0);
+    const signatureDate = currentTimestamp;
 
     const signers: SignerWithAddress[] = await hre.ethers.getSigners();
     const [borrower, lender, admin] = signers;
@@ -134,6 +136,7 @@ const fixture = async (): Promise<TestContext> => {
         currentTimestamp,
         blockchainTime,
         mockLoanCore,
+        signatureDate
     };
 };
 
@@ -181,7 +184,7 @@ const initializeLoan = async (
     numInstallments: number,
     deadline: BigNumber,
 ): Promise<LoanDef> => {
-    const { originationController, mockERC20, vaultFactory, loanCore, lender, borrower } = context;
+    const { originationController, mockERC20, vaultFactory, loanCore, lender, borrower, signatureDate } = context;
     const bundleId = await initializeBundle(vaultFactory, borrower);
     const loanTerms = createLoanTerms(
         payableCurrency,
@@ -209,7 +212,7 @@ const initializeLoan = async (
 
     const tx = await originationController
         .connect(lender)
-        .initializeLoan(loanTerms, await borrower.getAddress(), await lender.getAddress(), sig, 1);
+        .initializeLoan(loanTerms, await borrower.getAddress(), await lender.getAddress(), sig, 1, signatureDate);
     const receipt = await tx.wait();
 
     let loanId;

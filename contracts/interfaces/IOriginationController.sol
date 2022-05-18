@@ -25,7 +25,8 @@ interface IOriginationController {
         address borrower,
         address lender,
         Signature calldata sig,
-        uint160 nonce
+        uint160 nonce,
+        uint256 signatureDate
     ) external returns (uint256 loanId);
 
     function initializeLoanWithItems(
@@ -34,6 +35,7 @@ interface IOriginationController {
         address lender,
         Signature calldata sig,
         uint160 nonce,
+        uint256 signatureDate,
         LoanLibrary.Predicate[] calldata itemPredicates
     ) external returns (uint256 loanId);
 
@@ -44,6 +46,7 @@ interface IOriginationController {
         Signature calldata sig,
         uint160 nonce,
         Signature calldata collateralSig,
+        uint256 signatureDate,
         uint256 permitDeadline
     ) external returns (uint256 loanId);
 
@@ -54,6 +57,7 @@ interface IOriginationController {
         Signature calldata sig,
         uint160 nonce,
         Signature calldata collateralSig,
+        uint256 signatureDate,
         uint256 permitDeadline,
         LoanLibrary.Predicate[] calldata itemPredicates
     ) external returns (uint256 loanId);

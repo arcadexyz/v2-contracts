@@ -91,6 +91,9 @@ library LoanLibrary {
         // The number of seconds representing the relative expiration
         // date of the loan
         uint256 deadline;
+        // the time when the terms were set, using block.timestamp - for determining
+        // signature deadline
+        uint256 termsDate;
     }
 
     /**
