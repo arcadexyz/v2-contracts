@@ -699,7 +699,7 @@ describe("LoanCore", () => {
             const { loanCore, user: borrower } = await setupLoan();
             const loanId = "123412341324";
             await expect(loanCore.connect(borrower).repay(loanId)).to.be.revertedWith(
-                "LC_StartInvalidState",
+                "LC_InvalidState",
             );
         });
 
@@ -709,7 +709,7 @@ describe("LoanCore", () => {
             terms.collateralId = collateralId;
             const loanId = 1000;
             await expect(loanCore.connect(borrower).repay(loanId)).to.be.revertedWith(
-                "LC_StartInvalidState",
+                "LC_InvalidState",
             );
         });
 
@@ -722,7 +722,7 @@ describe("LoanCore", () => {
 
             await loanCore.connect(borrower).repay(loanId);
             await expect(loanCore.connect(borrower).repay(loanId)).to.be.revertedWith(
-                "LC_StartInvalidState",
+                "LC_InvalidState",
             );
         });
 
@@ -862,8 +862,8 @@ describe("LoanCore", () => {
         it("should fail if loan doesnt exist", async () => {
             const { loanCore, user: borrower } = await setupLoan();
             const loanId = "123412341324";
-            await expect(loanCore.connect(borrower).claim(loanId, BigNumber.from(0))).to.be.revertedWith(
-                "LC_StartInvalidState",
+            await expect(loanCore.connect(borrower).claim(loanId, 0)).to.be.revertedWith(
+                "LC_InvalidState",
             );
         });
 
@@ -872,8 +872,8 @@ describe("LoanCore", () => {
             const collateralId = await initializeBundle(borrower);
             terms.collateralId = collateralId;
             const loanId = 100;
-            await expect(loanCore.connect(borrower).claim(loanId, BigNumber.from(0))).to.be.revertedWith(
-                "LC_StartInvalidState",
+            await expect(loanCore.connect(borrower).claim(loanId, 0)).to.be.revertedWith(
+                "LC_InvalidState",
             );
         });
 
@@ -885,8 +885,8 @@ describe("LoanCore", () => {
             await mockERC20.connect(borrower).approve(loanCore.address, terms.principal.add(terms.interestRate));
 
             await loanCore.connect(borrower).repay(loanId);
-            await expect(loanCore.connect(borrower).claim(loanId, BigNumber.from(0))).to.be.revertedWith(
-                "LC_StartInvalidState",
+            await expect(loanCore.connect(borrower).claim(loanId, 0)).to.be.revertedWith(
+                "LC_InvalidState",
             );
         });
 
@@ -904,9 +904,9 @@ describe("LoanCore", () => {
 
             await blockchainTime.increaseTime(360001);
 
-            await loanCore.connect(borrower).claim(loanId, BigNumber.from(0));
-            await expect(loanCore.connect(borrower).claim(loanId, BigNumber.from(0))).to.be.revertedWith(
-                "LC_StartInvalidState",
+            await loanCore.connect(borrower).claim(loanId, 0);
+            await expect(loanCore.connect(borrower).claim(loanId, 0)).to.be.revertedWith(
+                "LC_InvalidState",
             );
         });
 

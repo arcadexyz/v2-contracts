@@ -23,7 +23,7 @@ import "./vault/OwnableERC721.sol";
 import {
     LC_ZeroAddress,
     LC_CollateralInUse,
-    LC_StartInvalidState,
+    LC_InvalidState,
     LC_NotExpired,
     LC_BalanceGTZero,
     LC_NonceUsed,
@@ -212,7 +212,7 @@ contract LoanCore is
     function repay(uint256 loanId) external override onlyRole(REPAYER_ROLE) {
         LoanLibrary.LoanData memory data = loans[loanId];
         // ensure valid initial loan state when starting loan
-        if (data.state != LoanLibrary.LoanState.Active) revert LC_StartInvalidState(data.state);
+        if (data.state != LoanLibrary.LoanState.Active) revert LC_InvalidState(data.state);
 
         uint256 returnAmount = getFullInterestAmount(data.terms.principal, data.terms.interestRate);
         // ensure balance to be paid is greater than zero
@@ -253,7 +253,7 @@ contract LoanCore is
     function claim(uint256 loanId, uint256 currentInstallmentPeriod) external override whenNotPaused onlyRole(REPAYER_ROLE) {
         LoanLibrary.LoanData memory data = loans[loanId];
         // ensure valid initial loan state when starting loan
-        if (data.state != LoanLibrary.LoanState.Active) revert LC_StartInvalidState(data.state);
+        if (data.state != LoanLibrary.LoanState.Active) revert LC_InvalidState(data.state);
         // for legacy loans (currentInstallmentPeriod == 0) ensure lender is claiming
         // after the loan has ended and if so, block.timstamp must be greater than the dueDate.
         // for installment loan types (currentInstallmentPeriod > 0), check if the loan
@@ -312,7 +312,7 @@ contract LoanCore is
     ) external override onlyRole(REPAYER_ROLE) {
         LoanLibrary.LoanData storage data = loans[_loanId];
         // ensure valid initial loan state when repaying loan
-        if (data.state != LoanLibrary.LoanState.Active) revert LC_StartInvalidState(data.state);
+        if (data.state != LoanLibrary.LoanState.Active) revert LC_InvalidState(data.state);
 
         // calculate total sent by borrower and transferFrom repayment controller to this address
         uint256 paymentTotal = _paymentToPrincipal + _paymentToLateFees + _paymentToInterest;

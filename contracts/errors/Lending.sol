@@ -226,11 +226,11 @@ error LC_ZeroAddress();
 error LC_CollateralInUse(address collateralAddress, uint256 collateralId);
 
 /**
- * @notice Ensure valid initial loan state when starting loan.
+ * @notice Ensure valid loan state for loan lifceycle operations.
  *
  * @param state                         Current state of a loan according to LoanState enum.
  */
-error LC_StartInvalidState(LoanLibrary.LoanState state);
+error LC_InvalidState(LoanLibrary.LoanState state);
 
 /**
  * @notice Loan duration has not expired.
