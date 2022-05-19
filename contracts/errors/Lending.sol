@@ -21,6 +21,13 @@ import "../libraries/LoanLibrary.sol";
 error OC_ZeroAddress();
 
 /**
+ * @notice Ensure valid loan state for loan lifceycle operations.
+ *
+ * @param state                         Current state of a loan according to LoanState enum.
+ */
+error OC_InvalidState(LoanLibrary.LoanState state);
+
+/**
  * @notice Loan duration must be greater than 1hr and less than 3yrs.
  *
  * @param durationSecs                 Total amount of time in seconds.

@@ -170,10 +170,10 @@ describe("Rollovers", () => {
     const initializeLoan = async (
         context: TestContext,
         payableCurrency: string,
-        durationSecs: BigNumber,
+        durationSecs: BigNumberish,
         principal: BigNumber,
         interestRate: BigNumber,
-        numInstallments: number,
+        numInstallments: BigNumberish,
         deadline: BigNumberish,
     ): Promise<LoanDef> => {
         const { originationController, mockERC20, vaultFactory, loanCore, lender, borrower } = context;
@@ -235,17 +235,302 @@ describe("Rollovers", () => {
         let ctx: TestContext;
         let loan: LoanDef;
 
+        const DEADLINE = 1754884800;
+
         beforeEach(async () => {
             ctx = await loadFixture(fixture);
+            loan = await initializeLoan(
+                ctx,
+                ctx.mockERC20.address,
+                BigNumber.from(86400),
+                hre.ethers.utils.parseEther("100"), // principal
+                hre.ethers.utils.parseEther("1000"), // interest
+                2, // numInstallments
+                DEADLINE
+            );
         });
 
-        it("should not allow a rollover if the collateral doesn't match");
-        it("should not allow a rollover if the loan currencies don't match");
-        it("should not allow a rollover on an already closed loan");
-        it("should not allow a rollover if called by a third party");
-        it("should not allow a rollover if called by the old lender");
+        it("should not allow a rollover if the collateral doesn't match", async () => {
+            const { originationController, vaultFactory, borrower, lender } = ctx;
+            const { loanId, loanTerms, bundleId } = loan;
+
+            // create new terms for rollover and sign them
+            const newTerms = createLoanTerms(
+                ctx.mockERC20.address,
+                vaultFactory.address,
+                { ...loanTerms, collateralId: BigNumber.from(bundleId).add(1) } // different bundle ID
+            );
+
+            const sig = await createLoanTermsSignature(
+                originationController.address,
+                "OriginationController",
+                loanTerms,
+                lender,
+                "2",
+                2
+            );
+
+            await expect(
+                originationController.connect(borrower).rolloverLoan(
+                    loanId,
+                    newTerms,
+                    lender.address,
+                    sig,
+                    2
+                )
+            ).to.be.revertedWith("OC_RolloverCollateralMismatch");
+        });
+
+        it("should not allow a rollover if the loan currencies don't match", async () => {
+            const { originationController, vaultFactory, borrower, lender, admin } = ctx;
+            const { loanId, loanTerms } = loan;
+
+            const otherERC20 = <MockERC20>await deploy("MockERC20", admin, ["Mock ERC20", "MOCK"]);
+
+            // create new terms for rollover and sign them
+            const newTerms = createLoanTerms(
+                otherERC20.address,      // different currency
+                vaultFactory.address,
+                loanTerms
+            );
+
+            const sig = await createLoanTermsSignature(
+                originationController.address,
+                "OriginationController",
+                loanTerms,
+                lender,
+                "2",
+                2
+            );
+
+            await expect(
+                originationController.connect(borrower).rolloverLoan(
+                    loanId,
+                    newTerms,
+                    lender.address,
+                    sig,
+                    2
+                )
+            ).to.be.revertedWith("OC_RolloverCurrencyMismatch");
+        });
+
+        it("should not allow a rollover on an already closed loan", async () => {
+            const {
+                originationController,
+                repaymentController,
+                mockERC20,
+                vaultFactory,
+                borrower,
+                lender,
+                admin
+            } = ctx;
+            const { loanId, loanTerms } = loan;
+
+            // Repay the loan
+            await mockERC20.connect(admin).mint(borrower.address, ethers.utils.parseEther("1000"));
+            await mockERC20.connect(borrower).approve(repaymentController.address, ethers.utils.parseEther("1000"));
+            await repaymentController.connect(borrower).closeLoan(loanId);
+
+            // create new terms for rollover and sign them
+            const newTerms = createLoanTerms(
+                mockERC20.address,
+                vaultFactory.address,
+                loanTerms
+            );
+
+            const sig = await createLoanTermsSignature(
+                originationController.address,
+                "OriginationController",
+                loanTerms,
+                lender,
+                "2",
+                2
+            );
+
+            await expect(
+                originationController.connect(borrower).rolloverLoan(
+                    loanId,
+                    newTerms,
+                    lender.address,
+                    sig,
+                    2
+                )
+            ).to.be.revertedWith("OC_InvalidState");
+        });
+
+        it("should not allow a rollover if called by a third party", async () => {
+            const {
+                originationController,
+                mockERC20,
+                vaultFactory,
+                lender,
+                newLender,
+            } = ctx;
+            const { loanId, loanTerms } = loan;
+
+            // create new terms for rollover and sign them
+            const newTerms = createLoanTerms(
+                mockERC20.address,
+                vaultFactory.address,
+                loanTerms
+            );
+
+            const sig = await createLoanTermsSignature(
+                originationController.address,
+                "OriginationController",
+                loanTerms,
+                lender,
+                "2",
+                2
+            );
+
+            await expect(
+                // newLender not a counterparty
+                originationController.connect(newLender).rolloverLoan(
+                    loanId,
+                    newTerms,
+                    lender.address,
+                    sig,
+                    2
+                )
+            ).to.be.revertedWith("OC_CallerNotParticipant");
+        });
+
+        it("should not allow a rollover if signed by the old lender", async () => {
+            const {
+                originationController,
+                mockERC20,
+                vaultFactory,
+                borrower,
+                lender,
+                newLender,
+            } = ctx;
+            const { loanId, loanTerms } = loan;
+
+            // create new terms for rollover and sign them
+            const newTerms = createLoanTerms(
+                mockERC20.address,
+                vaultFactory.address,
+                loanTerms
+            );
+
+            const sig = await createLoanTermsSignature(
+                originationController.address,
+                "OriginationController",
+                loanTerms,
+                lender,
+                "2",
+                2
+            );
+
+            await expect(
+                // newLender not a counterparty
+                originationController.connect(borrower).rolloverLoan(
+                    loanId,
+                    newTerms,
+                    newLender.address,
+                    sig,
+                    2
+                )
+            ).to.be.revertedWith("OC_InvalidSignature");
+        });
+
+        it("should not allow a rollover if called by the old lender", async () => {
+            const {
+                originationController,
+                mockERC20,
+                vaultFactory,
+                lender,
+                newLender,
+            } = ctx;
+            const { loanId, loanTerms } = loan;
+
+            // create new terms for rollover and sign them
+            const newTerms = createLoanTerms(
+                mockERC20.address,
+                vaultFactory.address,
+                loanTerms
+            );
+
+            const sig = await createLoanTermsSignature(
+                originationController.address,
+                "OriginationController",
+                loanTerms,
+                newLender,
+                "2",
+                2
+            );
+
+            await expect(
+                // newLender not a counterparty
+                originationController.connect(lender).rolloverLoan(
+                    loanId,
+                    newTerms,
+                    newLender.address,
+                    sig,
+                    2
+                )
+            ).to.be.revertedWith("OC_CallerNotParticipant");
+        });
+
+        it("should roll over to the same lender", async () => {
+            const {
+                originationController,
+                mockERC20,
+                vaultFactory,
+                borrower,
+                lender,
+            } = ctx;
+            const { loanId, loanTerms } = loan;
+
+            // create new terms for rollover and sign them
+            const newTerms = createLoanTerms(
+                mockERC20.address,
+                vaultFactory.address,
+                loanTerms
+            );
+
+            const sig = await createLoanTermsSignature(
+                originationController.address,
+                "OriginationController",
+                loanTerms,
+                lender,
+                "2",
+                2
+            );
+
+            // Figure out amounts owed
+            // With same terms, borrower will have to pay interest plus 2%
+            // 10% interest on 100, plus 12% eq 12
+
+            await mockERC20.mint(borrower.address, ethers.utils.parseEther("12"));
+            await mockERC20.connect(borrower).approve(originationController.address, ethers.utils.parseEther("12"));
+
+            await originationController.connect(borrower).rolloverLoan(
+                loanId,
+                newTerms,
+                lender.address,
+                sig,
+                2
+            );
+
+            // Check repayment controller balance 0
+            // Check loan core balance 0.6 (og fee + rollover fee)
+
+            // await expect(
+            //     // newLender not a counterparty
+            //     originationController.connect(borrower).rolloverLoan(
+            //         loanId,
+            //         newTerms,
+            //         lender.address,
+            //         sig,
+            //         2
+            //     )
+            // ).to.not.be.reverted;
+        });
+
         it("should roll over to a different lender");
-        it("should roll over to the same lender");
+        it("should roll over to a different lender, called by the lender");
         it("should roll over to a different lender using an items signature");
         it("should roll over to the same lender using an items signature");
         it("should roll over an installment loan to a different lender");

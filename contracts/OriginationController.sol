@@ -24,6 +24,7 @@ import "./FullInterestAmountCalc.sol";
 import "./verifiers/ItemsVerifier.sol";
 import {
     OC_ZeroAddress,
+    OC_InvalidState,
     OC_InvalidVerifier,
     OC_BatchLengthMismatch,
     OC_PredicateFailed,
@@ -39,6 +40,8 @@ import {
     OC_RolloverCurrencyMismatch,
     OC_RolloverCollateralMismatch
 } from "./errors/Lending.sol";
+
+import "hardhat/console.sol";
 
 /**
  * @title OriginationController
@@ -326,6 +329,8 @@ contract OriginationController is
         _validateLoanTerms(loanTerms);
 
         LoanLibrary.LoanData memory data = ILoanCore(loanCore).getLoan(oldLoanId);
+        if (data.state != LoanLibrary.LoanState.Active) revert OC_InvalidState(data.state);
+
         _validateRollover(data.terms, loanTerms);
 
         (bytes32 sighash, address externalSigner) = recoverTokenSignature(loanTerms, sig, nonce);
@@ -732,29 +737,36 @@ contract OriginationController is
         RolloverAmounts memory amounts  = _calculateRolloverAmounts(oldLoanData, newTerms, lender, oldLender, rolloverFee);
 
         // Collect funds
+        uint256 settledAmount;
         if (lender != oldLender) {
             // Take new principal from lender
             // OriginationController should have collected
             payableCurrency.safeTransferFrom(lender, address(this), newTerms.principal);
+            settledAmount += newTerms.principal;
         }
 
         if (amounts.needFromBorrower > 0) {
             // Borrower must pay difference
             // OriginationController should have collected
             payableCurrency.safeTransferFrom(borrower, address(this), amounts.needFromBorrower);
+            settledAmount += amounts.needFromBorrower;
         } else if (amounts.leftoverPrincipal > 0 && lender == oldLender) {
             // Lender must pay difference
             // OriginationController should have collected
             // Make sure to collect fee
             payableCurrency.safeTransferFrom(lender, address(this), amounts.leftoverPrincipal);
+            settledAmount += amounts.leftoverPrincipal;
         }
 
         {
+            payableCurrency.approve(loanCore, settledAmount);
+
             loanId = ILoanCore(loanCore).rollover(
                 oldLoanId,
                 borrower,
                 lender,
                 newTerms,
+                settledAmount,
                 amounts.amountToOldLender,
                 amounts.amountToLender,
                 amounts.leftoverPrincipal
@@ -799,7 +811,7 @@ contract OriginationController is
                 oldLoanData.numInstallmentsPaid,
                 oldTerms.interestRate
             );
-
+π
             repayAmount = oldLoanData.balance + interestDue + lateFees;
         }
 

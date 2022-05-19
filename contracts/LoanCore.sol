@@ -31,6 +31,8 @@ import {
     LC_LoanNotDefaulted
 } from "./errors/Lending.sol";
 
+import "hardhat/console.sol";
+
 
 /**
  * @title LoanCore
@@ -292,6 +294,7 @@ contract LoanCore is
      * @param borrower              The borrower for the loan.
      * @param lender                The lender for the old loan.
      * @param terms                 The terms of the new loan.
+     * @param _settledAmount        The amount LoanCore needs to withdraw to settle.
      * @param _amountToOldLender    The payment to the old lender (if lenders are changing).
      * @param _amountToLender       The payment to the lender (if same as old lender).
      * @param _amountToBorrower     The payemnt to the borrower (in the case of leftover principal).
@@ -303,6 +306,7 @@ contract LoanCore is
         address borrower,
         address lender,
         LoanLibrary.LoanTerms calldata terms,
+        uint256 _settledAmount,
         uint256 _amountToOldLender,
         uint256 _amountToLender,
         uint256 _amountToBorrower
@@ -360,6 +364,10 @@ contract LoanCore is
 
         // Distribute notes and principal
         _mintLoanNotes(newLoanId, borrower, lender);
+
+        if (_settledAmount > 0) {
+            IERC20Upgradeable(payableCurrency).safeTransferFrom(_msgSender(), address(this), _settledAmount);
+        }
 
         _transferIfNonzero(payableCurrency, oldLender, _amountToOldLender);
         _transferIfNonzero(payableCurrency, lender, _amountToLender);

@@ -15,7 +15,7 @@ import {
     MockLoanCore,
 } from "../typechain";
 import { BlockchainTime } from "./utils/time";
-import { BigNumber } from "ethers";
+import { BigNumber, BigNumberish } from "ethers";
 import { deploy } from "./utils/contracts";
 import { approve, mint } from "./utils/erc20";
 import { LoanTerms, LoanData } from "./utils/types";
@@ -80,10 +80,18 @@ const fixture = async (): Promise<TestContext> => {
 
     const feeController = <FeeController>await deploy("FeeController", admin, []);
 
+    const borrowerNote = <PromissoryNote>await deploy("PromissoryNote", admin, ["Arcade.xyz BorrowerNote", "aBN"]);
+    const lenderNote = <PromissoryNote>await deploy("PromissoryNote", admin, ["Arcade.xyz LenderNote", "aLN"]);
+
     const LoanCore = await hre.ethers.getContractFactory("LoanCore");
     const loanCore = <LoanCore>(
-        await upgrades.deployProxy(LoanCore, [feeController.address], { kind: 'uups' })
+        await upgrades.deployProxy(LoanCore, [feeController.address, borrowerNote.address, lenderNote.address], { kind: 'uups' })
     );
+
+    // Grant correct permissions for promissory note
+    for (const note of [borrowerNote, lenderNote]) {
+        await note.connect(admin).initialize(loanCore.address);
+    }
 
     const mockERC20 = <MockERC20>await deploy("MockERC20", signers[0], ["Mock ERC20", "MOCK"]);
 
@@ -93,21 +101,13 @@ const fixture = async (): Promise<TestContext> => {
     );
     await originationController.deployed();
 
-    const borrowerNoteAddress = await loanCore.borrowerNote();
-    const borrowerNote = <PromissoryNote>(
-        (await ethers.getContractFactory("PromissoryNote")).attach(borrowerNoteAddress)
-    );
-
-    const lenderNoteAddress = await loanCore.lenderNote();
-    const lenderNote = <PromissoryNote>(await ethers.getContractFactory("PromissoryNote")).attach(lenderNoteAddress);
-
     const MockLoanCore = await hre.ethers.getContractFactory("MockLoanCore");
     const mockLoanCore = <MockLoanCore>(
         await upgrades.deployProxy(MockLoanCore, [feeController.address], { kind: 'uups' })
     );
 
     const repaymentController = <RepaymentController>(
-        await deploy("RepaymentController", admin, [loanCore.address, borrowerNoteAddress, lenderNoteAddress])
+        await deploy("RepaymentController", admin, [loanCore.address, borrowerNote.address, lenderNote.address])
     );
 
     await repaymentController.deployed();
@@ -147,6 +147,7 @@ const createLoanTerms = (
     interestRate: BigNumber,
     collateralAddress: string,
     numInstallments: number,
+    deadline: BigNumberish,
     { collateralId = 1 }: Partial<LoanTerms> = {},
 ): LoanTerms => {
     return {
@@ -157,6 +158,7 @@ const createLoanTerms = (
         collateralId,
         payableCurrency,
         numInstallments,
+        deadline,
     };
 };
 
@@ -177,6 +179,7 @@ const initializeLoan = async (
     principal: BigNumber,
     interest: BigNumber,
     numInstallments: number,
+    deadline: BigNumberish,
 ): Promise<LoanDef> => {
     const { originationController, mockERC20, vaultFactory, loanCore, lender, borrower } = context;
     const bundleId = await initializeBundle(vaultFactory, borrower);
@@ -187,6 +190,7 @@ const initializeLoan = async (
         interest,
         vaultFactory.address,
         numInstallments,
+        deadline,
         { collateralId: bundleId },
     );
     await mint(mockERC20, lender, loanTerms.principal);
@@ -228,7 +232,7 @@ const initializeLoan = async (
     };
 };
 
-describe("Legacy Repayments with interest parameter as a rate:", () => {
+describe("RepaymentController", () => {
     it("Legacy loan type (no installments), repay interest and principal. 100 ETH principal, 10% interest rate.", async () => {
         const context = await loadFixture(fixture);
         const { repaymentController, vaultFactory, mockERC20, loanCore, borrower } = context;
@@ -239,6 +243,7 @@ describe("Legacy Repayments with interest parameter as a rate:", () => {
             hre.ethers.utils.parseEther("100"), // principal
             hre.ethers.utils.parseEther("1000"), // interest
             0, // numInstallments
+            1754884800, // deadline
         );
         // total repayment amount
         const total = ethers.utils.parseEther("110");
@@ -264,6 +269,7 @@ describe("Legacy Repayments with interest parameter as a rate:", () => {
             hre.ethers.utils.parseEther("10"), // principal
             hre.ethers.utils.parseEther("750"), // interest
             0, // numInstallments
+            1754884800, // deadline
         );
 
         // total repayment amount
@@ -290,6 +296,7 @@ describe("Legacy Repayments with interest parameter as a rate:", () => {
             hre.ethers.utils.parseEther("25"), // principal
             hre.ethers.utils.parseEther("250"), // interest
             0, // numInstallments
+            1754884800, // deadline
         );
         // total repayment amount
         const total = ethers.utils.parseEther("25.625");
@@ -315,6 +322,7 @@ describe("Legacy Repayments with interest parameter as a rate:", () => {
             hre.ethers.utils.parseEther("25"), // principal
             hre.ethers.utils.parseEther("250"), // interest
             0, // numInstallments
+            1754884800, // deadline
         );
         // total repayment amount less than 25.625ETH
         const total = ethers.utils.parseEther("25.624");
@@ -340,6 +348,7 @@ describe("Legacy Repayments with interest parameter as a rate:", () => {
             hre.ethers.utils.parseEther("25"), // principal
             hre.ethers.utils.parseEther("250"), // interest
             0, // numInstallments
+            1754884800, // deadline
         );
         // total repayment amount less than 25.625ETH
         const total = ethers.utils.parseEther("25.625");
@@ -365,6 +374,7 @@ describe("Legacy Repayments with interest parameter as a rate:", () => {
                 hre.ethers.utils.parseEther(".000000000000009999"), // principal
                 hre.ethers.utils.parseEther("250"), // interest
                 0, // numInstallments
+                1754884800, // deadline
             ),
         ).to.be.revertedWith("OC_PrincipalTooLow");
     });
@@ -379,6 +389,7 @@ describe("Legacy Repayments with interest parameter as a rate:", () => {
             hre.ethers.utils.parseEther(".00000000000001"), // principal
             hre.ethers.utils.parseEther("250"), // interest
             0, // numInstallments
+            1754884800, // deadline
         );
         // total repayment amount less than 25.625ETH
         const total = ethers.utils.parseEther(".000000000000010250");
