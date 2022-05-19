@@ -24,6 +24,7 @@ import {
 } from "../typechain";
 import { approve, mint, ZERO_ADDRESS } from "./utils/erc20";
 import { mint as mint721 } from "./utils/erc721";
+import { BlockchainTime } from "./utils/time";
 import { ItemsPredicate, LoanTerms, SignatureItem } from "./utils/types";
 import { createLoanTermsSignature, createLoanItemsSignature, createPermitSignature } from "./utils/eip712";
 import { encodePredicates, encodeSignatureItems, initializeBundle } from "./utils/loans";
@@ -96,7 +97,7 @@ const fixture = async (): Promise<TestContext> => {
     };
 };
 
-const createLoanTerms = (
+const createLoanTermsExpired = (
     payableCurrency: string,
     collateralAddress: string,
     {
@@ -105,6 +106,7 @@ const createLoanTerms = (
         interestRate = hre.ethers.utils.parseEther("1"),
         collateralId = "1",
         numInstallments = 0,
+        deadline = 808113600, // August 11, 1995
     }: Partial<LoanTerms> = {},
 ): LoanTerms => {
     return {
@@ -115,6 +117,31 @@ const createLoanTerms = (
         collateralAddress,
         payableCurrency,
         numInstallments,
+        deadline,
+    };
+};
+
+const createLoanTerms = (
+    payableCurrency: string,
+    collateralAddress: string,
+    {
+        durationSecs = BigNumber.from(360000),
+        principal = hre.ethers.utils.parseEther("100"),
+        interestRate = hre.ethers.utils.parseEther("1"),
+        collateralId = "1",
+        numInstallments = 0,
+        deadline = 1754884800
+    }: Partial<LoanTerms> = {},
+): LoanTerms => {
+    return {
+        durationSecs,
+        principal,
+        interestRate,
+        collateralId,
+        collateralAddress,
+        payableCurrency,
+        numInstallments,
+        deadline,
     };
 };
 
@@ -190,7 +217,7 @@ describe("OriginationController", () => {
                 originationController
                     // some random guy
                     .connect(signers[3])
-                    .initializeLoan(loanTerms, await borrower.getAddress(), await lender.getAddress(), sig, 1),
+                    .initializeLoan(loanTerms, await borrower.getAddress(), await lender.getAddress(), sig, 1 ),
             ).to.be.revertedWith("OC_CallerNotParticipant");
         });
 
@@ -320,6 +347,31 @@ describe("OriginationController", () => {
                     // Use nonce of 2, skipping nonce 1
                     .initializeLoan(loanTerms, await borrower.getAddress(), await lender.getAddress(), sig, 2),
             ).to.be.revertedWith("OC_InvalidSignature");
+        });
+
+        it("Reverts on an expired signature", async () => {
+            const { originationController, mockERC20, vaultFactory, user: lender, other: borrower } = ctx;
+            const bundleId = await initializeBundle(vaultFactory, borrower);
+            const loanTerms = createLoanTermsExpired(mockERC20.address, vaultFactory.address, { collateralId: bundleId });
+
+            await mint(mockERC20, lender, loanTerms.principal);
+
+            const sig = await createLoanTermsSignature(
+                originationController.address,
+                "OriginationController",
+                loanTerms,
+                borrower,
+                "2",
+                "3", // Use nonce 3
+            );
+
+            await approve(mockERC20, lender, originationController.address, loanTerms.principal);
+            await vaultFactory.connect(borrower).approve(originationController.address, bundleId);
+            await expect(
+                originationController
+                    .connect(lender)
+                    .initializeLoan(loanTerms, await borrower.getAddress(), await lender.getAddress(), sig, 1),
+            ).to.be.revertedWith("OC_SignatureIsExpired");
         });
 
         it("Reverts if the nonce does not match the signature", async () => {
@@ -474,6 +526,7 @@ describe("OriginationController", () => {
                     mockERC721,
                     lenderPromissoryNote,
                     borrowerPromissoryNote,
+
                 } = ctx;
 
                 const tokenId = await mint721(mockERC721, other);
@@ -516,6 +569,7 @@ describe("OriginationController", () => {
                             sig,
                             1,
                             collateralSig,
+
                             maxDeadline,
                         ),
                 ).to.be.revertedWith("function selector was not recognized and there's no fallback function");
@@ -530,6 +584,7 @@ describe("OriginationController", () => {
                     mockERC20,
                     lenderPromissoryNote,
                     borrowerPromissoryNote,
+
                 } = ctx;
 
                 const bundleId = await initializeBundle(vaultFactory,  user);
@@ -571,6 +626,7 @@ describe("OriginationController", () => {
                             sig,
                             1,
                             collateralSig,
+
                             maxDeadline,
                         ),
                 ).to.be.revertedWith("ERC721P_NotTokenOwner");
@@ -618,6 +674,7 @@ describe("OriginationController", () => {
                             sig,
                             1,
                             collateralSig,
+
                             maxDeadline,
                         ),
                 )
@@ -689,11 +746,9 @@ describe("OriginationController", () => {
 
         it("Reverts if the required predicates fail", async () => {
             const { originationController, mockERC20, mockERC721, vaultFactory, user: lender, other: borrower } = ctx;
-
             const bundleId = await initializeBundle(vaultFactory, borrower);
             const tokenId = await mint721(mockERC721, borrower);
             // Do not transfer erc721 to bundle
-
             const loanTerms = createLoanTerms(mockERC20.address, vaultFactory.address, { collateralId: bundleId });
             const signatureItems: SignatureItem[] = [
                 {
@@ -1095,7 +1150,7 @@ describe("OriginationController", () => {
                     mockERC20,
                     mockERC721,
                     lenderPromissoryNote,
-                    borrowerPromissoryNote,
+                    borrowerPromissoryNote
                 } = ctx;
 
                 const bundleId = await initializeBundle(vaultFactory, borrower);
@@ -1172,7 +1227,7 @@ describe("OriginationController", () => {
                     mockERC20,
                     mockERC721,
                     lenderPromissoryNote,
-                    borrowerPromissoryNote,
+                    borrowerPromissoryNote
                 } = ctx;
 
                 const bundleId = await initializeBundle(vaultFactory, borrower);
@@ -1234,6 +1289,7 @@ describe("OriginationController", () => {
                             sig,
                             1,
                             collateralSig,
+
                             maxDeadline,
                             predicates,
                         ),

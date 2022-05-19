@@ -36,6 +36,8 @@ interface TestContext {
     borrower: SignerWithAddress;
     lender: SignerWithAddress;
     admin: SignerWithAddress;
+    currentTimestamp: number;
+    blockchainTime: BlockchainTime;
 }
 
 describe("Integration", () => {
@@ -45,6 +47,9 @@ describe("Integration", () => {
      * Sets up a test context, deploying new contracts and returning them for use in a test
      */
     const fixture = async (): Promise<TestContext> => {
+         const blockchainTime = new BlockchainTime();
+         const currentTimestamp = await blockchainTime.secondsFromNow(0);
+
         const signers: SignerWithAddress[] = await hre.ethers.getSigners();
         const [borrower, lender, admin] = signers;
 
@@ -105,6 +110,8 @@ describe("Integration", () => {
             borrower,
             lender,
             admin,
+            currentTimestamp,
+            blockchainTime
         };
     };
 
@@ -120,6 +127,7 @@ describe("Integration", () => {
             interestRate = hre.ethers.utils.parseEther("1"),
             collateralId = 1,
             numInstallments = 0,
+            deadline = 1754884800,
         }: Partial<LoanTerms> = {},
     ): LoanTerms => {
         return {
@@ -130,6 +138,7 @@ describe("Integration", () => {
             collateralId,
             payableCurrency,
             numInstallments,
+            deadline
         };
     };
 

@@ -33,7 +33,8 @@ import {
     OC_PrincipalTooLow,
     OC_LoanDuration,
     OC_InterestRate,
-    OC_NumberInstallments
+    OC_NumberInstallments,
+    OC_SignatureIsExpired
 } from "./errors/Lending.sol";
 
 /**
@@ -66,14 +67,14 @@ contract OriginationController is
     bytes32 private constant _TOKEN_ID_TYPEHASH =
         keccak256(
             // solhint-disable-next-line max-line-length
-            "LoanTerms(uint32 durationSecs,uint24 numInstallments,uint200 interestRate,uint256 principal,address collateralAddress,uint256 collateralId,address payableCurrency,uint160 nonce)"
+            "LoanTerms(uint32 durationSecs,uint24 numInstallments,uint200 interestRate,uint256 principal,address collateralAddress,uint256 collateralId,address payableCurrency,uint160 nonce,uint256 deadline)"
         );
 
     /// @notice EIP712 type hash for item-based signatures.
     bytes32 private constant _ITEMS_TYPEHASH =
         keccak256(
             // solhint-disable max-line-length
-            "LoanTermsWithItems(uint32 durationSecs,uint24 numInstallments,uint200 interestRate,uint256 principal,address collateralAddress,bytes32 itemsHash,address payableCurrency,uint160 nonce)"
+            "LoanTermsWithItems(uint32 durationSecs,uint24 numInstallments,uint200 interestRate,uint256 principal,address collateralAddress,bytes32 itemsHash,address payableCurrency,uint160 nonce,uint256 deadline)"
         );
 
     // =============== Contract References ===============
@@ -398,7 +399,8 @@ contract OriginationController is
                 loanTerms.collateralAddress,
                 loanTerms.collateralId,
                 loanTerms.payableCurrency,
-                nonce
+                nonce,
+                loanTerms.deadline
             )
         );
 
@@ -435,7 +437,8 @@ contract OriginationController is
                 loanTerms.collateralAddress,
                 itemsHash,
                 loanTerms.payableCurrency,
-                nonce
+                nonce,
+                loanTerms.deadline
             )
         );
 
@@ -499,7 +502,7 @@ contract OriginationController is
      */
     function _validateLoanTerms(
         LoanLibrary.LoanTerms memory terms
-    ) internal pure {
+    ) internal view {
         // principal must be greater than or equal to 10000 wei
         if (terms.principal < 10_000) revert OC_PrincipalTooLow(terms.principal);
 
@@ -513,6 +516,9 @@ contract OriginationController is
         // number of installments must be an even number.
         if (terms.numInstallments % 2 != 0 || terms.numInstallments > 1_000_000)
             revert OC_NumberInstallments(terms.numInstallments);
+
+        // signature must not have already expired
+        if (terms.deadline < block.timestamp) revert OC_SignatureIsExpired(terms.deadline);
     }
 
     /**

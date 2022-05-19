@@ -54,6 +54,9 @@ library LoanLibrary {
         uint256 collateralId;
         // The payable currency for the loan principal and interest.
         address payableCurrency;
+        // The number of seconds representing the relative expiration
+        // date of the loan
+        uint256 deadline;
     }
 
     /**
@@ -85,6 +88,9 @@ library LoanLibrary {
         bytes items;
         // The payable currency for the loan principal and interest
         address payableCurrency;
+        // The number of seconds representing the relative expiration
+        // date of the loan
+        uint256 deadline;
     }
 
     /**

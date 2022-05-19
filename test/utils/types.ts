@@ -27,6 +27,7 @@ export interface LoanTerms {
     collateralId: BigNumberish;
     payableCurrency: string;
     numInstallments: BigNumberish;
+    deadline: BigNumberish;
 }
 
 export interface ItemsPayload {
@@ -38,6 +39,7 @@ export interface ItemsPayload {
     payableCurrency: string;
     numInstallments: BigNumberish;
     nonce: BigNumberish;
+    deadline: BigNumberish;
 }
 
 export interface LoanData {
