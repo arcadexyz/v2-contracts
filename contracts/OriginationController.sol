@@ -811,7 +811,7 @@ contract OriginationController is
                 oldLoanData.numInstallmentsPaid,
                 oldTerms.interestRate
             );
-π
+
             repayAmount = oldLoanData.balance + interestDue + lateFees;
         }
 

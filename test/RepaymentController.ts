@@ -11,8 +11,7 @@ import {
     AssetVault,
     CallWhitelist,
     VaultFactory,
-    FeeController,
-    MockLoanCore,
+    FeeController
 } from "../typechain";
 import { BlockchainTime } from "./utils/time";
 import { BigNumber, BigNumberish } from "ethers";
@@ -39,7 +38,6 @@ interface TestContext {
     admin: SignerWithAddress;
     currentTimestamp: number;
     blockchainTime: BlockchainTime;
-    mockLoanCore: MockLoanCore;
 }
 
 /**
@@ -101,11 +99,6 @@ const fixture = async (): Promise<TestContext> => {
     );
     await originationController.deployed();
 
-    const MockLoanCore = await hre.ethers.getContractFactory("MockLoanCore");
-    const mockLoanCore = <MockLoanCore>(
-        await upgrades.deployProxy(MockLoanCore, [feeController.address], { kind: 'uups' })
-    );
-
     const repaymentController = <RepaymentController>(
         await deploy("RepaymentController", admin, [loanCore.address, borrowerNote.address, lenderNote.address])
     );
@@ -132,8 +125,7 @@ const fixture = async (): Promise<TestContext> => {
         lender,
         admin,
         currentTimestamp,
-        blockchainTime,
-        mockLoanCore,
+        blockchainTime
     };
 };
 
