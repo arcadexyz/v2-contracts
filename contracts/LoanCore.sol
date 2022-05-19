@@ -281,6 +281,23 @@ contract LoanCore is
         emit LoanClaimed(loanId);
     }
 
+    /**
+     * @notice Roll over a loan, atomically closing one and re-opening a new one with the
+     *         same collateral. Instead of full repayment, only net payments from each
+     *         party are required. Each rolled-over loan is marked as complete, and the new
+     *         loan is given a new unique ID and notes. At the time of calling, any needed
+     *         net payments have been collected by the RepaymentController for withdrawal.
+     *
+     * @param oldLoanId             The ID of the old loan.
+     * @param borrower              The borrower for the loan.
+     * @param lender                The lender for the old loan.
+     * @param terms                 The terms of the new loan.
+     * @param _amountToOldLender    The payment to the old lender (if lenders are changing).
+     * @param _amountToLender       The payment to the lender (if same as old lender).
+     * @param _amountToBorrower     The payemnt to the borrower (in the case of leftover principal).
+     *
+     * @return newLoanId            The ID of the new loan.
+     */
     function rollover(
         uint256 oldLoanId,
         address borrower,

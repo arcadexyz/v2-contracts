@@ -13,6 +13,13 @@ interface IOriginationController {
         bytes32 s;
     }
 
+    struct RolloverAmounts {
+        uint256 needFromBorrower;
+        uint256 leftoverPrincipal;
+        uint256 amountToOldLender;
+        uint256 amountToLender;
+    }
+
     // ================ Events =================
 
     event Approval(address indexed owner, address indexed signer, bool isApproved);
@@ -64,6 +71,15 @@ interface IOriginationController {
         address lender,
         Signature calldata sig,
         uint160 nonce
+    ) external returns (uint256 newLoanId);
+
+    function rolloverLoanWithItems(
+        uint256 oldLoanId,
+        LoanLibrary.LoanTerms calldata loanTerms,
+        address lender,
+        Signature calldata sig,
+        uint160 nonce,
+        LoanLibrary.Predicate[] calldata itemPredicates
     ) external returns (uint256 newLoanId);
 
     // ================ Permission Management =================

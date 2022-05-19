@@ -35,7 +35,7 @@ import {
     OC_LoanDuration,
     OC_InterestRate,
     OC_NumberInstallments,
-    OC_SignatureIsExpired
+    OC_SignatureIsExpired,
     OC_RolloverCurrencyMismatch,
     OC_RolloverCollateralMismatch
 } from "./errors/Lending.sol";
@@ -62,13 +62,6 @@ contract OriginationController is
     UUPSUpgradeable
 {
     using SafeERC20Upgradeable for IERC20Upgradeable;
-
-    struct RolloverAmounts {
-        uint256 needFromBorrower;
-        uint256 leftoverPrincipal;
-        uint256 amountToOldLender;
-        uint256 amountToLender;
-    }
 
     // ============================================ STATE ==============================================
 
@@ -308,6 +301,21 @@ contract OriginationController is
         loanId = initializeLoanWithItems(loanTerms, borrower, lender, sig, nonce, itemPredicates);
     }
 
+    /**
+     * @notice Rolls over an existing loan via Loan Core, using a signature
+     *         for a new loan to create. The lender can be the same lender as
+     *         the loan to be rolled over, or a new lender. The net funding between
+     *         the old and new loan is calculated, with funds withdrawn from relevant
+     *         parties.
+     *
+     * @param oldLoanId                     The ID of the old loan.
+     * @param loanTerms                     The terms agreed by the lender and borrower.
+     * @param lender                        Address of the lender.
+     * @param sig                           The loan terms signature, with v, r, s fields.
+     * @param nonce                         The signature nonce for the loan terms signature.
+     *
+     * @return newLoanId                    The unique ID of the new loan.
+     */
     function rolloverLoan(
         uint256 oldLoanId,
         LoanLibrary.LoanTerms calldata loanTerms,
@@ -324,6 +332,61 @@ contract OriginationController is
 
         address borrower = IERC721(ILoanCore(loanCore).borrowerNote()).ownerOf(oldLoanId);
         _validateCounterparties(borrower, lender, msg.sender, externalSigner, sig, sighash);
+
+        ILoanCore(loanCore).consumeNonce(externalSigner, nonce);
+
+        newLoanId = _rollover(oldLoanId, loanTerms, borrower, lender);
+    }
+
+    /**
+     * @notice Rolls over an existing loan via Loan Core, using a signature
+     *         for a new loan to create (of items type). The lender can be the same lender as
+     *         the loan to be rolled over, or a new lender. The net funding between
+     *         the old and new loan is calculated, with funds withdrawn from relevant
+     *         parties.
+     *
+     * @param oldLoanId                     The ID of the old loan.
+     * @param loanTerms                     The terms agreed by the lender and borrower.
+     * @param lender                        Address of the lender.
+     * @param sig                           The loan terms signature, with v, r, s fields.
+     * @param nonce                         The signature nonce for the loan terms signature.
+     * @param itemPredicates                The predicate rules for the items in the bundle.
+     *
+     * @return newLoanId                    The unique ID of the new loan.
+     */
+    function rolloverLoanWithItems(
+        uint256 oldLoanId,
+        LoanLibrary.LoanTerms calldata loanTerms,
+        address lender,
+        Signature calldata sig,
+        uint160 nonce,
+        LoanLibrary.Predicate[] calldata itemPredicates
+    ) public override returns (uint256 newLoanId) {
+        _validateLoanTerms(loanTerms);
+
+        LoanLibrary.LoanData memory data = ILoanCore(loanCore).getLoan(oldLoanId);
+        _validateRollover(data.terms, loanTerms);
+
+        address vault = IVaultFactory(loanTerms.collateralAddress).instanceAt(loanTerms.collateralId);
+        (bytes32 sighash, address externalSigner) = recoverItemsSignature(
+            loanTerms,
+            sig,
+            nonce,
+            keccak256(abi.encode(itemPredicates))
+        );
+
+        address borrower = IERC721(ILoanCore(loanCore).borrowerNote()).ownerOf(oldLoanId);
+        _validateCounterparties(borrower, lender, msg.sender, externalSigner, sig, sighash);
+
+        for (uint256 i = 0; i < itemPredicates.length; i++) {
+            // Verify items are held in the wrapper
+            address verifier = itemPredicates[i].verifier;
+            if (!isAllowedVerifier(verifier)) revert OC_InvalidVerifier(verifier);
+
+            if (!IArcadeSignatureVerifier(verifier).verifyPredicates(itemPredicates[i].data, vault)) {
+                revert OC_PredicateFailed(verifier, itemPredicates[i].data, vault);
+            }
+        }
 
         ILoanCore(loanCore).consumeNonce(externalSigner, nonce);
 
@@ -554,6 +617,13 @@ contract OriginationController is
         if (terms.deadline < block.timestamp) revert OC_SignatureIsExpired(terms.deadline);
     }
 
+    /**
+     * @dev Validate the rules for rolling over a loan - must be using the same
+     *      currency and collateral.
+     *
+     * @param oldTerms              The terms of the old loan, fetched from LoanCore.
+     * @param newTerms              The terms of the new loan, provided by the caller.
+     */
     function _validateRollover(
         LoanLibrary.LoanTerms memory oldTerms,
         LoanLibrary.LoanTerms memory newTerms
@@ -692,6 +762,20 @@ contract OriginationController is
         }
     }
 
+    /**
+     * @dev Calculate the net amounts needed for the rollover from each party - the
+     *      borrower, the new lender, and the old lender (can be same as new lender).
+     *      Determine the amount to either pay or withdraw from the borrower, and
+     *      any payments to be sent to the old lender.
+     *
+     * @param oldLoanData           The LoanData struct for the old loan.
+     * @param newTerms              The terms struct for the new loan.
+     * @param lender                The lender for the new loan.
+     * @param oldLender             The lender for the existing loan.
+     * @param rolloverFee           The protocol fee for rollovers.
+     *
+     * @return amounts              The net amounts owed to each party.
+     */
     function _calculateRolloverAmounts(
         LoanLibrary.LoanData memory oldLoanData,
         LoanLibrary.LoanTerms calldata newTerms,
