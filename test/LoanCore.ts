@@ -153,7 +153,7 @@ describe("LoanCore", () => {
     };
 
     /**
-     * Create a LoanTerms object using the given parameters, or defaults
+     * Create a legacy loan type object using the given parameters, or defaults
      */
     const createLoanTerms = (
         payableCurrency: string,
@@ -511,7 +511,7 @@ describe("LoanCore", () => {
 
             await blockchainTime.increaseTime(360001);
 
-            await loanCore.connect(borrower).claim(loanId)
+            await loanCore.connect(borrower).claim(loanId, BigNumber.from(0))
             await expect(
                 loanCore.connect(borrower).startLoan(await lender.getAddress(), await borrower.getAddress(), terms),
             ).to.be.revertedWith("ERC721: transfer caller is not owner nor approved");
@@ -622,7 +622,7 @@ describe("LoanCore", () => {
                 .startLoan(await lender.getAddress(), await borrower.getAddress(), terms);
             const receipt = await tx.wait();
             const gasUsed = receipt.gasUsed;
-            expect(gasUsed.toString()).to.equal("617155");
+            expect(gasUsed.toString()).to.equal("639487");
         });
     });
 
@@ -788,11 +788,11 @@ describe("LoanCore", () => {
             const tx = await loanCore.connect(borrower).repay(loanId);
             const receipt = await tx.wait();
             const gasUsed = receipt.gasUsed;
-            expect(gasUsed.toString()).to.equal("236819");
+            expect(gasUsed.toString()).to.equal("238516");
         });
     });
 
-    describe("Claim Loan", async function () {
+    describe("Claim loan (no installments)", async function () {
         interface RepayLoanState extends TestContext {
             loanId: BigNumberish;
             terms: LoanTerms;
@@ -845,7 +845,7 @@ describe("LoanCore", () => {
 
             await blockchainTime.increaseTime(360001);
 
-            await expect(loanCore.connect(borrower).claim(loanId)).to.emit(loanCore, "LoanClaimed").withArgs(loanId);
+            await expect(loanCore.connect(borrower).claim(loanId, BigNumber.from(0))).to.emit(loanCore, "LoanClaimed").withArgs(loanId);
         });
 
         it("Rejects calls from non-repayer", async () => {
@@ -854,7 +854,7 @@ describe("LoanCore", () => {
             await mockERC20.connect(borrower).mint(loanCore.address, terms.principal.add(terms.interestRate));
             await blockchainTime.increaseTime(360001);
 
-            await expect(loanCore.connect(other).claim(loanId)).to.be.revertedWith(
+            await expect(loanCore.connect(other).claim(loanId, BigNumber.from(0))).to.be.revertedWith(
                 `AccessControl: account ${(await other.getAddress()).toLowerCase()} is missing role ${REPAYER_ROLE}`,
             );
         });
@@ -862,7 +862,7 @@ describe("LoanCore", () => {
         it("should fail if loan doesnt exist", async () => {
             const { loanCore, user: borrower } = await setupLoan();
             const loanId = "123412341324";
-            await expect(loanCore.connect(borrower).claim(loanId)).to.be.revertedWith(
+            await expect(loanCore.connect(borrower).claim(loanId, BigNumber.from(0))).to.be.revertedWith(
                 "LC_StartInvalidState",
             );
         });
@@ -872,7 +872,7 @@ describe("LoanCore", () => {
             const collateralId = await initializeBundle(borrower);
             terms.collateralId = collateralId;
             const loanId = 100;
-            await expect(loanCore.connect(borrower).claim(loanId)).to.be.revertedWith(
+            await expect(loanCore.connect(borrower).claim(loanId, BigNumber.from(0))).to.be.revertedWith(
                 "LC_StartInvalidState",
             );
         });
@@ -885,7 +885,7 @@ describe("LoanCore", () => {
             await mockERC20.connect(borrower).approve(loanCore.address, terms.principal.add(terms.interestRate));
 
             await loanCore.connect(borrower).repay(loanId);
-            await expect(loanCore.connect(borrower).claim(loanId)).to.be.revertedWith(
+            await expect(loanCore.connect(borrower).claim(loanId, BigNumber.from(0))).to.be.revertedWith(
                 "LC_StartInvalidState",
             );
         });
@@ -904,8 +904,8 @@ describe("LoanCore", () => {
 
             await blockchainTime.increaseTime(360001);
 
-            await loanCore.connect(borrower).claim(loanId);
-            await expect(loanCore.connect(borrower).claim(loanId)).to.be.revertedWith(
+            await loanCore.connect(borrower).claim(loanId, BigNumber.from(0));
+            await expect(loanCore.connect(borrower).claim(loanId, BigNumber.from(0))).to.be.revertedWith(
                 "LC_StartInvalidState",
             );
         });
@@ -914,7 +914,7 @@ describe("LoanCore", () => {
             const { mockERC20, loanId, loanCore, user: borrower, terms } = await setupLoan();
             await mockERC20.connect(borrower).mint(loanCore.address, terms.principal.add(terms.interestRate));
 
-            await expect(loanCore.connect(borrower).claim(loanId)).to.be.revertedWith(
+            await expect(loanCore.connect(borrower).claim(loanId, BigNumber.from(0))).to.be.revertedWith(
                 "LC_NotExpired",
             );
         });
@@ -933,7 +933,7 @@ describe("LoanCore", () => {
             await blockchainTime.increaseTime(360001);
 
             await loanCore.connect(borrower).pause();
-            await expect(loanCore.connect(borrower).claim(loanId)).to.be.revertedWith("Pausable: paused");
+            await expect(loanCore.connect(borrower).claim(loanId, BigNumber.from(0))).to.be.revertedWith("Pausable: paused");
         });
 
         it("gas [ @skip-on-coverage ]", async () => {
@@ -950,10 +950,10 @@ describe("LoanCore", () => {
 
             await blockchainTime.increaseTime(360001);
 
-            const tx = await loanCore.connect(borrower).claim(loanId);
+            const tx = await loanCore.connect(borrower).claim(loanId, BigNumber.from(0));
             const receipt = await tx.wait();
             const gasUsed = receipt.gasUsed;
-            expect(gasUsed.toString()).to.equal("196415");
+            expect(gasUsed.toString()).to.equal("198260");
         });
     });
 

@@ -177,11 +177,18 @@ error RC_OnlyLender(address caller);
 error RC_BeforeStartDate(uint256 startDate);
 
 /**
- * @notice Loan does not have any installments.
+ * @notice Loan terms do not have any installments, use repay for repayments.
  *
  * @param numInstallments           Number of installments returned from LoanTerms.
  */
 error RC_NoInstallments(uint256 numInstallments);
+
+/**
+ * @notice Loan terms have installments, use repaypart or repayPartMinimum for repayments.
+ *
+ * @param numInstallments           Number of installments returned from LoanTerms.
+ */
+error RC_HasInstallments(uint256 numInstallments);
 
 /**
  * @notice No interest payment or late fees due.
@@ -246,6 +253,11 @@ error LC_BalanceGTZero(uint256 returnAmount);
  * @param nonce                         Represents the number of transactions sent by address.
  */
 error LC_NonceUsed(address user, uint160 nonce);
+
+/**
+ * @notice Installment loan has not defaulted.
+ */
+error LC_LoanNotDefaulted();
 
 // ================================== Full Insterest Amount Calc ====================================
 /// @notice All errors prefixed with FIAC_, to separate from other contracts in the protocol.

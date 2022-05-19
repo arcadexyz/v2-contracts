@@ -147,7 +147,7 @@ contract MockLoanCore is ILoanCore, Initializable, AccessControlUpgradeable, UUP
      *  - The loan must be in state Active
      *  - The current time must be beyond the dueDate
      */
-    function claim(uint256 loanId) public override {}
+    function claim(uint256 loanId, uint256 currentInstallmentPeriod) public override {}
 
     function isNonceUsed(address user, uint160 nonce) external view override returns (bool) {
         return usedNonces[user][nonce];

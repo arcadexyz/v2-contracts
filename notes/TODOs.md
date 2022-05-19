@@ -7,41 +7,14 @@ Features:
 - Signature expiry
 - Native rollovers
 
-Final Cleanup:
-- Get 100% test coverage
-- Run prettier
+ Evan:
 
+> V2 Protocol Planning/ Progress:
 
-Evan:
+- (DONE) Installment Claims
+- Rollover Review
+- Test coverage
 
-V2 Progress:
-
-- (Ready for Review) Custom Errors
-  - Lending.sol
-    - (DONE) OC - Kevin
-    - (DONE) IV - Kevin
-    - (DONE) RC
-    - (DONE) LC
-    - (DONE) FILC
-    - (DONE) PN
-  - LendingUtils.sol
-    - (DONE) ERC721P
-    - (DONE) ERC721PU
-    - (DONE) PunkRouter
-  - Vault.sol
-    - (DONE) AssetVault
-    - (DONE) OwnableERC721
-    - (DONE) VaultFactory
- - BEFORE MERGING:
-    - Go through natspec in error files to ensure they are up to standard.
-    - Remove the `TODO: custom errors` from top of contracts.
-    - Modify the tests so they do not fail due to new errors.
-
-📌 For Further Review Items:
-
-- Tune LoanTerms dials for what will be accepted. Namely: `durationSeconds` and `numInstallments`.
-- Global parameters, `LATE_FEE` and `GRACE_PERIOD`
-- `claim` functionality with installment loans, with grace period?
 
 Mouzayan:
 

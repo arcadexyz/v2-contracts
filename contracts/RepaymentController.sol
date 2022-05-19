@@ -29,7 +29,17 @@ import "./interfaces/IPromissoryNote.sol";
 import "./interfaces/ILoanCore.sol";
 import "./interfaces/IRepaymentController.sol";
 
-import { RC_CannotDereference, RC_NoPaymentDue, RC_OnlyLender, RC_BeforeStartDate, RC_NoInstallments, RC_NoMinPaymentDue, RC_RepayPartZero, RC_RepayPartLTMin } from "./errors/Lending.sol";
+import {
+    RC_CannotDereference,
+    RC_NoPaymentDue,
+    RC_OnlyLender,
+    RC_BeforeStartDate,
+    RC_NoInstallments,
+    RC_NoMinPaymentDue,
+    RC_RepayPartZero,
+    RC_RepayPartLTMin,
+    RC_HasInstallments
+ } from "./errors/Lending.sol";
 
 /**
  * @title RepaymentController
@@ -58,9 +68,7 @@ contract RepaymentController is
     // Interest rate parameter
     uint256 public constant INSTALLMENT_PERIOD_MULTIPLIER = 1_000_000;
 
-    // Installment parameters
-    // * * * NOTE!!! Finish implementation of grace period
-    uint256 public constant GRACE_PERIOD = 604800; // 60*60*24*7 // 1 week
+    // Installment parameter
     uint256 public constant LATE_FEE = 50; // 50/BASIS_POINTS_DENOMINATOR = 0.5%
 
     constructor(
@@ -86,6 +94,9 @@ contract RepaymentController is
         LoanLibrary.LoanTerms memory terms = loanCore.getLoan(loanId).terms;
         if (terms.durationSecs == 0) revert RC_CannotDereference(loanId);
 
+        //cannot use for installment loans, call repayPart or repayPartMinimum
+        if(terms.numInstallments != 0) revert RC_HasInstallments(terms.numInstallments);
+
         // withdraw principal plus interest from borrower and send to loan core
         uint256 total = getFullInterestAmount(terms.principal, terms.interestRate);
         if (total == 0) revert RC_NoPaymentDue();
@@ -109,9 +120,18 @@ contract RepaymentController is
         // make sure that caller owns lender note
         address lender = lenderNote.ownerOf(loanId);
         if (lender != msg.sender) revert RC_OnlyLender(msg.sender);
-
-        // call claim function in loan core
-        loanCore.claim(loanId);
+        // get LoanData for determining how to send the current installment parameter to LoanCore
+        LoanLibrary.LoanData memory data = loanCore.getLoan(loanId);
+        if (data.terms.numInstallments > 0) {
+            // get the current installment period
+            uint256 _installmentPeriod = currentInstallmentPeriod(data.startDate, data.terms.durationSecs, data.terms.numInstallments);
+            // call claim function in loan core
+            loanCore.claim(loanId, _installmentPeriod);
+        } else {
+            // call claim function in loan core indicating a legacy loan type with 0 as the installment period
+            // installment loans cannot have an installment period of 0
+            loanCore.claim(loanId, 0);
+        }
     }
 
     // =========================== INSTALLMENT SPECIFIC OPERATIONS ===============================
@@ -290,6 +310,8 @@ contract RepaymentController is
      *         we are able to determine the current timeframe relative to the total number of installments.
      *
      * @dev Get current installment using the startDate, duration, and current time.
+     *      This function should only be called by loans with installment payments, else
+     *      when finding the time per installment the function will divide by 0.
      *      NOTE!!! DurationSecs must be greater than 10 seconds (10%10 = 0).
      *              Also verify the _timestampMultiplier value for what is determined on the max and min loan durations.
      *

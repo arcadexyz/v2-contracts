@@ -26,8 +26,10 @@ import {
     LC_StartInvalidState,
     LC_NotExpired,
     LC_BalanceGTZero,
-    LC_NonceUsed
+    LC_NonceUsed,
+    LC_LoanNotDefaulted
 } from "./errors/Lending.sol";
+
 
 /**
  * @title LoanCore
@@ -63,6 +65,7 @@ contract LoanCore is
 
     // 10k bps per whole
     uint256 private constant BPS_DENOMINATOR = 10_000;
+    uint256 private constant PERCENT_MISSED_FOR_LENDER_CLAIM = 4000;
 
     // =============== Contract References ================
 
@@ -191,7 +194,7 @@ contract LoanCore is
 
         IERC20Upgradeable(terms.payableCurrency).safeTransfer(
             borrower,
-            getPrincipalLessFees(terms.principal)
+            _getPrincipalLessFees(terms.principal)
         );
 
         emit LoanStarted(loanId, lender, borrower);
@@ -243,16 +246,28 @@ contract LoanCore is
      *         date has passed, and then distribute collateral to the lender. All promissory
      *         notes will be burned and the loan will be marked as complete.
      *
-     * @param loanId                The ID of the loan to claim.
+     * @param loanId                              The ID of the loan to claim.
+     * @param currentInstallmentPeriod            The current installment period if
+     *                                            installment loan type, else 0.
      */
-    function claim(uint256 loanId) external override whenNotPaused onlyRole(REPAYER_ROLE) {
+    function claim(uint256 loanId, uint256 currentInstallmentPeriod) external override whenNotPaused onlyRole(REPAYER_ROLE) {
         LoanLibrary.LoanData memory data = loans[loanId];
         // ensure valid initial loan state when starting loan
         if (data.state != LoanLibrary.LoanState.Active) revert LC_StartInvalidState(data.state);
-        // ensure claiming after the loan has ended. block.timstamp must be greater than the dueDate.
-
-        uint256 dueDate = data.startDate + data.terms.durationSecs;
-        if (dueDate > block.timestamp) revert LC_NotExpired(dueDate);
+        // for legacy loans (currentInstallmentPeriod == 0) ensure lender is claiming
+        // after the loan has ended and if so, block.timstamp must be greater than the dueDate.
+        // for installment loan types (currentInstallmentPeriod > 0), check if the loan
+        // is in default, if not, revert.
+        if (data.terms.numInstallments == 0) {
+            uint256 dueDate = data.startDate + data.terms.durationSecs;
+            if (dueDate > block.timestamp) revert LC_NotExpired(dueDate);
+        } else {
+            _verifyDefaultedLoan(
+                data.terms.numInstallments,
+                data.numInstallmentsPaid,
+                currentInstallmentPeriod
+            );
+        }
 
         address lender = lenderNote.ownerOf(loanId);
 
@@ -474,13 +489,13 @@ contract LoanCore is
 
     /**
      * @dev Takes a principal value and returns the amount that will be distributed
-     *      to the borrower after fees.
+     *      to the borrower after protocol fees.
      *
      * @param principal             The principal amount.
      *
      * @return principalLessFees    The amount after fees.
      */
-    function getPrincipalLessFees(uint256 principal) internal view returns (uint256) {
+    function _getPrincipalLessFees(uint256 principal) internal view returns (uint256) {
         return principal - principal * feeController.getOriginationFee() / BPS_DENOMINATOR;
     }
 
@@ -497,5 +512,37 @@ contract LoanCore is
         usedNonces[user][nonce] = true;
 
         emit NonceUsed(user, nonce);
+    }
+
+    /**
+     * @notice Check collateral is available to claim via default.
+     *         This function passes when the last payment made by the borrower
+     *         was made over 40% of the total number of installment periods previously.
+     *         For example a loan with 10 installment periods. The borrower would
+     *         have to miss 4 consecutive payments during the loan to default.
+     *
+     * @dev Missed payments checked are consecutive due how the numInstallmentsPaid
+     *      value in LoanData is being updated to the current installment period
+     *      everytime a repayment at any time is made for an installment loan.
+     *      (numInstallmentsPaid += _currentMissedPayments + 1).
+     *
+     * @param numInstallments                  Total number of installments in loan.
+     * @param numInstallmentsPaid              Installment period of the last installment payment.
+     * @param currentInstallmentPeriod         Current installment period call made in.
+     */
+    function _verifyDefaultedLoan(uint256 numInstallments, uint256 numInstallmentsPaid, uint256 currentInstallmentPeriod) internal view {
+        // make sure if called in the same installment period as payment was made,
+        // does not get to currentInstallmentsMissed calculation. needs to be first.
+        if(numInstallmentsPaid == currentInstallmentPeriod) revert LC_LoanNotDefaulted();
+
+        // get installments missed necessary for loan default (*1000)
+        uint256 installmentsMissedForDefault = ((numInstallments * PERCENT_MISSED_FOR_LENDER_CLAIM) * 1000) / BPS_DENOMINATOR;
+        // get current installments missed (*1000)
+        // one added to numInstallmentsPaid for a grace period on the current installment.
+        uint256 currentInstallmentsMissed = ((currentInstallmentPeriod) * 1000) - ((numInstallmentsPaid + 1) * 1000);
+
+        // check if the number of missed payments is greater than
+        // 40% the total number of installment periods
+        if(currentInstallmentsMissed < installmentsMissedForDefault) revert LC_LoanNotDefaulted();
     }
 }
