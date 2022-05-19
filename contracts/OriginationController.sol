@@ -63,6 +63,13 @@ contract OriginationController is
 {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
+    struct RolloverAmounts {
+        uint256 needFromBorrower;
+        uint256 leftoverPrincipal;
+        uint256 amountToOldLender;
+        uint256 amountToLender;
+    }
+
     // ============================================ STATE ==============================================
 
     // =================== Constants =====================
@@ -652,12 +659,7 @@ contract OriginationController is
         uint256 rolloverFee = ILoanCore(loanCore).feeController().getRolloverFee();
 
         // Settle amounts
-        (
-            uint256 needFromBorrower,
-            uint256 leftoverPrincipal,
-            uint256 amountToOldLender,
-            uint256 amountToLender
-        ) = _calculateRolloverAmounts(oldLoanData, newTerms, lender, oldLender, rolloverFee);
+        RolloverAmounts memory amounts  = _calculateRolloverAmounts(oldLoanData, newTerms, lender, oldLender, rolloverFee);
 
         // Collect funds
         if (lender != oldLender) {
@@ -666,15 +668,15 @@ contract OriginationController is
             payableCurrency.safeTransferFrom(lender, address(this), newTerms.principal);
         }
 
-        if (needFromBorrower > 0) {
+        if (amounts.needFromBorrower > 0) {
             // Borrower must pay difference
             // OriginationController should have collected
-            payableCurrency.safeTransferFrom(borrower, address(this), needFromBorrower);
-        } else if (leftoverPrincipal > 0 && lender == oldLender) {
+            payableCurrency.safeTransferFrom(borrower, address(this), amounts.needFromBorrower);
+        } else if (amounts.leftoverPrincipal > 0 && lender == oldLender) {
             // Lender must pay difference
             // OriginationController should have collected
             // Make sure to collect fee
-            payableCurrency.safeTransferFrom(lender, address(this), leftoverPrincipal);
+            payableCurrency.safeTransferFrom(lender, address(this), amounts.leftoverPrincipal);
         }
 
         {
@@ -683,9 +685,9 @@ contract OriginationController is
                 borrower,
                 lender,
                 newTerms,
-                amountToOldLender,
-                amountToLender,
-                leftoverPrincipal
+                amounts.amountToOldLender,
+                amounts.amountToLender,
+                amounts.leftoverPrincipal
             );
         }
     }
@@ -697,10 +699,7 @@ contract OriginationController is
         address oldLender,
         uint256 rolloverFee
     ) internal view returns (
-        uint256 needFromBorrower,
-        uint256 leftoverPrincipal,
-        uint256 amountToOldLender,
-        uint256 amountToLender
+        RolloverAmounts memory amounts
     ) {
         LoanLibrary.LoanTerms memory oldTerms = oldLoanData.terms;
 
@@ -725,18 +724,21 @@ contract OriginationController is
 
         // Settle amounts
         if (repayAmount > newPrincipal) {
-            needFromBorrower = repayAmount - newPrincipal;
+            amounts.needFromBorrower = repayAmount - newPrincipal;
         } else if (newPrincipal > repayAmount) {
-            leftoverPrincipal = newPrincipal - repayAmount;
+            amounts.leftoverPrincipal = newPrincipal - repayAmount;
         }
 
         // Collect funds
         if (lender != oldLender) {
-            amountToOldLender = repayAmount;
-            amountToLender = 0;
+            amounts.amountToOldLender = repayAmount;
+            amounts.amountToLender = 0;
         } else {
-            amountToOldLender = 0;
-            amountToLender = repayAmount - newTerms.principal;
+            amounts.amountToOldLender = 0;
+
+            if (amounts.needFromBorrower > 0) {
+                amounts.amountToLender = repayAmount - newTerms.principal;
+            }
         }
     }
 }

@@ -180,37 +180,37 @@ abstract contract FullInterestAmountCalc is IFullInterestAmountCalc {
             // this indicates that the minimum interest and any late fees for this installment period
             // have alread been repaid. Any additional amount sent in this installment period goes to principal
             return (0, 0, 0);
-        } else {
-            // +1 for current install payment
-            uint256 _installmentsMissed = _installmentPeriod - (numInstallmentsPaid + 1);
+        }
 
-            // ** Installment Interest - using mulitpier of 1 million.
-            // There should not be loan with more than 1 million installment periods. Checked in LoanCore.
-            uint256 _interestRatePerInstallment = ((interestRate / INTEREST_RATE_DENOMINATOR) *
-                INSTALLMENT_PERIOD_MULTIPLIER) / numInstallments;
+        // +1 for current install payment
+        uint256 _installmentsMissed = _installmentPeriod - (numInstallmentsPaid + 1);
 
-            // ** Determine if late fees are added and if so, how much?
-            // Calulate number of payments missed based on _latePayment, _pastDueDate
+        // ** Installment Interest - using mulitpier of 1 million.
+        // There should not be loan with more than 1 million installment periods. Checked in LoanCore.
+        uint256 _interestRatePerInstallment = ((interestRate / INTEREST_RATE_DENOMINATOR) *
+            INSTALLMENT_PERIOD_MULTIPLIER) / numInstallments;
 
-            // * If payment on time...
-            if (_installmentsMissed == 0) {
-                // Minimum balance due calculation. Based on interest per installment period
-                uint256 minBalDue = ((balance * _interestRatePerInstallment) / INSTALLMENT_PERIOD_MULTIPLIER) /
-                    BASIS_POINTS_DENOMINATOR;
+        // ** Determine if late fees are added and if so, how much?
+        // Calulate number of payments missed based on _latePayment, _pastDueDate
 
-                return (minBalDue, 0, 0);
-            }
-            // * If payment is late, or past the loan duration...
-            else {
-                // get late fees based on number of payments missed and current principal due
-                (uint256 minInterestDue, uint256 lateFees) = _getFees(
-                    balance,
-                    _interestRatePerInstallment,
-                    _installmentsMissed
-                );
+        // * If payment on time...
+        if (_installmentsMissed == 0) {
+            // Minimum balance due calculation. Based on interest per installment period
+            uint256 minBalDue = ((balance * _interestRatePerInstallment) / INSTALLMENT_PERIOD_MULTIPLIER) /
+                BASIS_POINTS_DENOMINATOR;
 
-                return (minInterestDue, lateFees, _installmentsMissed);
-            }
+            return (minBalDue, 0, 0);
+        }
+        // * If payment is late, or past the loan duration...
+        else {
+            // get late fees based on number of payments missed and current principal due
+            (uint256 minInterestDue, uint256 lateFees) = _getFees(
+                balance,
+                _interestRatePerInstallment,
+                _installmentsMissed
+            );
+
+            return (minInterestDue, lateFees, _installmentsMissed);
         }
     }
 }
