@@ -159,9 +159,6 @@ contract OriginationController is
 
         (bytes32 sighash, address externalSigner) = recoverTokenSignature(loanTerms, sig, nonce);
 
-        // signature must not have already expired
-        if (loanTerms.deadline < block.timestamp) revert OC_SignatureIsExpired(loanTerms.deadline);
-
         _validateCounterparties(borrower, lender, msg.sender, externalSigner, sig, sighash);
 
         ILoanCore(loanCore).consumeNonce(externalSigner, nonce);
@@ -203,8 +200,6 @@ contract OriginationController is
             nonce,
             keccak256(abi.encode(itemPredicates))
         );
-        // signature must not have already expired
-        if (loanTerms.deadline < block.timestamp) revert OC_SignatureIsExpired(loanTerms.deadline);
 
         _validateCounterparties(borrower, lender, msg.sender, externalSigner, sig, sighash);
 
@@ -507,7 +502,7 @@ contract OriginationController is
      */
     function _validateLoanTerms(
         LoanLibrary.LoanTerms memory terms
-    ) internal pure {
+    ) internal view {
         // principal must be greater than or equal to 10000 wei
         if (terms.principal < 10_000) revert OC_PrincipalTooLow(terms.principal);
 
@@ -521,6 +516,9 @@ contract OriginationController is
         // number of installments must be an even number.
         if (terms.numInstallments % 2 != 0 || terms.numInstallments > 1_000_000)
             revert OC_NumberInstallments(terms.numInstallments);
+
+        // signature must not have already expired
+        if (terms.deadline < block.timestamp) revert OC_SignatureIsExpired(terms.deadline);
     }
 
     /**
