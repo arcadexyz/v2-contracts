@@ -48,48 +48,42 @@ export async function main(
 
     console.log("FeeController deployed to: ", feeController.address);
 
+    const PromissoryNoteFactory = await ethers.getContractFactory("PromissoryNote");
+    const borrowerNote = <PromissoryNote>await PromissoryNoteFactory.deploy("Arcade.xyz BorrowerNote", "aBN");
+    await borrowerNote.deployed()
+    const lenderNote = <PromissoryNote>await PromissoryNoteFactory.deploy("Arcade.xyz LenderNote", "aLN");
+    await lenderNote.deployed()
+    console.log("BorrowerNote deployed to:", borrowerNote.address);
+    console.log("LenderNote deployed to:", lenderNote.address);
+
     const LoanCoreFactory = await ethers.getContractFactory("LoanCore");
-    const loanCore = <LoanCore>await upgrades.deployProxy(LoanCoreFactory, [feeController.address], { kind: "uups" });
+    const loanCore = <LoanCore>await upgrades.deployProxy(LoanCoreFactory, [feeController.address, borrowerNote.address, lenderNote.address], { kind: "uups" });
     await loanCore.deployed();
-
     console.log("LoanCore deployed to:", loanCore.address);
-
-    const promissoryNoteFactory = await ethers.getContractFactory("PromissoryNote");
-    const borrowerNoteAddr = await loanCore.borrowerNote();
-    const borrowerNote = <PromissoryNote>await promissoryNoteFactory.attach(borrowerNoteAddr);
-    const lenderNoteAddr = await loanCore.lenderNote();
-    const lenderNote = <PromissoryNote>await promissoryNoteFactory.attach(lenderNoteAddr);
-
-    console.log("BorrowerNote deployed to:", borrowerNoteAddr);
-    console.log("LenderNote deployed to:", lenderNoteAddr);
 
     const RepaymentControllerFactory = await ethers.getContractFactory("RepaymentController");
     const repaymentController = <RepaymentController>(
-        await RepaymentControllerFactory.deploy(loanCore.address, borrowerNoteAddr, lenderNoteAddr)
+         await RepaymentControllerFactory.deploy(loanCore.address, borrowerNote.address, lenderNote.address)
     );
-
     await repaymentController.deployed();
+
     const updateRepaymentControllerPermissions = await loanCore.grantRole(REPAYER_ROLE, repaymentController.address);
     await updateRepaymentControllerPermissions.wait();
-
     console.log("RepaymentController deployed to:", repaymentController.address);
 
     const OriginationControllerFactory = await ethers.getContractFactory("OriginationController");
     const originationController = <OriginationController>(
         await upgrades.deployProxy(OriginationControllerFactory, [loanCore.address], { kind: "uups" })
     );
-
     await originationController.deployed();
     const updateOriginationControllerPermissions = await loanCore.grantRole(
         ORIGINATOR_ROLE,
         originationController.address,
     );
     await updateOriginationControllerPermissions.wait();
-
     console.log("OriginationController deployed to:", originationController.address);
 
     const VaultFactoryFactory = await ethers.getContractFactory("VaultFactory");
-    // console.log("VaultFactory deployed to:", VaultFactoryFactory)
     const vaultFactory = <VaultFactory>await upgrades.deployProxy(
         VaultFactoryFactory,
         [assetVault.address, whitelist.address],
@@ -109,7 +103,7 @@ export async function main(
         repaymentController,
         originationController,
         whitelist,
-        vaultFactory,
+        vaultFactory
     };
 }
 
