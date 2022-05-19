@@ -41,7 +41,6 @@ interface TestContext {
     admin: SignerWithAddress;
     currentTimestamp: number;
     blockchainTime: BlockchainTime;
-    signatureDate: number;
 }
 
 interface LoanDef {
@@ -80,7 +79,6 @@ const initializeBundle = async (vaultFactory: VaultFactory, user: SignerWithAddr
 const fixture = async (): Promise<TestContext> => {
     const blockchainTime = new BlockchainTime();
     const currentTimestamp = await blockchainTime.secondsFromNow(0);
-    const signatureDate = currentTimestamp;
 
     const signers: SignerWithAddress[] = await hre.ethers.getSigners();
     const [borrower, lender, admin] = signers;
@@ -142,7 +140,6 @@ const fixture = async (): Promise<TestContext> => {
         admin,
         currentTimestamp,
         blockchainTime,
-        signatureDate,
     };
 };
 
@@ -158,7 +155,7 @@ const createLoanTerms = (
         interestRate = hre.ethers.utils.parseEther("1"),
         collateralId = 1,
         numInstallments = 0,
-        deadline = 259200,
+        deadline = 1754884800,
     }: Partial<LoanTerms> = {},
 ): LoanTerms => {
     return {
@@ -202,7 +199,7 @@ const createInstallmentLoanTerms = (
  * Initialize a loan WITHOUT installments
  */
 const initializeLoan = async (context: TestContext): Promise<LoanDef> => {
-    const { originationController, mockERC20, vaultFactory, loanCore, lender, borrower, signatureDate } = context;
+    const { originationController, mockERC20, vaultFactory, loanCore, lender, borrower } = context;
     const bundleId = await initializeBundle(vaultFactory, borrower);
     const loanTerms = createLoanTerms(mockERC20.address, vaultFactory.address, { collateralId: bundleId });
     await mint(mockERC20, lender, loanTerms.principal);
@@ -221,7 +218,7 @@ const initializeLoan = async (context: TestContext): Promise<LoanDef> => {
 
     const tx = await originationController
         .connect(lender)
-        .initializeLoan(loanTerms, await borrower.getAddress(), await lender.getAddress(), sig, 1, signatureDate);
+        .initializeLoan(loanTerms, await borrower.getAddress(), await lender.getAddress(), sig, 1);
     const receipt = await tx.wait();
 
     let loanId;
@@ -255,7 +252,7 @@ const initializeInstallmentLoan = async (
     deadline: BigNumberish,
     terms?: Partial<LoanTerms>,
 ): Promise<LoanDef> => {
-    const { originationController, mockERC20, vaultFactory, loanCore, lender, borrower, signatureDate } = context;
+    const { originationController, mockERC20, vaultFactory, loanCore, lender, borrower } = context;
     const bundleId = await initializeBundle(vaultFactory, borrower);
     const loanTerms = createInstallmentLoanTerms(
         payableCurrency,
@@ -285,7 +282,7 @@ const initializeInstallmentLoan = async (
     await vaultFactory.connect(borrower).approve(originationController.address, bundleId);
     const tx = await originationController
         .connect(lender)
-        .initializeLoan(loanTerms, await borrower.getAddress(), await lender.getAddress(), sig, 1, signatureDate);
+        .initializeLoan(loanTerms, await borrower.getAddress(), await lender.getAddress(), sig, 1);
     const receipt = await tx.wait();
 
     let loanId;
@@ -352,7 +349,7 @@ describe("Installments", () => {
                 hre.ethers.utils.parseEther("100"), // principal
                 hre.ethers.utils.parseEther("1000"), // interest
                 4, // numInstallments
-                259200// deadline
+                1754884800 // deadline
             );
 
             //increase time barely, so getInstallmentMinPayment fn call does not occur in the same block
@@ -379,7 +376,7 @@ describe("Installments", () => {
                 hre.ethers.utils.parseEther("100"), // principal
                 hre.ethers.utils.parseEther("1000"), // interest
                 8, // numInstallments
-                259200// deadline
+                1754884800 // deadline
             );
 
             //increase one installment period
@@ -406,7 +403,7 @@ describe("Installments", () => {
                 hre.ethers.utils.parseEther("100"), // principal
                 hre.ethers.utils.parseEther("1000"), // interest
                 8, // numInstallments
-                259200// deadline
+                1754884800 // deadline
             );
 
             //increase one installment period
@@ -433,7 +430,7 @@ describe("Installments", () => {
                 hre.ethers.utils.parseEther("100"), // principal
                 hre.ethers.utils.parseEther("1000"), // interest
                 10, // numInstallments
-                259200// deadline
+                1754884800 // deadline
             );
 
             //increase two installment periods
@@ -460,7 +457,7 @@ describe("Installments", () => {
                 hre.ethers.utils.parseEther("100"), // principal
                 hre.ethers.utils.parseEther("1000"), // interest
                 4, // numInstallments
-                259200// deadline
+                1754884800 // deadline
             );
             // pay first installment
             await mockERC20.connect(borrower).approve(repaymentController.address, ethers.utils.parseEther("2.5"));
@@ -491,7 +488,7 @@ describe("Installments", () => {
                 hre.ethers.utils.parseEther("100"), // principal
                 hre.ethers.utils.parseEther("1000"), // interest
                 8, // numInstallments
-                259200// deadline
+                1754884800 // deadline
             );
 
             await blockchainTime.increaseTime(36000 / 8 + 10);
@@ -543,7 +540,7 @@ describe("Installments", () => {
                 hre.ethers.utils.parseEther("100"), // principal
                 hre.ethers.utils.parseEther("1000"), // interest
                 8, // numInstallments
-                259200// deadline
+                1754884800 // deadline
             );
             const borrowerBalanceBefore = await mockERC20.balanceOf(await borrower.getAddress());
             const lenderBalanceBefore = await mockERC20.balanceOf(await lender.getAddress());
@@ -577,7 +574,7 @@ describe("Installments", () => {
                 hre.ethers.utils.parseEther("100"), // principal
                 hre.ethers.utils.parseEther("1000"), // interest
                 4, // numInstallments
-                259200// deadline
+                1754884800 // deadline
             );
             const borrowerBalanceBefore = await mockERC20.balanceOf(await borrower.getAddress());
             const lenderBalanceBefore = await mockERC20.balanceOf(await lender.getAddress());
@@ -611,7 +608,7 @@ describe("Installments", () => {
                 hre.ethers.utils.parseEther("100"), // principal
                 hre.ethers.utils.parseEther("1000"), // interest
                 4, // numInstallments
-                259200// deadline
+                1754884800 // deadline
             );
             const borrowerBalanceBefore = await mockERC20.balanceOf(await borrower.getAddress());
 
@@ -634,7 +631,7 @@ describe("Installments", () => {
                     hre.ethers.utils.parseEther("100"), // principal
                     hre.ethers.utils.parseEther("1000"), // interest
                     4, // numInstallments
-                    259200// deadline
+                    1754884800 // deadline
                 );
                 const borrowerBalanceBefore = await mockERC20.balanceOf(await borrower.getAddress());
                 const lenderBalanceBefore = await mockERC20.balanceOf(await lender.getAddress());
@@ -667,7 +664,7 @@ describe("Installments", () => {
                     hre.ethers.utils.parseEther("100"), // principal
                     hre.ethers.utils.parseEther("1000"), // interest
                     4, // numInstallments
-                    259200// deadline
+                    1754884800 // deadline
                 );
                 const borrowerBalanceBefore = await mockERC20.balanceOf(await borrower.getAddress());
                 const lenderBalanceBefore = await mockERC20.balanceOf(await lender.getAddress());
@@ -700,7 +697,7 @@ describe("Installments", () => {
                     hre.ethers.utils.parseEther("100"), // principal
                     hre.ethers.utils.parseEther("1000"), // interest
                     4, // numInstallments
-                    259200// deadline
+                    1754884800 // deadline
                 );
                 //increase two installment period
                 await blockchainTime.increaseTime(36000 / 4 + 36000 / 4);
@@ -721,7 +718,7 @@ describe("Installments", () => {
                     hre.ethers.utils.parseEther("100"), // principal
                     hre.ethers.utils.parseEther("1000"), // interest
                     4, // numInstallments
-                    259200// deadline
+                    1754884800 // deadline
                 );
                 const borrowerBalanceBefore = await mockERC20.balanceOf(await borrower.getAddress());
                 const lenderBalanceBefore = await mockERC20.balanceOf(await lender.getAddress());
@@ -764,7 +761,7 @@ describe("Installments", () => {
                         hre.ethers.utils.parseEther("100"), // principal
                         hre.ethers.utils.parseEther("1000"), // interest
                         4, // numInstallments
-                        259200// deadline
+                        1754884800 // deadline
                     );
                     const borrowerBalanceBefore = await mockERC20.balanceOf(await borrower.getAddress());
                     const lenderBalanceBefore = await mockERC20.balanceOf(await lender.getAddress());
@@ -808,7 +805,7 @@ describe("Installments", () => {
                         hre.ethers.utils.parseEther("100"), // principal
                         hre.ethers.utils.parseEther("1000"), // interest
                         4, // numInstallments
-                        259200// deadline
+                        1754884800 // deadline
                     );
                     const borrowerBalanceBefore = await mockERC20.balanceOf(await borrower.getAddress());
 
@@ -835,7 +832,7 @@ describe("Installments", () => {
                         hre.ethers.utils.parseEther("100"), // principal
                         hre.ethers.utils.parseEther("1000"), // interest
                         4, // numInstallments
-                        259200// deadline
+                        1754884800 // deadline
                     );
                     const borrowerBalanceBefore = await mockERC20.balanceOf(await borrower.getAddress());
                     const lenderBalanceBefore = await mockERC20.balanceOf(await lender.getAddress());
@@ -879,7 +876,7 @@ describe("Installments", () => {
                         hre.ethers.utils.parseEther("100"), // principal
                         hre.ethers.utils.parseEther("1000"), // interest
                         4, // numInstallments
-                        259200// deadline
+                        1754884800 // deadline
                     );
                     const borrowerBalanceBefore = await mockERC20.balanceOf(await borrower.getAddress());
                     const lenderBalanceBefore = await mockERC20.balanceOf(await lender.getAddress());
@@ -926,7 +923,7 @@ describe("Installments", () => {
                     hre.ethers.utils.parseEther("100"), // principal
                     hre.ethers.utils.parseEther("1000"), // interest
                     8, // numInstallments
-                    259200// deadline
+                    1754884800 // deadline
                 );
                 const borrowerBalanceBefore = await mockERC20.balanceOf(await borrower.getAddress());
                 const lenderBalanceBefore = await mockERC20.balanceOf(await lender.getAddress());
@@ -964,7 +961,7 @@ describe("Installments", () => {
                     hre.ethers.utils.parseEther("100"), // principal
                     hre.ethers.utils.parseEther("1000"), // interest
                     4, // numInstallments
-                    259200// deadline
+                    1754884800 // deadline
                 );
                 const borrowerBalanceBefore = await mockERC20.balanceOf(await borrower.getAddress());
                 const lenderBalanceBefore = await mockERC20.balanceOf(await lender.getAddress());
@@ -1034,7 +1031,7 @@ describe("Installments", () => {
                     hre.ethers.utils.parseEther("100"), // principal
                     hre.ethers.utils.parseEther("1000"), // interest
                     8, // numInstallments
-                    259200// deadline
+                    1754884800 // deadline
 
                 );
                 const borrowerBalanceBefore = await mockERC20.balanceOf(await borrower.getAddress());
@@ -1131,7 +1128,7 @@ describe("Installments", () => {
                     hre.ethers.utils.parseEther("1000"), // principal
                     hre.ethers.utils.parseEther("625"), // interest
                     12, // numInstallments
-                    259200// deadline
+                    1754884800 // deadline
                 );
                 const borrowerBalanceBefore = await mockERC20.balanceOf(await borrower.getAddress());
                 const lenderBalanceBefore = await mockERC20.balanceOf(await lender.getAddress());
@@ -1177,7 +1174,7 @@ describe("Installments", () => {
                     hre.ethers.utils.parseEther("100000"), // principal
                     hre.ethers.utils.parseEther("1000"), // interest
                     12, // numInstallments
-                    259200// deadline
+                    1754884800 // deadline
                 );
                 const borrowerBalanceBefore = await mockERC20.balanceOf(await borrower.getAddress());
                 const lenderBalanceBefore = await mockERC20.balanceOf(await lender.getAddress());
@@ -1230,7 +1227,7 @@ describe("Installments", () => {
                     hre.ethers.utils.parseEther("100"), // principal
                     hre.ethers.utils.parseEther("1000"), // interest
                     4, // numInstallments
-                    259200// deadline
+                    1754884800 // deadline
                 );
                 const borrowerBalanceBefore = await mockERC20.balanceOf(await borrower.getAddress());
                 const lenderBalanceBefore = await mockERC20.balanceOf(await lender.getAddress());
@@ -1281,7 +1278,7 @@ describe("Installments", () => {
                     hre.ethers.utils.parseEther("100"), // principal
                     hre.ethers.utils.parseEther("1000"), // interest
                     4, // numInstallments
-                    259200// deadline
+                    1754884800 // deadline
                 );
                 const borrowerBalanceBefore = await mockERC20.balanceOf(await borrower.getAddress());
                 const lenderBalanceBefore = await mockERC20.balanceOf(await lender.getAddress());
@@ -1336,7 +1333,7 @@ describe("Installments", () => {
                     hre.ethers.utils.parseEther("100"), // principal
                     hre.ethers.utils.parseEther("1000"), // interest
                     4, // numInstallments
-                    259200// deadline
+                    1754884800 // deadline
                 );
                 const borrowerBalanceBefore = await mockERC20.balanceOf(await borrower.getAddress());
                 const lenderBalanceBefore = await mockERC20.balanceOf(await lender.getAddress());
@@ -1389,7 +1386,7 @@ describe("Installments", () => {
                     hre.ethers.utils.parseEther("1000"), // principal
                     hre.ethers.utils.parseEther("75"), // interest
                     24, // numInstallments
-                    259200// deadline
+                    1754884800 // deadline
                 );
                 const borrowerBalanceBefore = await mockERC20.balanceOf(await borrower.getAddress());
                 const lenderBalanceBefore = await mockERC20.balanceOf(await lender.getAddress());
@@ -1435,7 +1432,7 @@ describe("Installments", () => {
                     hre.ethers.utils.parseEther("100"), // principal
                     hre.ethers.utils.parseEther("1000"), // interest
                     4, // numInstallments
-                    259200// deadline
+                    1754884800 // deadline
                 );
                 const borrowerBalanceBefore = await mockERC20.balanceOf(await borrower.getAddress());
                 const lenderBalanceBefore = await mockERC20.balanceOf(await lender.getAddress());
@@ -1472,7 +1469,7 @@ describe("Installments", () => {
                     hre.ethers.utils.parseEther("100"), // principal
                     hre.ethers.utils.parseEther("1000"), // interest
                     4, // numInstallments
-                    259200// deadline
+                    1754884800 // deadline
                 );
                 const borrowerBalanceBefore = await mockERC20.balanceOf(await borrower.getAddress());
 
@@ -1498,7 +1495,7 @@ describe("Installments", () => {
                     hre.ethers.utils.parseEther("100"), // principal
                     hre.ethers.utils.parseEther("1000"), // interest
                     4, // numInstallments
-                    259200// deadline
+                    1754884800 // deadline
                 );
                 const borrowerBalanceBefore = await mockERC20.balanceOf(await borrower.getAddress());
                 const lenderBalanceBefore = await mockERC20.balanceOf(await lender.getAddress());
@@ -1543,7 +1540,7 @@ describe("Installments", () => {
                     hre.ethers.utils.parseEther("100"), // principal
                     hre.ethers.utils.parseEther("1000"), // interest
                     4, // numInstallments
-                    259200// deadline
+                    1754884800 // deadline
                 );
                 const borrowerBalanceBefore = await mockERC20.balanceOf(await borrower.getAddress());
                 const lenderBalanceBefore = await mockERC20.balanceOf(await lender.getAddress());
@@ -1597,7 +1594,7 @@ describe("Installments", () => {
                     hre.ethers.utils.parseEther("100"), // principal
                     hre.ethers.utils.parseEther("1000"), // interest
                     4, // numInstallments
-                    259200// deadline
+                    1754884800 // deadline
                 );
                 const borrowerBalanceBefore = await mockERC20.balanceOf(await borrower.getAddress());
                 const lenderBalanceBefore = await mockERC20.balanceOf(await lender.getAddress());
@@ -1641,7 +1638,7 @@ describe("Installments", () => {
                     hre.ethers.utils.parseEther("100"), // principal
                     hre.ethers.utils.parseEther("1000"), // interest
                     4, // numInstallments
-                    259200// deadline
+                    1754884800 // deadline
                 );
                 const borrowerBalanceBefore = await mockERC20.balanceOf(await borrower.getAddress());
                 const lenderBalanceBefore = await mockERC20.balanceOf(await lender.getAddress());

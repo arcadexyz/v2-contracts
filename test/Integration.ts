@@ -38,7 +38,6 @@ interface TestContext {
     admin: SignerWithAddress;
     currentTimestamp: number;
     blockchainTime: BlockchainTime;
-    signatureDate: number;
 }
 
 describe("Integration", () => {
@@ -50,7 +49,6 @@ describe("Integration", () => {
     const fixture = async (): Promise<TestContext> => {
          const blockchainTime = new BlockchainTime();
          const currentTimestamp = await blockchainTime.secondsFromNow(0);
-         const signatureDate = currentTimestamp;
 
         const signers: SignerWithAddress[] = await hre.ethers.getSigners();
         const [borrower, lender, admin] = signers;
@@ -113,8 +111,7 @@ describe("Integration", () => {
             lender,
             admin,
             currentTimestamp,
-            blockchainTime,
-            signatureDate,
+            blockchainTime
         };
     };
 
@@ -130,7 +127,7 @@ describe("Integration", () => {
             interestRate = hre.ethers.utils.parseEther("1"),
             collateralId = 1,
             numInstallments = 0,
-            deadline = 259200,
+            deadline = 1754884800,
         }: Partial<LoanTerms> = {},
     ): LoanTerms => {
         return {
@@ -157,7 +154,7 @@ describe("Integration", () => {
 
     describe("Originate Loan", function () {
         it("should successfully create a loan", async () => {
-            const { originationController, mockERC20, loanCore, vaultFactory, lender, borrower, signatureDate } = await loadFixture(
+            const { originationController, mockERC20, loanCore, vaultFactory, lender, borrower } = await loadFixture(
                 fixture,
             );
 
@@ -180,7 +177,7 @@ describe("Integration", () => {
             await expect(
                 originationController
                     .connect(lender)
-                    .initializeLoan(loanTerms, await borrower.getAddress(), await lender.getAddress(), sig, 1, signatureDate),
+                    .initializeLoan(loanTerms, await borrower.getAddress(), await lender.getAddress(), sig, 1),
             )
                 .to.emit(mockERC20, "Transfer")
                 .withArgs(await lender.getAddress(), originationController.address, loanTerms.principal)
@@ -190,7 +187,7 @@ describe("Integration", () => {
         });
 
         it("should fail to start loan if wNFT has withdraws enabled", async () => {
-            const { originationController, mockERC20, vaultFactory, lender, borrower, signatureDate } = await loadFixture(fixture);
+            const { originationController, mockERC20, vaultFactory, lender, borrower } = await loadFixture(fixture);
 
             const bundleId = await createWnft(vaultFactory, borrower);
             const loanTerms = createLoanTerms(mockERC20.address, vaultFactory.address, { collateralId: bundleId });
@@ -212,12 +209,12 @@ describe("Integration", () => {
             await expect(
                 originationController
                     .connect(lender)
-                    .initializeLoan(loanTerms, await borrower.getAddress(), await lender.getAddress(), sig, 1, signatureDate),
+                    .initializeLoan(loanTerms, await borrower.getAddress(), await lender.getAddress(), sig, 1),
             ).to.be.revertedWith("VF_NoTransferWithdrawEnabled");
         });
 
         it("should fail to create a loan with nonexistent collateral", async () => {
-            const { originationController, mockERC20, lender, borrower, vaultFactory, signatureDate } = await loadFixture(fixture);
+            const { originationController, mockERC20, lender, borrower, vaultFactory } = await loadFixture(fixture);
 
             const mockOpenVault = await deploy("MockOpenVault", borrower, []);
             const bundleId = mockOpenVault.address;
@@ -237,12 +234,12 @@ describe("Integration", () => {
             await expect(
                 originationController
                     .connect(lender)
-                    .initializeLoan(loanTerms, await borrower.getAddress(), await lender.getAddress(), sig, 1, signatureDate),
+                    .initializeLoan(loanTerms, await borrower.getAddress(), await lender.getAddress(), sig, 1),
             ).to.be.revertedWith("ERC721: operator query for nonexistent token");
         });
 
         it("should fail to create a loan with passed due date", async () => {
-            const { originationController, mockERC20, vaultFactory, lender, borrower, signatureDate } = await loadFixture(fixture);
+            const { originationController, mockERC20, vaultFactory, lender, borrower } = await loadFixture(fixture);
             const bundleId = await createWnft(vaultFactory, borrower);
             const loanTerms = createLoanTerms(mockERC20.address, vaultFactory.address, {
                 collateralId: bundleId,
@@ -264,7 +261,7 @@ describe("Integration", () => {
             await expect(
                 originationController
                     .connect(lender)
-                    .initializeLoan(loanTerms, await borrower.getAddress(), await lender.getAddress(), sig, 1, signatureDate),
+                    .initializeLoan(loanTerms, await borrower.getAddress(), await lender.getAddress(), sig, 1),
             ).to.be.revertedWith("OC_LoanDuration");
         });
     });
@@ -278,7 +275,7 @@ describe("Integration", () => {
         }
 
         const initializeLoan = async (context: TestContext, nonce: number, terms?: Partial<LoanTerms>): Promise<LoanDef> => {
-            const { originationController, mockERC20, vaultFactory, loanCore, lender, borrower, signatureDate } = context;
+            const { originationController, mockERC20, vaultFactory, loanCore, lender, borrower } = context;
             const bundleId = terms?.collateralId ?? (await createWnft(vaultFactory, borrower));
             const loanTerms = createLoanTerms(mockERC20.address, vaultFactory.address, { collateralId: bundleId });
             if (terms) Object.assign(loanTerms, terms);
@@ -299,7 +296,7 @@ describe("Integration", () => {
 
             const tx = await originationController
                 .connect(lender)
-                .initializeLoan(loanTerms, await borrower.getAddress(), await lender.getAddress(), sig, nonce, signatureDate);
+                .initializeLoan(loanTerms, await borrower.getAddress(), await lender.getAddress(), sig, nonce);
             const receipt = await tx.wait();
 
             let loanId;
@@ -406,7 +403,7 @@ describe("Integration", () => {
         }
 
         const initializeLoan = async (context: TestContext, nonce:number, terms?: Partial<LoanTerms>): Promise<LoanDef> => {
-            const { originationController, mockERC20, vaultFactory, loanCore, lender, borrower, signatureDate } = context;
+            const { originationController, mockERC20, vaultFactory, loanCore, lender, borrower } = context;
             const durationSecs = BigNumber.from(3600);
             const bundleId = terms?.collateralId ?? (await createWnft(vaultFactory, borrower));
             const loanTerms = createLoanTerms(mockERC20.address, vaultFactory.address, {
@@ -429,7 +426,7 @@ describe("Integration", () => {
             await vaultFactory.connect(borrower).approve(originationController.address, bundleId);
             const tx = await originationController
                 .connect(lender)
-                .initializeLoan(loanTerms, await borrower.getAddress(), await lender.getAddress(), sig, nonce, signatureDate);
+                .initializeLoan(loanTerms, await borrower.getAddress(), await lender.getAddress(), sig, nonce);
             const receipt = await tx.wait();
 
             let loanId;
