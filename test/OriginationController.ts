@@ -115,7 +115,7 @@ const createLoanTerms = (
         interestRate = hre.ethers.utils.parseEther("1"),
         collateralId = "1",
         numInstallments = 0,
-        deadline = BigNumber.from(259200),
+        deadline = 259200,
     }: Partial<LoanTerms> = {},
 ): LoanTerms => {
     return {
@@ -334,6 +334,34 @@ describe("OriginationController", () => {
             ).to.be.revertedWith("OC_InvalidSignature");
         });
 
+        it("Reverts on an expired signature", async () => {
+            const { originationController, mockERC20, vaultFactory, user: lender, other: borrower, currentTimestamp } = ctx;
+            const bundleId = await initializeBundle(vaultFactory, borrower);
+            const loanTerms = createLoanTerms(mockERC20.address, vaultFactory.address, { collateralId: bundleId });
+
+            await currentTimestamp;
+            let expiredSigDate = Math.floor(currentTimestamp / 20)
+
+            await mint(mockERC20, lender, loanTerms.principal);
+
+            const sig = await createLoanTermsSignature(
+                originationController.address,
+                "OriginationController",
+                loanTerms,
+                borrower,
+                "2",
+                "3", // Use nonce 3
+            );
+
+            await approve(mockERC20, lender, originationController.address, loanTerms.principal);
+            await vaultFactory.connect(borrower).approve(originationController.address, bundleId);
+            await expect(
+                originationController
+                    .connect(lender)
+                    .initializeLoan(loanTerms, await borrower.getAddress(), await lender.getAddress(), sig, 1, expiredSigDate),
+            ).to.be.revertedWith("OC_SignatureIsExpired");
+        });
+
         it("Reverts if the nonce does not match the signature", async () => {
             const { originationController, mockERC20, vaultFactory, user: lender, other: borrower, signatureDate } = ctx;
 
@@ -462,7 +490,7 @@ describe("OriginationController", () => {
             await expect(
                 originationController
                     .connect(borrower)
-                    .initializeLoan(loanTerms, await borrower.getAddress(), await lender.getAddress(), sig, signatureDate, 1),
+                    .initializeLoan(loanTerms, await borrower.getAddress(), await lender.getAddress(), sig, 1, signatureDate),
             )
                 .to.emit(mockERC20, "Transfer")
                 .withArgs(await lender.getAddress(), originationController.address, loanTerms.principal);
@@ -471,7 +499,7 @@ describe("OriginationController", () => {
             await expect(
                 originationController
                     .connect(borrower)
-                    .initializeLoan(loanTerms, await borrower.getAddress(), await lender.getAddress(), sig, signatureDate, 1),
+                    .initializeLoan(loanTerms, await borrower.getAddress(), await lender.getAddress(), sig, 1, signatureDate),
             ).to.be.revertedWith("LC_NonceUsed");
         });
 

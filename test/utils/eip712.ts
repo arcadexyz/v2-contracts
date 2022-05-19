@@ -121,7 +121,6 @@ export async function createLoanItemsSignature(
     signer: SignerWithAddress,
     version = "1",
     nonce = "1",
-    deadline = BigNumber.from(259200),
 ): Promise<ECDSASignature> {
     const message: ItemsPayload = {
         durationSecs: terms.durationSecs,
@@ -132,7 +131,7 @@ export async function createLoanItemsSignature(
         payableCurrency: terms.payableCurrency,
         numInstallments: terms.numInstallments,
         nonce,
-        deadline,
+        deadline: terms.deadline
     };
 
     const data = buildData(verifyingContract, name, version, message, typedLoanItemsData);

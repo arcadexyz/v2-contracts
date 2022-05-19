@@ -587,18 +587,4 @@ contract OriginationController is
         // Start loan
         loanId = ILoanCore(loanCore).startLoan(lender, borrower, loanTerms);
     }
-
-    //  /**
-    //  * @dev Set signature deadline to inform initializeLoan and initializeLoanWithItems if
-    //  *      the loanterms signature deadline has expired.
-    //  *
-    //  * @param deadline                      The time in seconds for signature expiry, agreed by the lender and borrower.
-    //  * @param borrower                      Address of the borrower.
-    //  * @param lender                        Address of the lender.
-    //  *
-    //  * @return loanId                       The unique ID of the new loan.
-    //  */
-    // function setDeadline(uint256 deadline) public {
-    //     deadline = block.timestamp + deadline;
-    // }
 }

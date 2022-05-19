@@ -321,6 +321,7 @@ describe("Installments", () => {
                     hre.ethers.utils.parseEther("100"), // principal
                     hre.ethers.utils.parseEther("1000"), // interest
                     1, // numInstallments
+                    BigNumber.from(259200)
                 ),
             ).to.be.revertedWith("OC_NumberInstallments");
         });
@@ -336,6 +337,7 @@ describe("Installments", () => {
                     hre.ethers.utils.parseEther("100"), // principal
                     hre.ethers.utils.parseEther("1000"), // interest
                     11, // numInstallments
+                     BigNumber.from(259200)
                 ),
             ).to.be.revertedWith("OC_NumberInstallments");
         });

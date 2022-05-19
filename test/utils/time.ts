@@ -11,4 +11,9 @@ export class BlockchainTime {
         await hre.network.provider.send("evm_increaseTime", [seconds]);
         await hre.network.provider.send("evm_mine");
     }
+
+     async decreaseTime(seconds: number): Promise<void> {
+        await hre.network.provider.send("evm_increaseTime", [-604800]);
+        await hre.network.provider.send("evm_mine");
+    }
 }
