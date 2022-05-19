@@ -1689,6 +1689,7 @@ describe("Installments", () => {
             hre.ethers.utils.parseEther("100"), // principal
             hre.ethers.utils.parseEther("1000"), // interest
             2, // numInstallments
+            1754884800 // deadline
         );
         const borrowerBalanceBefore = await vaultFactory.balanceOf(await borrower.getAddress());
         const lenderBalanceBefore = await vaultFactory.balanceOf(await lender.getAddress());
@@ -1715,6 +1716,7 @@ describe("Installments", () => {
             hre.ethers.utils.parseEther("100"), // principal
             hre.ethers.utils.parseEther("1000"), // interest
             2, // numInstallments
+            1754884800 // deadline
         );
         const borrowerBalanceBefore = await mockERC20.balanceOf(await borrower.getAddress());
         const lenderBalanceBefore = await mockERC20.balanceOf(await lender.getAddress());
@@ -1735,6 +1737,7 @@ describe("Installments", () => {
             hre.ethers.utils.parseEther("100"), // principal
             hre.ethers.utils.parseEther("1000"), // interest
             2, // numInstallments
+            1754884800 // deadline
         );
         const borrowerBalanceBefore = await vaultFactory.balanceOf(await borrower.getAddress());
         const lenderBalanceBefore = await vaultFactory.balanceOf(await lender.getAddress());
@@ -1761,6 +1764,7 @@ describe("Installments", () => {
             hre.ethers.utils.parseEther("100"), // principal
             hre.ethers.utils.parseEther("1000"), // interest
             4, // numInstallments
+            1754884800 // deadline
         );
         const borrowerBalanceBefore = await vaultFactory.balanceOf(await borrower.getAddress());
         const lenderBalanceBefore = await vaultFactory.balanceOf(await lender.getAddress());
@@ -1787,6 +1791,7 @@ describe("Installments", () => {
             hre.ethers.utils.parseEther("100"), // principal
             hre.ethers.utils.parseEther("1000"), // interest
             4, // numInstallments
+            1754884800 // deadline
         );
         const borrowerBalanceBefore = await vaultFactory.balanceOf(await borrower.getAddress());
         const lenderBalanceBefore = await vaultFactory.balanceOf(await lender.getAddress());
@@ -1813,6 +1818,7 @@ describe("Installments", () => {
             hre.ethers.utils.parseEther("100"), // principal
             hre.ethers.utils.parseEther("1000"), // interest
             4, // numInstallments
+            1754884800 // deadline
         );
         const borrowerBalanceBefore = await vaultFactory.balanceOf(await borrower.getAddress());
         const lenderBalanceBefore = await vaultFactory.balanceOf(await lender.getAddress());
@@ -1852,6 +1858,7 @@ describe("Installments", () => {
             hre.ethers.utils.parseEther("100"), // principal
             hre.ethers.utils.parseEther("1000"), // interest
             4, // numInstallments
+            1754884800 // deadline
         );
         const borrowerBalanceBefore = await vaultFactory.balanceOf(await borrower.getAddress());
         const lenderBalanceBefore = await vaultFactory.balanceOf(await lender.getAddress());
@@ -1891,6 +1898,7 @@ describe("Installments", () => {
             hre.ethers.utils.parseEther("100"), // principal
             hre.ethers.utils.parseEther("1000"), // interest
             4, // numInstallments
+            1754884800 // deadline
         );
         const borrowerBalanceBefore = await vaultFactory.balanceOf(await borrower.getAddress());
         const lenderBalanceBefore = await vaultFactory.balanceOf(await lender.getAddress());
@@ -1944,6 +1952,7 @@ describe("Installments", () => {
             hre.ethers.utils.parseEther("100"), // principal
             hre.ethers.utils.parseEther("1000"), // interest
             10, // numInstallments
+            1754884800 // deadline
         );
         const borrowerBalanceBefore = await vaultFactory.balanceOf(await borrower.getAddress());
         const lenderBalanceBefore = await vaultFactory.balanceOf(await lender.getAddress());
@@ -1999,6 +2008,7 @@ describe("Installments", () => {
             hre.ethers.utils.parseEther("100"), // principal
             hre.ethers.utils.parseEther("1000"), // interest
             24, // numInstallments
+            1754884800 // deadline
         );
         const borrowerBalanceBefore = await vaultFactory.balanceOf(await borrower.getAddress());
         const lenderBalanceBefore = await vaultFactory.balanceOf(await lender.getAddress());
