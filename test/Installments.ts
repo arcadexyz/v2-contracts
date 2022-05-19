@@ -1934,5 +1934,114 @@ describe("Installments", () => {
         expect(borrowerBalanceAfter.sub(borrowerBalanceBefore)).to.equal(0)
         expect(lenderBalanceAfter.sub(lenderBalanceBefore)).to.equal(1)
       });
+      it("Scenario: numInstallments: 10, durationSecs: 36000. Borrower repays minimum. Lender tries to claim various times in loan duration.", async () => {
+        const context = await loadFixture(fixture);
+        const { repaymentController, loanCore, mockERC20, vaultFactory, borrower, lender, blockchainTime } = context;
+        const { loanId } = await initializeInstallmentLoan(
+            context,
+            mockERC20.address,
+            BigNumber.from(36000), // durationSecs
+            hre.ethers.utils.parseEther("100"), // principal
+            hre.ethers.utils.parseEther("1000"), // interest
+            10, // numInstallments
+        );
+        const borrowerBalanceBefore = await vaultFactory.balanceOf(await borrower.getAddress());
+        const lenderBalanceBefore = await vaultFactory.balanceOf(await lender.getAddress());
+
+        //increase time slightly
+        await blockchainTime.increaseTime(100);
+        // borrower repays minimum
+        await mockERC20
+            .connect(borrower)
+            .approve(repaymentController.address, ethers.utils.parseEther("1.0"));
+        await expect(repaymentController.connect(borrower).repayPartMinimum(loanId))
+            .to.emit(mockERC20, "Transfer")
+            .withArgs(
+                await borrower.getAddress(),
+                repaymentController.address,
+                ethers.utils.parseEther("1.0"),
+            );
+
+        //increase time 25% of duration (second installment period)
+        await blockchainTime.increaseTime(3600);
+        // have lender call claim on the collateral
+        await expect(repaymentController.connect(lender).claim(loanId)).to.be.revertedWith("LC_LoanNotDefaulted");
+        //increase time 15% of duration (third installment period)
+        await blockchainTime.increaseTime(3600);
+        // have lender call claim on the collateral
+        await expect(repaymentController.connect(lender).claim(loanId)).to.be.revertedWith("LC_LoanNotDefaulted");
+        //increase time 10% of duration (forth installment period)
+        await blockchainTime.increaseTime(3600);
+        // have lender call claim on the collateral
+        await expect(repaymentController.connect(lender).claim(loanId)).to.be.revertedWith("LC_LoanNotDefaulted");
+        // increase time 10% of duration (fifth installment period)
+        await blockchainTime.increaseTime(3600);
+        // have lender call claim on the collateral
+        await expect(repaymentController.connect(lender).claim(loanId)).to.be.revertedWith("LC_LoanNotDefaulted");
+        // increase time 10% of duration (sixth installment period) ---> claimable
+        await blockchainTime.increaseTime(3600);
+        // have lender call claim on the collateral
+        await expect(repaymentController.connect(lender).claim(loanId)).to.emit(loanCore, "LoanClaimed");
+
+        // check balances
+        const borrowerBalanceAfter = await vaultFactory.balanceOf(await borrower.getAddress());
+        const lenderBalanceAfter = await vaultFactory.balanceOf(await lender.getAddress());
+        expect(borrowerBalanceAfter.sub(borrowerBalanceBefore)).to.equal(0)
+        expect(lenderBalanceAfter.sub(lenderBalanceBefore)).to.equal(1)
+      });
+      it("Scenario: numInstallments: 24, durationSecs: 2y. Borrower repays minimum. Lender tries to claim various times in loan duration.", async () => {
+        const context = await loadFixture(fixture);
+        const { repaymentController, loanCore, mockERC20, vaultFactory, borrower, lender, blockchainTime } = context;
+        const { loanId } = await initializeInstallmentLoan(
+            context,
+            mockERC20.address,
+            BigNumber.from(31536000 * 2), // durationSecs
+            hre.ethers.utils.parseEther("100"), // principal
+            hre.ethers.utils.parseEther("1000"), // interest
+            24, // numInstallments
+        );
+        const borrowerBalanceBefore = await vaultFactory.balanceOf(await borrower.getAddress());
+        const lenderBalanceBefore = await vaultFactory.balanceOf(await lender.getAddress());
+
+        //increase time slightly
+        await blockchainTime.increaseTime(100);
+        // borrower repays minimum
+        await mockERC20
+            .connect(borrower)
+            .approve(repaymentController.address, ethers.utils.parseEther("0.417"));
+        await expect(repaymentController.connect(borrower).repayPartMinimum(loanId))
+            .to.emit(mockERC20, "Transfer");
+
+        //(second installment period)
+        await blockchainTime.increaseTime((2 * (31536000 * 2) / 24));
+        // have lender call claim on the collateral
+        await expect(repaymentController.connect(lender).claim(loanId)).to.be.revertedWith("LC_LoanNotDefaulted");
+        //(forth installment period)
+        await blockchainTime.increaseTime((2 * (31536000 * 2) / 24));
+        // have lender call claim on the collateral
+        await expect(repaymentController.connect(lender).claim(loanId)).to.be.revertedWith("LC_LoanNotDefaulted");
+        //(sixth installment period)
+        await blockchainTime.increaseTime((2 * (31536000 * 2) / 24));
+        // have lender call claim on the collateral
+        await expect(repaymentController.connect(lender).claim(loanId)).to.be.revertedWith("LC_LoanNotDefaulted");
+        // (eigth installment period)
+        await blockchainTime.increaseTime((2 * (31536000 * 2) / 24));
+        // have lender call claim on the collateral
+        await expect(repaymentController.connect(lender).claim(loanId)).to.be.revertedWith("LC_LoanNotDefaulted");
+        // (tenth installment period)
+        await blockchainTime.increaseTime((2 * (31536000 * 2) / 24));
+        // have lender call claim on the collateral
+        await expect(repaymentController.connect(lender).claim(loanId)).to.be.revertedWith("LC_LoanNotDefaulted");
+        // (eleventh installment period) ---> claimable
+        await blockchainTime.increaseTime((1 * (31536000 * 2) / 24));
+        // have lender call claim on the collateral
+        await expect(repaymentController.connect(lender).claim(loanId)).to.emit(loanCore, "LoanClaimed");
+
+        // check balances
+        const borrowerBalanceAfter = await vaultFactory.balanceOf(await borrower.getAddress());
+        const lenderBalanceAfter = await vaultFactory.balanceOf(await lender.getAddress());
+        expect(borrowerBalanceAfter.sub(borrowerBalanceBefore)).to.equal(0)
+        expect(lenderBalanceAfter.sub(lenderBalanceBefore)).to.equal(1)
+      });
    });
 });

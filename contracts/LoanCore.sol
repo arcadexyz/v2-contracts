@@ -534,11 +534,13 @@ contract LoanCore is
         // make sure if called in the same installment period as payment was made,
         // does not get to currentInstallmentsMissed calculation. needs to be first.
         if(numInstallmentsPaid == currentInstallmentPeriod) revert LC_LoanNotDefaulted();
+
         // get installments missed necessary for loan default (*1000)
         uint256 installmentsMissedForDefault = ((numInstallments * PERCENT_MISSED_FOR_LENDER_CLAIM) * 1000) / BPS_DENOMINATOR;
         // get current installments missed (*1000)
         // one added to numInstallmentsPaid for a grace period on the current installment.
-        uint256 currentInstallmentsMissed =((currentInstallmentPeriod) * 1000) - ((numInstallmentsPaid + 1) * 1000);
+        uint256 currentInstallmentsMissed = ((currentInstallmentPeriod) * 1000) - ((numInstallmentsPaid + 1) * 1000);
+
         // check if the number of missed payments is greater than
         // 40% the total number of installment periods
         if(currentInstallmentsMissed < installmentsMissedForDefault) revert LC_LoanNotDefaulted();
