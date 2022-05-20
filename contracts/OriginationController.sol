@@ -769,7 +769,7 @@ contract OriginationController is
                 settledAmount,
                 amounts.amountToOldLender,
                 amounts.amountToLender,
-                amounts.leftoverPrincipal
+                amounts.amountToBorrower
             );
         }
     }
@@ -816,13 +816,14 @@ contract OriginationController is
         }
 
         uint256 fee = newTerms.principal * rolloverFee / BASIS_POINTS_DENOMINATOR;
-        uint256 newPrincipal = newTerms.principal - fee;
+        uint256 borrowerWillGet = newTerms.principal - fee;
 
         // Settle amounts
-        if (repayAmount > newPrincipal) {
-            amounts.needFromBorrower = repayAmount - newPrincipal;
-        } else if (newPrincipal > repayAmount) {
-            amounts.leftoverPrincipal = newPrincipal - repayAmount;
+        if (repayAmount > borrowerWillGet) {
+            amounts.needFromBorrower = repayAmount - borrowerWillGet;
+        } else if (borrowerWillGet > repayAmount) {
+            amounts.leftoverPrincipal = newTerms.principal - repayAmount;
+            amounts.amountToBorrower = amounts.leftoverPrincipal - fee;
         }
 
         // Collect funds

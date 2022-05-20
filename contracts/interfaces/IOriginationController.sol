@@ -18,6 +18,7 @@ interface IOriginationController {
         uint256 leftoverPrincipal;
         uint256 amountToOldLender;
         uint256 amountToLender;
+        uint256 amountToBorrower;
     }
 
     // ================ Events =================
