@@ -357,7 +357,7 @@ describe("OriginationController", () => {
                     // sender is the borrower, signer is also the borrower
                     .connect(borrower)
                     .initializeLoan(loanTerms, await borrower.getAddress(), await lender.getAddress(), sig, 1),
-            ).to.be.revertedWith("OC_ApprovedOwnLoan");
+            ).to.be.revertedWith("OC_InvalidSignature");
         });
 
         it("Reverts if signer is not a participant", async () => {
@@ -508,7 +508,7 @@ describe("OriginationController", () => {
                 lender,
                 "2",
                 1,
-                "b"
+                "l"
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -848,7 +848,7 @@ describe("OriginationController", () => {
                 encodePredicates(predicates),
                 lender,
                 "2",
-                1,
+                "1",
                 "l"
             );
 
@@ -1597,7 +1597,7 @@ describe("OriginationController", () => {
                 newSigner, // Now signed by a third party
                 "2",
                 1,
-                "b"
+                "l"
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -1630,7 +1630,7 @@ describe("OriginationController", () => {
                 lender,
                 "2",
                 1,
-                "b"
+                "l"
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -1738,7 +1738,7 @@ describe("OriginationController", () => {
                 originationController
                     .connect(borrower)
                     .initializeLoan(loanTerms, await borrower.getAddress(), await lender.getAddress(), sig, 1),
-            ).to.be.revertedWith("OC_ApprovedOwnLoan");
+            ).to.be.revertedWith("OC_InvalidSignature");
         });
 
         it("does not allow unilateral lender origination even if the borrower approves", async () => {
@@ -1768,7 +1768,7 @@ describe("OriginationController", () => {
                 originationController
                     .connect(lender)
                     .initializeLoan(loanTerms, await borrower.getAddress(), await lender.getAddress(), sig, 1),
-            ).to.be.revertedWith("OC_ApprovedOwnLoan");
+            ).to.be.revertedWith("OC_InvalidSignature");
         });
     });
 
