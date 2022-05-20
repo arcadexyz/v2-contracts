@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.11;
 
-import "./interfaces/IFullInterestAmountCalc.sol";
+import "./interfaces/IInstallmentsCalc.sol";
 
 import { FIAC_InterestRate } from "./errors/Lending.sol";
 
@@ -15,7 +15,7 @@ import { FIAC_InterestRate } from "./errors/Lending.sol";
  * that the interestRate is already expressed over the desired
  * time period.
  */
-abstract contract FullInterestAmountCalc is IFullInterestAmountCalc {
+abstract contract InstallmentsCalc is IInstallmentsCalc {
     // ============================================ STATE ==============================================
 
     /// @dev The units of precision equal to the minimum interest of 1 basis point.

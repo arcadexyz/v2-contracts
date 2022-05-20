@@ -21,7 +21,7 @@ import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import "./FullInterestAmountCalc.sol";
+import "./InstallmentsCalc.sol";
 import "./libraries/LoanLibrary.sol";
 import "./interfaces/IPromissoryNote.sol";
 import "./interfaces/ILoanCore.sol";
@@ -52,7 +52,7 @@ import {
  */
 contract RepaymentController is
     IRepaymentController,
-    FullInterestAmountCalc,
+    InstallmentsCalc,
     AccessControl
 {
     using SafeERC20 for IERC20;

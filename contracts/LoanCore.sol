@@ -17,7 +17,7 @@ import "./interfaces/IAssetVault.sol";
 import "./interfaces/IFeeController.sol";
 import "./interfaces/ILoanCore.sol";
 
-import "./FullInterestAmountCalc.sol";
+import "./InstallmentsCalc.sol";
 import "./PromissoryNote.sol";
 import "./vault/OwnableERC721.sol";
 import {
@@ -46,7 +46,7 @@ import {
 contract LoanCore is
     ILoanCore,
     Initializable,
-    FullInterestAmountCalc,
+    InstallmentsCalc,
     AccessControlUpgradeable,
     PausableUpgradeable,
     ICallDelegator,

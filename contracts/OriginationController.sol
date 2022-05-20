@@ -20,7 +20,7 @@ import "./interfaces/IAssetVault.sol";
 import "./interfaces/IVaultFactory.sol";
 import "./interfaces/ISignatureVerifier.sol";
 
-import "./FullInterestAmountCalc.sol";
+import "./InstallmentsCalc.sol";
 import "./verifiers/ItemsVerifier.sol";
 import {
     OC_ZeroAddress,
@@ -54,7 +54,7 @@ import {
  */
 contract OriginationController is
     Initializable,
-    FullInterestAmountCalc,
+    InstallmentsCalc,
     ContextUpgradeable,
     IOriginationController,
     EIP712Upgradeable,
