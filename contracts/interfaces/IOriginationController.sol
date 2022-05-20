@@ -7,6 +7,11 @@ import "../libraries/LoanLibrary.sol";
 interface IOriginationController {
     // ================ Data Types =============
 
+    enum Side {
+        BORROW,
+        LEND
+    }
+
     struct Signature {
         uint8 v;
         bytes32 r;
@@ -33,7 +38,8 @@ interface IOriginationController {
         address borrower,
         address lender,
         Signature calldata sig,
-        uint160 nonce
+        uint160 nonce,
+        Side side
     ) external returns (uint256 loanId);
 
     function initializeLoanWithItems(
@@ -42,6 +48,7 @@ interface IOriginationController {
         address lender,
         Signature calldata sig,
         uint160 nonce,
+        Side side,
         LoanLibrary.Predicate[] calldata itemPredicates
     ) external returns (uint256 loanId);
 
@@ -51,6 +58,7 @@ interface IOriginationController {
         address lender,
         Signature calldata sig,
         uint160 nonce,
+        Side side,
         Signature calldata collateralSig,
         uint256 permitDeadline
     ) external returns (uint256 loanId);
@@ -61,6 +69,7 @@ interface IOriginationController {
         address lender,
         Signature calldata sig,
         uint160 nonce,
+        Side side,
         Signature calldata collateralSig,
         uint256 permitDeadline,
         LoanLibrary.Predicate[] calldata itemPredicates
@@ -71,7 +80,8 @@ interface IOriginationController {
         LoanLibrary.LoanTerms calldata loanTerms,
         address lender,
         Signature calldata sig,
-        uint160 nonce
+        uint160 nonce,
+        Side side
     ) external returns (uint256 newLoanId);
 
     function rolloverLoanWithItems(
@@ -80,6 +90,7 @@ interface IOriginationController {
         address lender,
         Signature calldata sig,
         uint160 nonce,
+        Side side
         LoanLibrary.Predicate[] calldata itemPredicates
     ) external returns (uint256 newLoanId);
 

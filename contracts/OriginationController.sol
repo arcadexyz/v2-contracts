@@ -72,14 +72,14 @@ contract OriginationController is
     bytes32 private constant _TOKEN_ID_TYPEHASH =
         keccak256(
             // solhint-disable-next-line max-line-length
-            "LoanTerms(uint32 durationSecs,uint24 numInstallments,uint200 interestRate,uint256 principal,address collateralAddress,uint256 collateralId,address payableCurrency,uint160 nonce,uint256 deadline)"
+            "LoanTerms(uint32 durationSecs,uint32 deadline,uint24 numInstallments,uint160 interestRate,uint256 principal,address collateralAddress,uint256 collateralId,address payableCurrency,uint160 nonce,uint8 side)"
         );
 
     /// @notice EIP712 type hash for item-based signatures.
     bytes32 private constant _ITEMS_TYPEHASH =
         keccak256(
             // solhint-disable max-line-length
-            "LoanTermsWithItems(uint32 durationSecs,uint24 numInstallments,uint200 interestRate,uint256 principal,address collateralAddress,bytes32 itemsHash,address payableCurrency,uint160 nonce,uint256 deadline)"
+            "LoanTermsWithItems(uint32 durationSecs,uint32 deadline,uint24 numInstallments,uint160 interestRate,uint256 principal,address collateralAddress,bytes32 itemsHash,address payableCurrency,uint160 nonce,uint8 side)"
         );
 
     // =============== Contract References ===============
@@ -150,6 +150,7 @@ contract OriginationController is
      * @param lender                        Address of the lender.
      * @param sig                           The loan terms signature, with v, r, s fields, and a nonce.
      * @param nonce                         The signature nonce.
+     * @param side                          The side of the loan the caller will take (lend or borrow).
      *
      * @return loanId                       The unique ID of the new loan.
      */
@@ -158,7 +159,8 @@ contract OriginationController is
         address borrower,
         address lender,
         Signature calldata sig,
-        uint160 nonce
+        uint160 nonce,
+        Side side
     ) public override returns (uint256 loanId) {
         _validateLoanTerms(loanTerms);
 
@@ -184,6 +186,7 @@ contract OriginationController is
      * @param lender                        Address of the lender.
      * @param sig                           The loan terms signature, with v, r, s fields, and a nonce.
      * @param nonce                         The signature nonce.
+     * @param side                          The side of the loan the caller will take (lend or borrow).
      * @param itemPredicates                The predicate rules for the items in the bundle.
      *
      * @return loanId                       The unique ID of the new loan.
@@ -194,6 +197,7 @@ contract OriginationController is
         address lender,
         Signature calldata sig,
         uint160 nonce,
+        Side side,
         LoanLibrary.Predicate[] calldata itemPredicates
     ) public override returns (uint256 loanId) {
         _validateLoanTerms(loanTerms);
@@ -234,6 +238,7 @@ contract OriginationController is
      * @param lender                        Address of the lender.
      * @param sig                           The loan terms signature, with v, r, s fields.
      * @param nonce                         The signature nonce for the loan terms signature.
+     * @param side                          The side of the loan the caller will take (lend or borrow).
      * @param collateralSig                 The collateral permit signature, with v, r, s fields.
      * @param permitDeadline                The last timestamp for which the signature is valid.
      *
@@ -245,6 +250,7 @@ contract OriginationController is
         address lender,
         Signature calldata sig,
         uint160 nonce,
+        Side side,
         Signature calldata collateralSig,
         uint256 permitDeadline
     ) external override returns (uint256 loanId) {
@@ -257,7 +263,8 @@ contract OriginationController is
             collateralSig.r,
             collateralSig.s
         );
-        loanId = initializeLoan(loanTerms, borrower, lender, sig, nonce);
+
+        loanId = initializeLoan(loanTerms, borrower, lender, sig, nonce, side);
     }
 
     /**
@@ -273,6 +280,7 @@ contract OriginationController is
      * @param lender                        Address of the lender.
      * @param sig                           The loan terms signature, with v, r, s fields.
      * @param nonce                         The signature nonce for the loan terms signature.
+     * @param side                          THe side of the loan the caller will take (lend or borrow).
      * @param collateralSig                 The collateral permit signature, with v, r, s fields.
      * @param permitDeadline                The last timestamp for which the signature is valid.
      * @param itemPredicates                The predicate rules for the items in the bundle.
@@ -285,6 +293,7 @@ contract OriginationController is
         address lender,
         Signature calldata sig,
         uint160 nonce,
+        Side side,
         Signature calldata collateralSig,
         uint256 permitDeadline,
         LoanLibrary.Predicate[] calldata itemPredicates
@@ -299,7 +308,7 @@ contract OriginationController is
             collateralSig.s
         );
 
-        loanId = initializeLoanWithItems(loanTerms, borrower, lender, sig, nonce, itemPredicates);
+        loanId = initializeLoanWithItems(loanTerms, borrower, lender, sig, nonce, side, itemPredicates);
     }
 
     /**
@@ -322,7 +331,8 @@ contract OriginationController is
         LoanLibrary.LoanTerms calldata loanTerms,
         address lender,
         Signature calldata sig,
-        uint160 nonce
+        uint160 nonce,
+        Side side
     ) public override returns (uint256 newLoanId) {
         _validateLoanTerms(loanTerms);
 
@@ -353,6 +363,7 @@ contract OriginationController is
      * @param lender                        Address of the lender.
      * @param sig                           The loan terms signature, with v, r, s fields.
      * @param nonce                         The signature nonce for the loan terms signature.
+     * @param side                          The side of the loan the caller will take (lend or borrow).
      * @param itemPredicates                The predicate rules for the items in the bundle.
      *
      * @return newLoanId                    The unique ID of the new loan.
@@ -363,6 +374,7 @@ contract OriginationController is
         address lender,
         Signature calldata sig,
         uint160 nonce,
+        Side side,
         LoanLibrary.Predicate[] calldata itemPredicates
     ) public override returns (uint256 newLoanId) {
         _validateLoanTerms(loanTerms);
@@ -486,12 +498,14 @@ contract OriginationController is
     function recoverTokenSignature(
         LoanLibrary.LoanTerms calldata loanTerms,
         Signature calldata sig,
-        uint160 nonce
+        uint160 nonce,
+        Side side
     ) public view override returns (bytes32 sighash, address signer) {
         bytes32 loanHash = keccak256(
             abi.encode(
                 _TOKEN_ID_TYPEHASH,
                 loanTerms.durationSecs,
+                loanTerms.deadline,
                 loanTerms.numInstallments,
                 loanTerms.interestRate,
                 loanTerms.principal,
@@ -499,7 +513,7 @@ contract OriginationController is
                 loanTerms.collateralId,
                 loanTerms.payableCurrency,
                 nonce,
-                loanTerms.deadline
+                uint8(side)
             )
         );
 
@@ -524,12 +538,14 @@ contract OriginationController is
         LoanLibrary.LoanTerms calldata loanTerms,
         Signature calldata sig,
         uint160 nonce,
+        Side side,
         bytes32 itemsHash
     ) public view override returns (bytes32 sighash, address signer) {
         bytes32 loanHash = keccak256(
             abi.encode(
                 _ITEMS_TYPEHASH,
                 loanTerms.durationSecs,
+                loanTerms.deadline,
                 loanTerms.numInstallments,
                 loanTerms.interestRate,
                 loanTerms.principal,
@@ -537,7 +553,7 @@ contract OriginationController is
                 itemsHash,
                 loanTerms.payableCurrency,
                 nonce,
-                loanTerms.deadline
+                uint8(side)
             )
         );
 
@@ -656,6 +672,7 @@ contract OriginationController is
      * @param signer                    The address recovered from the loan terms signature.
      * @param sig                       A struct containing the signature data (for checking EIP-1271).
      * @param sighash                   The hash of the signature payload (used for EIP-1271 check).
+     * @param side                          The side of the loan the caller will take (lend or borrow).
      */
     function _validateCounterparties(
         address borrower,
@@ -663,21 +680,20 @@ contract OriginationController is
         address caller,
         address signer,
         Signature calldata sig,
-        bytes32 sighash
+        bytes32 sighash,
+        Side side
     ) internal view {
         if (caller == signer) revert OC_ApprovedOwnLoan(caller);
 
-        // Make sure one from each side approves
-        if (isSelfOrApproved(lender, caller)) {
-            if (!isSelfOrApproved(borrower, signer) && !isApprovedForContract(borrower, sig, sighash)) {
-                revert OC_InvalidSignature(borrower, signer);
-            }
-        } else if (isSelfOrApproved(borrower, caller)) {
-            if (!isSelfOrApproved(lender, signer) && !isApprovedForContract(lender, sig, sighash)) {
-                revert OC_InvalidSignature(lender, signer);
-            }
-        } else {
-            revert OC_CallerNotParticipant(caller);
+        address shouldBeCaller = side == Side.BORROW ? borrower : lender;
+        address shouldBeSigner = side == Side.LEND ? borrower : lender;
+
+        if (!isSelfOrApproved(shouldBeCaller, caller) && !isApprovedForContract(shouldBeCaller, sig, sighash)) {
+            revert OC_CallerNotParticipant(msg.sender);
+        }
+
+        if (!isSelfOrApproved(shouldBeSigner, signer) && !isApprovedForContract(shouldBeSigner, sig, sighash)) {
+            revert OC_InvalidSignature(shouldBeSigner, signer);
         }
     }
 
