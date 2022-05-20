@@ -14,7 +14,7 @@ contract ERC1271LenderMock is IERC1271 {
         IERC20(token).approve(target, type(uint256).max);
     }
 
-    function isValidSignature(bytes32 _hash, bytes memory _signature) public view override returns (bytes4 magicValue) {
+    function isValidSignature(bytes32, bytes memory) public pure override returns (bytes4 magicValue) {
         return MAGICVALUE;
     }
 }

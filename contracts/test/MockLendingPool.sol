@@ -28,12 +28,11 @@ contract MockLendingPool {
         address receiverAddress,
         address[] calldata assets,
         uint256[] calldata amounts,
-        uint256[] calldata modes,
-        address onBehalfOf,
+        uint256[] calldata,
+        address,
         bytes calldata params,
-        uint16 referralCode
+        uint16
     ) external {
-        uint256 startBalance = IERC20(assets[0]).balanceOf(address(this));
         uint256 premium = (amounts[0] * loanFeeBps) / 10_000;
         uint256[] memory premiums = new uint256[](1);
         premiums[0] = premium;

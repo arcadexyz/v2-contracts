@@ -30,9 +30,9 @@ contract MockERC20WithDecimals is ERC20PresetMinterPauser {
     constructor(
         string memory name,
         string memory symbol,
-        uint8 decimals
+        uint8 decimals_
     ) ERC20PresetMinterPauser(name, symbol) {
-        _decimals = decimals;
+        _decimals = decimals_;
     }
 
     function decimals() public view virtual override returns (uint8) {
