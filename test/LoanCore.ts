@@ -936,6 +936,29 @@ describe("LoanCore", () => {
             await expect(loanCore.connect(borrower).claim(loanId, BigNumber.from(0))).to.be.revertedWith("Pausable: paused");
         });
 
+        it("pause, unPause, make tx", async () => {
+            const {
+                mockERC20,
+                loanId,
+                loanCore,
+                other:lender,
+                user: borrower,
+                terms,
+                blockchainTime,
+            } = await setupLoan();
+            await mockERC20.connect(borrower).mint(loanCore.address, terms.principal.add(terms.interestRate));
+
+            await blockchainTime.increaseTime(360001);
+            await loanCore.connect(borrower).pause();
+
+            await blockchainTime.increaseTime(100);
+            await loanCore.connect(borrower).unpause();
+
+            await expect(loanCore.connect(borrower).claim(loanId, BigNumber.from(0)))
+            .to.emit(loanCore, "LoanClaimed")
+            .withArgs(loanId);
+        });
+
         it("gas [ @skip-on-coverage ]", async () => {
             const {
                 mockERC20,

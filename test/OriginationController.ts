@@ -21,6 +21,7 @@ import {
     FeeController,
     ERC1271LenderMock,
     MockOriginationController,
+    ERC721Permit
 } from "../typechain";
 import { approve, mint, ZERO_ADDRESS } from "./utils/erc20";
 import { mint as mint721 } from "./utils/erc721";
@@ -174,7 +175,7 @@ describe("OriginationController", () => {
         });
 
         it("v1 functionality can be upgraded in v2", async () => {
-            const { originationController, user: lender, other: borrower } = ctx;
+            const { originationController, user: lender, other: borrower} = ctx;
 
             // THIS IS WHERE ORIGINATION CONTROLLER UPGRADES TO V2 / BECOMES MOCKORIGINATION CONTROLLER
             const MockOriginationController = await hre.ethers.getContractFactory("MockOriginationController");
@@ -183,6 +184,13 @@ describe("OriginationController", () => {
             expect(await mockOriginationController.version()).to.equal("This is OriginationController V2!");
             // isApproved() IS CALLED AND RETURNS TRUE FOR FOR THE 2 ARGUMENTS NOT BEING EQUAL
             expect(await mockOriginationController.isApproved(await borrower.getAddress(), await lender.getAddress())).to.be.true;
+        });
+        it("v1 functionality cannot be upgraded to v2 by non authorized user", async () => {
+            const { originationController, user: lender, other } = ctx;
+
+            const MockOriginationController = await hre.ethers.getContractFactory("MockOriginationController", other);
+            await expect(hre.upgrades.upgradeProxy(originationController.address, MockOriginationController))
+            .to.be.revertedWith("Ownable: caller is not the owner");
         });
     });
 
@@ -551,7 +559,7 @@ describe("OriginationController", () => {
                     mockERC721,
                     lenderPromissoryNote,
                     borrowerPromissoryNote,
-
+                    loanCore
                 } = ctx;
 
                 const tokenId = await mint721(mockERC721, other);
@@ -594,7 +602,6 @@ describe("OriginationController", () => {
                             sig,
                             1,
                             collateralSig,
-
                             maxDeadline,
                         ),
                 ).to.be.revertedWith("function selector was not recognized and there's no fallback function");
@@ -651,7 +658,6 @@ describe("OriginationController", () => {
                             sig,
                             1,
                             collateralSig,
-
                             maxDeadline,
                         ),
                 ).to.be.revertedWith("ERC721P_NotTokenOwner");
@@ -699,7 +705,6 @@ describe("OriginationController", () => {
                             sig,
                             1,
                             collateralSig,
-
                             maxDeadline,
                         ),
                 )
@@ -1164,6 +1169,78 @@ describe("OriginationController", () => {
                     ),
             ).to.be.revertedWith("LC_NonceUsed");
         });
+        it.only("Initializes a loan with permit and items", async () => {
+          const { originationController, mockERC20, mockERC721, vaultFactory, user: lender, other: borrower, lenderPromissoryNote, borrowerPromissoryNote } = ctx;
+
+          const bundleId = await initializeBundle(vaultFactory, borrower);
+          const bundleAddress = await vaultFactory.instanceAt(bundleId);
+          const tokenId = await mint721(mockERC721, borrower);
+          await mockERC721.connect(borrower).transferFrom(borrower.address, bundleAddress, tokenId);
+
+          const loanTerms = createLoanTerms(mockERC20.address, vaultFactory.address, { collateralId: bundleId });
+          const signatureItems: SignatureItem[] = [
+              {
+                  cType: 0,
+                  asset: mockERC721.address,
+                  tokenId,
+                  amount: 0, // not used for 721
+              },
+          ];
+
+          const predicates: ItemsPredicate[] = [
+              {
+                  verifier: verifier.address,
+                  data: encodeSignatureItems(signatureItems),
+              },
+          ];
+
+          await mint(mockERC20, lender, loanTerms.principal);
+
+          const permitData = {
+             owner: await borrower.getAddress(),
+             spender: originationController.address,
+             tokenId: bundleAddress,
+             nonce: 0,
+             deadline: maxDeadline,
+         };
+
+         const collateralSig = await createPermitSignature(
+             vaultFactory.address,
+             await vaultFactory.name(),
+             permitData,
+             lender,
+         );
+
+          const sig = await createLoanItemsSignature(
+              originationController.address,
+              "OriginationController",
+              loanTerms,
+              encodePredicates(predicates),
+              borrower,
+              "2",
+          );
+
+          console.log("BORROWER ADDR", await borrower.getAddress())
+
+          await approve(mockERC20, lender, originationController.address, loanTerms.principal);
+          await vaultFactory.connect(borrower).approve(originationController.address, bundleId);
+          await expect(
+              originationController
+                  .connect(lender)
+                  .initializeLoanWithCollateralPermitAndItems(
+                    loanTerms,
+                    await borrower.getAddress(),
+                    await lender.getAddress(),
+                    sig,
+                    1,
+                    collateralSig,
+                    maxDeadline,
+                    predicates,
+                  ),
+          )
+              .to.emit(mockERC20, "Transfer")
+              .withArgs(await lender.getAddress(), originationController.address, loanTerms.principal);
+        });
 
         describe("initializeLoanWithCollateralPermitAndItems", () => {
             it("Reverts if vaultFactory.permit is invalid", async () => {
@@ -1243,7 +1320,7 @@ describe("OriginationController", () => {
                 ).to.be.revertedWith("ERC721P_NotTokenOwner");
             });
 
-            it("Initializes a loan with permit", async () => {
+            it("Trigger ERC721Permit not token owner", async () => {
                 const {
                     originationController,
                     vaultFactory,
@@ -1279,7 +1356,6 @@ describe("OriginationController", () => {
 
                 await mint(mockERC20, lender, loanTerms.principal);
 
-                // invalid signature because tokenId is something random here
                 const permitData = {
                     owner: await borrower.getAddress(),
                     spender: originationController.address,
@@ -1306,7 +1382,7 @@ describe("OriginationController", () => {
 
                 await expect(
                     originationController
-                        .connect(lender)
+                        .connect(borrower)
                         .initializeLoanWithCollateralPermitAndItems(
                             loanTerms,
                             lenderPromissoryNote.address,
@@ -1314,7 +1390,6 @@ describe("OriginationController", () => {
                             sig,
                             1,
                             collateralSig,
-
                             maxDeadline,
                             predicates,
                         ),

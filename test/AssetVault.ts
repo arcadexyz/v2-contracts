@@ -784,5 +784,14 @@ describe("AssetVault", () => {
                 );
             });
         });
+
+        describe("Introspection", function () {
+            it("should return true for declaring support for eip165 interface contract", async () => {
+                const { nft } = await loadFixture(fixture);
+                // https://eips.ethereum.org/EIPS/eip-165#test-cases
+                expect(await nft.supportsInterface("0x01ffc9a7")).to.be.true;
+                expect(await nft.supportsInterface("0xfafafafa")).to.be.false;
+            });
+        });
     });
 });

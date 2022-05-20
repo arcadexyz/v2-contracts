@@ -198,6 +198,11 @@ describe("VaultFactory", () => {
 
             approved = await factory.getApproved(bundleId);
             expect(approved).to.equal(await other.getAddress());
+
+            //check nonce was incremented to one
+            expect(await factory.nonces(await user.getAddress())).to.equal(1);
+            //test coverage checking domain separator
+            expect(await factory.DOMAIN_SEPARATOR());
         });
 
         it("rejects if given owner is not real owner", async () => {

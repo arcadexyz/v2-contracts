@@ -11,6 +11,7 @@ import "@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.
 import "@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol";
 
 import "./interfaces/IERC721PermitUpgradeable.sol";
+import "hardhat/console.sol";
 
 import { ERC721P_DeadlineExpired, ERC721P_NotTokenOwner, ERC721P_InvalidSignature } from "./errors/LendingUtils.sol";
 
@@ -113,6 +114,7 @@ abstract contract ERC721PermitUpgradeable is
         bytes32 s
     ) public virtual override {
         if (block.timestamp > deadline) revert ERC721P_DeadlineExpired(deadline);
+        console.log(owner, ERC721Upgradeable.ownerOf(tokenId));
         if (owner != ERC721Upgradeable.ownerOf(tokenId)) revert ERC721P_NotTokenOwner(owner);
 
         bytes32 structHash = keccak256(
