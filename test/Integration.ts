@@ -168,7 +168,8 @@ describe("Integration", () => {
                 loanTerms,
                 borrower,
                 "2",
-                BigNumber.from(1),
+                1,
+                "b"
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -199,7 +200,8 @@ describe("Integration", () => {
                 loanTerms,
                 borrower,
                 "2",
-                BigNumber.from(1),
+                1,
+                "b"
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -227,7 +229,8 @@ describe("Integration", () => {
                 loanTerms,
                 borrower,
                 "2",
-                BigNumber.from(1),
+                1,
+                "b"
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -253,7 +256,8 @@ describe("Integration", () => {
                 loanTerms,
                 borrower,
                 "2",
-                BigNumber.from(1),
+                1,
+                "b"
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -288,7 +292,8 @@ describe("Integration", () => {
                 loanTerms,
                 borrower,
                 "2",
-                BigNumber.from(nonce),
+                nonce,
+                "b"
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -402,7 +407,7 @@ describe("Integration", () => {
             loanData: LoanData;
         }
 
-        const initializeLoan = async (context: TestContext, nonce:number, terms?: Partial<LoanTerms>): Promise<LoanDef> => {
+        const initializeLoan = async (context: TestContext, nonce: number, terms?: Partial<LoanTerms>): Promise<LoanDef> => {
             const { originationController, mockERC20, vaultFactory, loanCore, lender, borrower } = context;
             const durationSecs = BigNumber.from(3600);
             const bundleId = terms?.collateralId ?? (await createWnft(vaultFactory, borrower));
@@ -419,7 +424,8 @@ describe("Integration", () => {
                 loanTerms,
                 borrower,
                 "2",
-                BigNumber.from(nonce),
+                nonce,
+                "b"
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);

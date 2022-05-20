@@ -211,7 +211,8 @@ describe("Rollovers", () => {
             loanTerms,
             borrower,
             "2",
-            nonce
+            nonce,
+            "b"
         );
 
         await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -279,7 +280,8 @@ describe("Rollovers", () => {
                 loanTerms,
                 lender,
                 "2",
-                2
+                2,
+                "l"
             );
 
             await expect(
@@ -312,7 +314,8 @@ describe("Rollovers", () => {
                 loanTerms,
                 lender,
                 "2",
-                2
+                2,
+                "l"
             );
 
             await expect(
@@ -356,7 +359,8 @@ describe("Rollovers", () => {
                 loanTerms,
                 lender,
                 "2",
-                2
+                2,
+                "l"
             );
 
             await expect(
@@ -393,7 +397,8 @@ describe("Rollovers", () => {
                 loanTerms,
                 lender,
                 "2",
-                2
+                2,
+                "b"
             );
 
             await expect(
@@ -432,7 +437,8 @@ describe("Rollovers", () => {
                 loanTerms,
                 lender,
                 "2",
-                2
+                2,
+                "l"
             );
 
             await expect(
@@ -470,7 +476,8 @@ describe("Rollovers", () => {
                 loanTerms,
                 newLender,
                 "2",
-                2
+                2,
+                "l"
             );
 
             await expect(
@@ -511,7 +518,8 @@ describe("Rollovers", () => {
                 loanTerms,
                 lender,
                 "2",
-                2
+                2,
+                "l"
             );
 
             // Figure out amounts owed
@@ -592,7 +600,8 @@ describe("Rollovers", () => {
                 loanTerms,
                 newLender,
                 "2",
-                2
+                2,
+                "l"
             );
 
             // Figure out amounts owed
@@ -679,7 +688,8 @@ describe("Rollovers", () => {
                 loanTerms,
                 borrower,
                 "2",
-                2
+                2,
+                "b"
             );
 
             // Figure out amounts owed
@@ -788,7 +798,8 @@ describe("Rollovers", () => {
                 encodePredicates(predicates),
                 newLender,
                 "2",
-                "2"
+                "2",
+                "l"
             );
 
             // Figure out amounts owed
@@ -897,7 +908,8 @@ describe("Rollovers", () => {
                 encodePredicates(predicates),
                 lender,
                 "2",
-                "2"
+                "2",
+                "l"
             );
 
             // Figure out amounts owed
@@ -978,7 +990,8 @@ describe("Rollovers", () => {
                 newTerms,
                 lender,
                 "2",
-                2
+                2,
+                "l"
             );
 
             // Figure out amounts owed
@@ -1060,7 +1073,8 @@ describe("Rollovers", () => {
                 newTerms,
                 newLender,
                 "2",
-                2
+                2,
+                "b"
             );
 
             // Figure out amounts owed
@@ -1154,7 +1168,8 @@ describe("Rollovers", () => {
                 newTerms,
                 lender,
                 "2",
-                3
+                3,
+                "b"
             );
 
             // Figure out amounts owed
@@ -1243,7 +1258,8 @@ describe("Rollovers", () => {
                 newTerms,
                 newLender,
                 "2",
-                1
+                1,
+                "l"
             );
 
             // Figure out amounts owed

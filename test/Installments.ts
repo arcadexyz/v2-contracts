@@ -206,7 +206,8 @@ const initializeLoan = async (context: TestContext): Promise<LoanDef> => {
         loanTerms,
         borrower,
         "2",
-        BigNumber.from(1)
+        1,
+        "b"
     );
 
     await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -271,7 +272,8 @@ const initializeInstallmentLoan = async (
         loanTerms,
         borrower,
         "2",
-        BigNumber.from(1)
+        1,
+        "b"
     );
 
     await approve(mockERC20, lender, originationController.address, loanTerms.principal);
