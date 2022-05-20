@@ -1247,7 +1247,7 @@ describe("LoanCore", () => {
         });
     });
 
-    describe.only("Nonce management", () => {
+    describe("Nonce management", () => {
         let context: TestContext;
 
         beforeEach(async () => {
@@ -1273,9 +1273,38 @@ describe("LoanCore", () => {
         });
 
         it("reverts if attempting to use a nonce that has already been consumed", async () => {
+            const { loanCore, user } = context;
+
+            await expect(
+                loanCore.connect(user).consumeNonce(user.address, 10)
+            ).to.not.be.reverted;
+
+            await expect(
+                loanCore.connect(user).consumeNonce(user.address, 10)
+            ).to.be.revertedWith("LC_NonceUsed");
         });
 
-        it("cancels a nonce");
-        it("reverts if attempting to use a nonce that has already been cancelled");
+        it("cancels a nonce", async () => {
+            const { loanCore, user } = context;
+
+            await expect(
+                loanCore.connect(user).cancelNonce(10)
+            ).to.not.be.reverted;
+
+            expect(await loanCore.isNonceUsed(user.address, 10)).to.be.true
+            expect(await loanCore.isNonceUsed(user.address, 20)).to.be.false;
+        });
+
+        it("reverts if attempting to use a nonce that has already been cancelled", async () => {
+            const { loanCore, user } = context;
+
+            await expect(
+                loanCore.connect(user).cancelNonce(10)
+            ).to.not.be.reverted;
+
+            await expect(
+                loanCore.connect(user).consumeNonce(user.address, 10)
+            ).to.be.revertedWith("LC_NonceUsed");
+        });
     });
 });
