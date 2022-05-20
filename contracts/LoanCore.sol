@@ -623,7 +623,7 @@ contract LoanCore is
      * @param numInstallmentsPaid              Installment period of the last installment payment.
      * @param currentInstallmentPeriod         Current installment period call made in.
      */
-    function _verifyDefaultedLoan(uint256 numInstallments, uint256 numInstallmentsPaid, uint256 currentInstallmentPeriod) internal view {
+    function _verifyDefaultedLoan(uint256 numInstallments, uint256 numInstallmentsPaid, uint256 currentInstallmentPeriod) internal pure {
         // make sure if called in the same installment period as payment was made,
         // does not get to currentInstallmentsMissed calculation. needs to be first.
         if(numInstallmentsPaid == currentInstallmentPeriod) revert LC_LoanNotDefaulted();

@@ -4,9 +4,8 @@ MAY 9 WHATS LEFT:
 
 Final Cleanup:
 - Get 100% test coverage
-- More gas optimization
-- Remove compiler warnings
 - Run prettier
+- Delete notes/ folder
 
 Mouzayan:
 

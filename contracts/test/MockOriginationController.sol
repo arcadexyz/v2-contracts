@@ -9,7 +9,7 @@ contract MockOriginationController is OriginationController {
         return "This is OriginationController V2!";
     }
 
-    function isApproved(address owner, address signer) public view override returns (bool) {
+    function isApproved(address owner, address signer) public pure override returns (bool) {
         return owner != signer;
     }
 }
