@@ -231,7 +231,7 @@ describe("LoanCore", () => {
                 terms
             );
 
-            const fee = principal.mul(3).div(100);
+            const fee = principal.mul(5).div(1000);
             const borrowerBalanceAfter = await mockERC20.balanceOf(await borrower.getAddress());
             expect(borrowerBalanceAfter.sub(borrowerBalanceBefore)).to.equal(principal.sub(fee));
             const loanCoreBalanceAfter = await mockERC20.balanceOf(loanCore.address);
@@ -622,7 +622,7 @@ describe("LoanCore", () => {
                 .startLoan(await lender.getAddress(), await borrower.getAddress(), terms);
             const receipt = await tx.wait();
             const gasUsed = receipt.gasUsed;
-            expect(gasUsed.toString()).to.equal("639487");
+            expect(gasUsed.toString()).to.equal("629459");
         });
     });
 
@@ -788,7 +788,7 @@ describe("LoanCore", () => {
             const tx = await loanCore.connect(borrower).repay(loanId);
             const receipt = await tx.wait();
             const gasUsed = receipt.gasUsed;
-            expect(gasUsed.toString()).to.equal("238516");
+            expect(gasUsed.toString()).to.equal("237694");
         });
     });
 
@@ -953,7 +953,7 @@ describe("LoanCore", () => {
             const tx = await loanCore.connect(borrower).claim(loanId, BigNumber.from(0));
             const receipt = await tx.wait();
             const gasUsed = receipt.gasUsed;
-            expect(gasUsed.toString()).to.equal("198260");
+            expect(gasUsed.toString()).to.equal("198300");
         });
     });
 
@@ -1005,7 +1005,7 @@ describe("LoanCore", () => {
                 terms
             );
 
-            const fee = principal.mul(3).div(100);
+            const fee = principal.mul(5).div(1000);
             expect(await mockERC20.balanceOf(loanCore.address)).to.equal(fee);
             await expect(loanCore.connect(borrower).claimFees(mockERC20.address))
                 .to.emit(loanCore, "FeesClaimed")
@@ -1044,7 +1044,7 @@ describe("LoanCore", () => {
                 terms
             );
 
-            const fee = principal.mul(3).div(100);
+            const fee = principal.mul(5).div(1000);
             expect(await mockERC20.balanceOf(loanCore.address)).to.equal(fee);
             await expect(loanCore.connect(lender).claimFees(mockERC20.address)).to.be.revertedWith(
                 `AccessControl: account ${(

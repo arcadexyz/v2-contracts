@@ -2,11 +2,7 @@
 
 MAY 9 WHATS LEFT:
 
-Features:
-- Native rollovers
-
 Final Cleanup:
-- Pending nonce tests
 - Get 100% test coverage
 - More gas optimization
 - Remove compiler warnings

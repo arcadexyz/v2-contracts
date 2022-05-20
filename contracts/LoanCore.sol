@@ -31,9 +31,6 @@ import {
     LC_LoanNotDefaulted
 } from "./errors/Lending.sol";
 
-import "hardhat/console.sol";
-
-
 /**
  * @title LoanCore
  * @author Non-Fungible Technologies, Inc.

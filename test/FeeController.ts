@@ -46,10 +46,10 @@ describe("FeeController", () => {
         });
 
         describe("getOriginationFee", () => {
-            it("initially returns 3%", async () => {
+            it("initially returns 0.5%", async () => {
                 const { feeController, user } = await loadFixture(fixture);
                 const originationFee = await feeController.connect(user).getOriginationFee();
-                expect(originationFee).to.equal(300);
+                expect(originationFee).to.equal(50);
             });
 
             it("returns updated origination fee after set", async () => {
