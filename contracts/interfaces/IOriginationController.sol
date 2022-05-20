@@ -90,7 +90,7 @@ interface IOriginationController {
         address lender,
         Signature calldata sig,
         uint160 nonce,
-        Side side
+        Side side,
         LoanLibrary.Predicate[] calldata itemPredicates
     ) external returns (uint256 newLoanId);
 
@@ -113,13 +113,15 @@ interface IOriginationController {
     function recoverTokenSignature(
         LoanLibrary.LoanTerms calldata loanTerms,
         Signature calldata sig,
-        uint160 nonce
+        uint160 nonce,
+        Side side
     ) external view returns (bytes32 sighash, address signer);
 
     function recoverItemsSignature(
         LoanLibrary.LoanTerms calldata loanTerms,
         Signature calldata sig,
         uint160 nonce,
+        Side side,
         bytes32 itemsHash
     ) external view returns (bytes32 sighash, address signer);
 

@@ -164,9 +164,9 @@ contract OriginationController is
     ) public override returns (uint256 loanId) {
         _validateLoanTerms(loanTerms);
 
-        (bytes32 sighash, address externalSigner) = recoverTokenSignature(loanTerms, sig, nonce);
+        (bytes32 sighash, address externalSigner) = recoverTokenSignature(loanTerms, sig, nonce, side);
 
-        _validateCounterparties(borrower, lender, msg.sender, externalSigner, sig, sighash);
+        _validateCounterparties(borrower, lender, msg.sender, externalSigner, sig, sighash, side);
 
         ILoanCore(loanCore).consumeNonce(externalSigner, nonce);
         loanId = _initialize(loanTerms, borrower, lender);
@@ -207,10 +207,11 @@ contract OriginationController is
             loanTerms,
             sig,
             nonce,
+            side,
             keccak256(abi.encode(itemPredicates))
         );
 
-        _validateCounterparties(borrower, lender, msg.sender, externalSigner, sig, sighash);
+        _validateCounterparties(borrower, lender, msg.sender, externalSigner, sig, sighash, side);
 
         for (uint256 i = 0; i < itemPredicates.length; i++) {
             // Verify items are held in the wrapper
@@ -341,10 +342,10 @@ contract OriginationController is
 
         _validateRollover(data.terms, loanTerms);
 
-        (bytes32 sighash, address externalSigner) = recoverTokenSignature(loanTerms, sig, nonce);
+        (bytes32 sighash, address externalSigner) = recoverTokenSignature(loanTerms, sig, nonce, side);
 
         address borrower = IERC721(ILoanCore(loanCore).borrowerNote()).ownerOf(oldLoanId);
-        _validateCounterparties(borrower, lender, msg.sender, externalSigner, sig, sighash);
+        _validateCounterparties(borrower, lender, msg.sender, externalSigner, sig, sighash, side);
 
         ILoanCore(loanCore).consumeNonce(externalSigner, nonce);
 
@@ -387,11 +388,12 @@ contract OriginationController is
             loanTerms,
             sig,
             nonce,
+            side,
             keccak256(abi.encode(itemPredicates))
         );
 
         address borrower = IERC721(ILoanCore(loanCore).borrowerNote()).ownerOf(oldLoanId);
-        _validateCounterparties(borrower, lender, msg.sender, externalSigner, sig, sighash);
+        _validateCounterparties(borrower, lender, msg.sender, externalSigner, sig, sighash, side);
 
         for (uint256 i = 0; i < itemPredicates.length; i++) {
             // Verify items are held in the wrapper

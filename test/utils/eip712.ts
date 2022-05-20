@@ -36,6 +36,7 @@ const typedLoanTermsData: TypeData = {
     types: {
         LoanTerms: [
             { name: "durationSecs", type: "uint32" },
+            { name: "deadline", type: "uint32" },
             { name: "numInstallments", type: "uint24" },
             { name: "interestRate", type: "uint200" },
             { name: "principal", type: "uint256" },
@@ -43,7 +44,7 @@ const typedLoanTermsData: TypeData = {
             { name: "collateralId", type: "uint256" },
             { name: "payableCurrency", type: "address" },
             { name: "nonce", type: "uint160" },
-            { name: "deadline", type: "uint256" },
+            { name: "side", type: "uint8" }
         ],
     },
     primaryType: "LoanTerms" as const,
@@ -53,6 +54,7 @@ const typedLoanItemsData: TypeData = {
     types: {
         LoanTermsWithItems: [
             { name: "durationSecs", type: "uint32" },
+            { name: "deadline", type: "uint32" },
             { name: "numInstallments", type: "uint24" },
             { name: "interestRate", type: "uint200" },
             { name: "principal", type: "uint256" },
@@ -61,6 +63,7 @@ const typedLoanItemsData: TypeData = {
             { name: "payableCurrency", type: "address" },
             { name: "nonce", type: "uint160" },
             { name: "deadline", type: "uint256" },
+            { name: "side", type: "uint8" }
         ],
     },
     primaryType: "LoanTermsWithItems" as const,
@@ -89,6 +92,7 @@ const buildData = (verifyingContract: string, name: string, version: string, mes
  * @param signer The EOA to create the signature
  * @param version The EIP712 version of the contract to use
  * @param nonce The signature nonce
+ * @param side The side of the loan
  */
 export async function createLoanTermsSignature(
     verifyingContract: string,
@@ -97,8 +101,10 @@ export async function createLoanTermsSignature(
     signer: SignerWithAddress,
     version = "1",
     nonce: BigNumberish,
+    _side: 'b' | 'l'
 ): Promise<ECDSASignature> {
-    const data = buildData(verifyingContract, name, version, { ...terms, nonce }, typedLoanTermsData);
+    const side = _side === 'b' ? 0 : 1;
+    const data = buildData(verifyingContract, name, version, { ...terms, nonce, side }, typedLoanTermsData);
     const signature = await signer._signTypedData(data.domain, data.types, data.message);
 
     return fromRpcSig(signature);
@@ -112,6 +118,7 @@ export async function createLoanTermsSignature(
  * @param signer The EOA to create the signature
  * @param version The EIP712 version of the contract to use
  * @param nonce The signature nonce
+ * @param side The side of the loan
  */
 export async function createLoanItemsSignature(
     verifyingContract: string,
@@ -121,7 +128,10 @@ export async function createLoanItemsSignature(
     signer: SignerWithAddress,
     version = "1",
     nonce = "1",
+    _side: 'b' | 'l'
 ): Promise<ECDSASignature> {
+    const side = _side === 'b' ? 0 : 1;
+
     const message: ItemsPayload = {
         durationSecs: terms.durationSecs,
         principal: terms.principal,
@@ -131,6 +141,7 @@ export async function createLoanItemsSignature(
         payableCurrency: terms.payableCurrency,
         numInstallments: terms.numInstallments,
         nonce,
+        side,
         deadline: terms.deadline
     };
 
