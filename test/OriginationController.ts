@@ -1169,7 +1169,7 @@ describe("OriginationController", () => {
                     ),
             ).to.be.revertedWith("LC_NonceUsed");
         });
-        it.only("Initializes a loan with permit and items", async () => {
+        it("Initializes a loan with permit and items", async () => {
           const { originationController, mockERC20, mockERC721, vaultFactory, user: lender, other: borrower, lenderPromissoryNote, borrowerPromissoryNote } = ctx;
 
           const bundleId = await initializeBundle(vaultFactory, borrower);
@@ -1208,7 +1208,7 @@ describe("OriginationController", () => {
              vaultFactory.address,
              await vaultFactory.name(),
              permitData,
-             lender,
+             borrower,
          );
 
           const sig = await createLoanItemsSignature(
@@ -1219,8 +1219,6 @@ describe("OriginationController", () => {
               borrower,
               "2",
           );
-
-          console.log("BORROWER ADDR", await borrower.getAddress())
 
           await approve(mockERC20, lender, originationController.address, loanTerms.principal);
           await vaultFactory.connect(borrower).approve(originationController.address, bundleId);
