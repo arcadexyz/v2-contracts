@@ -46,10 +46,10 @@ describe("FeeController", () => {
         });
 
         describe("getOriginationFee", () => {
-            it("initially returns 3%", async () => {
+            it("initially returns 0.5%", async () => {
                 const { feeController, user } = await loadFixture(fixture);
                 const originationFee = await feeController.connect(user).getOriginationFee();
-                expect(originationFee).to.equal(300);
+                expect(originationFee).to.equal(50);
             });
 
             it("returns updated origination fee after set", async () => {
@@ -60,6 +60,24 @@ describe("FeeController", () => {
 
                 const originationFee = await feeController.connect(user).getOriginationFee();
                 expect(originationFee).to.equal(newFee);
+            });
+        });
+
+        describe("getRolloverFee", () => {
+            it("initially returns 0.1%", async () => {
+                const { feeController, user } = await loadFixture(fixture);
+                const originationFee = await feeController.connect(user).getRolloverFee();
+                expect(originationFee).to.equal(10);
+            });
+
+            it("returns updated rollover fee after set", async () => {
+                const { feeController, user } = await loadFixture(fixture);
+                const newFee = 200;
+
+                await feeController.connect(user).setRolloverFee(newFee);
+
+                const rolloverFee = await feeController.connect(user).getRolloverFee();
+                expect(rolloverFee).to.equal(newFee);
             });
         });
     });

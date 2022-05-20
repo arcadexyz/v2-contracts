@@ -17,19 +17,19 @@ import "./interfaces/IAssetVault.sol";
 import "./interfaces/IFeeController.sol";
 import "./interfaces/ILoanCore.sol";
 
-import "./FullInterestAmountCalc.sol";
+import "./InstallmentsCalc.sol";
 import "./PromissoryNote.sol";
 import "./vault/OwnableERC721.sol";
 import {
     LC_ZeroAddress,
     LC_CollateralInUse,
-    LC_StartInvalidState,
+    LC_CollateralNotInUse,
+    LC_InvalidState,
     LC_NotExpired,
     LC_BalanceGTZero,
     LC_NonceUsed,
     LC_LoanNotDefaulted
 } from "./errors/Lending.sol";
-
 
 /**
  * @title LoanCore
@@ -46,7 +46,7 @@ import {
 contract LoanCore is
     ILoanCore,
     Initializable,
-    FullInterestAmountCalc,
+    InstallmentsCalc,
     AccessControlUpgradeable,
     PausableUpgradeable,
     ICallDelegator,
@@ -63,10 +63,7 @@ contract LoanCore is
     bytes32 public constant REPAYER_ROLE = keccak256("REPAYER_ROLE");
     bytes32 public constant FEE_CLAIMER_ROLE = keccak256("FEE_CLAIMER_ROLE");
 
-    // 10k bps per whole
-    uint256 private constant BPS_DENOMINATOR = 10_000;
     uint256 private constant PERCENT_MISSED_FOR_LENDER_CLAIM = 4000;
-
     // =============== Contract References ================
 
     IPromissoryNote public override borrowerNote;
@@ -181,8 +178,7 @@ contract LoanCore is
         collateralInUse[collateralKey] = true;
 
         // Distribute notes and principal
-        borrowerNote.mint(borrower, loanId);
-        lenderNote.mint(lender, loanId);
+        _mintLoanNotes(loanId, borrower, lender);
 
         IERC721Upgradeable(terms.collateralAddress).transferFrom(_msgSender(), address(this), terms.collateralId);
 
@@ -212,7 +208,7 @@ contract LoanCore is
     function repay(uint256 loanId) external override onlyRole(REPAYER_ROLE) {
         LoanLibrary.LoanData memory data = loans[loanId];
         // ensure valid initial loan state when starting loan
-        if (data.state != LoanLibrary.LoanState.Active) revert LC_StartInvalidState(data.state);
+        if (data.state != LoanLibrary.LoanState.Active) revert LC_InvalidState(data.state);
 
         uint256 returnAmount = getFullInterestAmount(data.terms.principal, data.terms.interestRate);
         // ensure balance to be paid is greater than zero
@@ -230,11 +226,12 @@ contract LoanCore is
         loans[loanId].state = LoanLibrary.LoanState.Repaid;
         collateralInUse[keccak256(abi.encode(data.terms.collateralAddress, data.terms.collateralId))] = false;
 
-        lenderNote.burn(loanId);
-        borrowerNote.burn(loanId);
+        _burnLoanNotes(loanId);
 
         // asset and collateral redistribution
-        IERC20Upgradeable(data.terms.payableCurrency).safeTransfer(lender, returnAmount);
+        // Not using safeTransfer to prevent lenders from blocking
+        // loan receipt and forcing a default
+        IERC20Upgradeable(data.terms.payableCurrency).transfer(lender, returnAmount);
         IERC721Upgradeable(data.terms.collateralAddress).transferFrom(address(this), borrower, data.terms.collateralId);
 
         emit LoanRepaid(loanId);
@@ -253,7 +250,7 @@ contract LoanCore is
     function claim(uint256 loanId, uint256 currentInstallmentPeriod) external override whenNotPaused onlyRole(REPAYER_ROLE) {
         LoanLibrary.LoanData memory data = loans[loanId];
         // ensure valid initial loan state when starting loan
-        if (data.state != LoanLibrary.LoanState.Active) revert LC_StartInvalidState(data.state);
+        if (data.state != LoanLibrary.LoanState.Active) revert LC_InvalidState(data.state);
         // for legacy loans (currentInstallmentPeriod == 0) ensure lender is claiming
         // after the loan has ended and if so, block.timstamp must be greater than the dueDate.
         // for installment loan types (currentInstallmentPeriod > 0), check if the loan
@@ -275,8 +272,7 @@ contract LoanCore is
         loans[loanId].state = LoanLibrary.LoanState.Defaulted;
         collateralInUse[keccak256(abi.encode(data.terms.collateralAddress, data.terms.collateralId))] = false;
 
-        lenderNote.burn(loanId);
-        borrowerNote.burn(loanId);
+        _burnLoanNotes(loanId);
 
         // collateral redistribution
         IERC721Upgradeable(data.terms.collateralAddress).transferFrom(address(this), lender, data.terms.collateralId);
@@ -284,7 +280,102 @@ contract LoanCore is
         emit LoanClaimed(loanId);
     }
 
-    // ===================================== INSTALLMENT OPERATIONS =====================================
+    /**
+     * @notice Roll over a loan, atomically closing one and re-opening a new one with the
+     *         same collateral. Instead of full repayment, only net payments from each
+     *         party are required. Each rolled-over loan is marked as complete, and the new
+     *         loan is given a new unique ID and notes. At the time of calling, any needed
+     *         net payments have been collected by the RepaymentController for withdrawal.
+     *
+     * @param oldLoanId             The ID of the old loan.
+     * @param borrower              The borrower for the loan.
+     * @param lender                The lender for the old loan.
+     * @param terms                 The terms of the new loan.
+     * @param _settledAmount        The amount LoanCore needs to withdraw to settle.
+     * @param _amountToOldLender    The payment to the old lender (if lenders are changing).
+     * @param _amountToLender       The payment to the lender (if same as old lender).
+     * @param _amountToBorrower     The payemnt to the borrower (in the case of leftover principal).
+     *
+     * @return newLoanId            The ID of the new loan.
+     */
+    function rollover(
+        uint256 oldLoanId,
+        address borrower,
+        address lender,
+        LoanLibrary.LoanTerms calldata terms,
+        uint256 _settledAmount,
+        uint256 _amountToOldLender,
+        uint256 _amountToLender,
+        uint256 _amountToBorrower
+    )
+        external
+        override
+        whenNotPaused
+        onlyRole(ORIGINATOR_ROLE)
+        returns (uint256 newLoanId)
+    {
+        bytes32 collateralKey = keccak256(abi.encode(terms.collateralAddress, terms.collateralId));
+        if (!collateralInUse[collateralKey]) revert LC_CollateralNotInUse();
+
+        // Repay loan
+
+        LoanLibrary.LoanData storage data = loans[oldLoanId];
+        // ensure valid initial loan state when starting loan
+        if (data.state != LoanLibrary.LoanState.Active) revert LC_InvalidState(data.state);
+        data.state = LoanLibrary.LoanState.Repaid;
+
+        address oldLender = lenderNote.ownerOf(oldLoanId);
+        IERC20Upgradeable payableCurrency = IERC20Upgradeable(data.terms.payableCurrency);
+
+        if (data.terms.numInstallments > 0) {
+            (uint256 interestDue, uint256 lateFees, uint256 numMissedPayments) = _calcAmountsDue(
+                data.balance,
+                data.startDate,
+                data.terms.durationSecs,
+                data.terms.numInstallments,
+                data.numInstallmentsPaid,
+                data.terms.interestRate
+            );
+
+            data.lateFeesAccrued += lateFees;
+            data.numInstallmentsPaid += uint24(numMissedPayments) + 1;
+            data.balance = 0;
+            data.balancePaid += data.balance + interestDue + lateFees;
+        }
+
+        _burnLoanNotes(oldLoanId);
+
+        // Set up new loan
+        newLoanId = loanIdTracker.current();
+        loanIdTracker.increment();
+
+        loans[newLoanId] = LoanLibrary.LoanData({
+            terms: terms,
+            state: LoanLibrary.LoanState.Active,
+            startDate: uint160(block.timestamp),
+            balance: terms.principal,
+            balancePaid: 0,
+            lateFeesAccrued: 0,
+            numInstallmentsPaid: 0
+        });
+
+        // Distribute notes and principal
+        _mintLoanNotes(newLoanId, borrower, lender);
+
+        if (_settledAmount > 0) {
+            IERC20Upgradeable(payableCurrency).safeTransferFrom(_msgSender(), address(this), _settledAmount);
+        }
+
+        _transferIfNonzero(payableCurrency, oldLender, _amountToOldLender);
+        _transferIfNonzero(payableCurrency, lender, _amountToLender);
+        _transferIfNonzero(payableCurrency, borrower, _amountToBorrower);
+
+        emit LoanRepaid(oldLoanId);
+        emit LoanStarted(newLoanId, lender, borrower);
+        emit LoanRolledOver(oldLoanId, newLoanId);
+    }
+
+    // ===================================== INSTALLMENT OPERATI\ONS =====================================
 
     /**
      * @notice Called from RepaymentController when paying back an installment loan.
@@ -308,7 +399,7 @@ contract LoanCore is
     ) external override onlyRole(REPAYER_ROLE) {
         LoanLibrary.LoanData storage data = loans[_loanId];
         // ensure valid initial loan state when repaying loan
-        if (data.state != LoanLibrary.LoanState.Active) revert LC_StartInvalidState(data.state);
+        if (data.state != LoanLibrary.LoanState.Active) revert LC_InvalidState(data.state);
 
         // calculate total sent by borrower and transferFrom repayment controller to this address
         uint256 paymentTotal = _paymentToPrincipal + _paymentToLateFees + _paymentToInterest;
@@ -325,8 +416,8 @@ contract LoanCore is
             // mark loan as closed
             data.state = LoanLibrary.LoanState.Repaid;
             collateralInUse[keccak256(abi.encode(data.terms.collateralAddress, data.terms.collateralId))] = false;
-            lenderNote.burn(_loanId);
-            borrowerNote.burn(_loanId);
+
+            _burnLoanNotes(_loanId);
         }
 
         // Unlike paymentTotal, cannot go over maximum amount owed
@@ -339,7 +430,9 @@ contract LoanCore is
         data.balancePaid += boundedPaymentTotal;
 
         // Send payment to lender.
-        IERC20Upgradeable(data.terms.payableCurrency).safeTransfer(lender, boundedPaymentTotal);
+        // Not using safeTransfer to prevent lenders from blocking
+        // loan receipt and forcing a default
+        IERC20Upgradeable(data.terms.payableCurrency).transfer(lender, boundedPaymentTotal);
 
         // If repaid, send collateral to borrower
         if (data.state == LoanLibrary.LoanState.Repaid) {
@@ -496,7 +589,7 @@ contract LoanCore is
      * @return principalLessFees    The amount after fees.
      */
     function _getPrincipalLessFees(uint256 principal) internal view returns (uint256) {
-        return principal - principal * feeController.getOriginationFee() / BPS_DENOMINATOR;
+        return principal - principal * feeController.getOriginationFee() / BASIS_POINTS_DENOMINATOR;
     }
 
     /**
@@ -536,7 +629,7 @@ contract LoanCore is
         if(numInstallmentsPaid == currentInstallmentPeriod) revert LC_LoanNotDefaulted();
 
         // get installments missed necessary for loan default (*1000)
-        uint256 installmentsMissedForDefault = ((numInstallments * PERCENT_MISSED_FOR_LENDER_CLAIM) * 1000) / BPS_DENOMINATOR;
+        uint256 installmentsMissedForDefault = ((numInstallments * PERCENT_MISSED_FOR_LENDER_CLAIM) * 1000) / BASIS_POINTS_DENOMINATOR;
         // get current installments missed (*1000)
         // one added to numInstallmentsPaid for a grace period on the current installment.
         uint256 currentInstallmentsMissed = ((currentInstallmentPeriod) * 1000) - ((numInstallmentsPaid + 1) * 1000);
@@ -544,5 +637,44 @@ contract LoanCore is
         // check if the number of missed payments is greater than
         // 40% the total number of installment periods
         if(currentInstallmentsMissed < installmentsMissedForDefault) revert LC_LoanNotDefaulted();
+    }
+
+    /*
+     * @dev Mint a borrower and lender note together - eiaser to make sure
+     *      they are synchronized.
+     *
+     * @param loanId                The token ID to mint.
+     * @param borrower              The address of the recipient of the borrower note.
+     * @param lender                The address of the recpient of the lender note.
+     */
+    function _mintLoanNotes(uint256 loanId, address borrower, address lender) internal {
+        borrowerNote.mint(borrower, loanId);
+        lenderNote.mint(lender, loanId);
+    }
+
+    /**
+     * @dev Burn a borrower and lender note together - eiaser to make sure
+     *      they are synchronized.
+     *
+     * @param loanId                The token ID to burn.
+     */
+    function _burnLoanNotes(uint256 loanId) internal {
+        lenderNote.burn(loanId);
+        borrowerNote.burn(loanId);
+    }
+
+    /**
+     * @dev Perform an ERC20 transfer, if the specified amount is nonzero - else no-op.
+     *
+     * @param token                 The token to transfer.
+     * @param to                    The address receiving the tokens.
+     * @param amount                The amount of tokens to transfer.
+     */
+    function _transferIfNonzero(
+        IERC20Upgradeable token,
+        address to,
+        uint256 amount
+    ) internal {
+        if (amount > 0) token.safeTransfer(to, amount);
     }
 }

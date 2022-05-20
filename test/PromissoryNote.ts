@@ -135,19 +135,10 @@ describe("PromissoryNote", () => {
         };
     };
 
-    // Repay Loan
-    const repayLoan = async (
-        repaymentController: RepaymentController,
-        user: Signer,
-        loanId: BigNumberish,
-    ) => {
-        const transaction = await repaymentController.connect(user).repay(loanId);
-        await transaction.wait();
-    };
-
     // Mint Promissory Note
     const mintPromissoryNote = async (note: PromissoryNote, user: Signer): Promise<BigNumber> => {
-        const transaction = await note.mint(await user.getAddress(), 1);
+        const totalSupply = await note.totalSupply();
+        const transaction = await note.mint(await user.getAddress(), totalSupply);
         const receipt = await transaction.wait();
 
         if (receipt && receipt.events && receipt.events.length === 1 && receipt.events[0].args) {

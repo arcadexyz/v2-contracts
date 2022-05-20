@@ -21,6 +21,13 @@ import "../libraries/LoanLibrary.sol";
 error OC_ZeroAddress();
 
 /**
+ * @notice Ensure valid loan state for loan lifceycle operations.
+ *
+ * @param state                         Current state of a loan according to LoanState enum.
+ */
+error OC_InvalidState(LoanLibrary.LoanState state);
+
+/**
  * @notice Loan duration must be greater than 1hr and less than 3yrs.
  *
  * @param durationSecs                 Total amount of time in seconds.
@@ -100,11 +107,32 @@ error OC_BatchLengthMismatch();
 error OC_PrincipalTooLow(uint256 principal);
 
 /**
- * @notice Signature must not be expired
+ * @notice Signature must not be expired.
  *
  * @param deadline                      Deadline in seconds.
  */
 error OC_SignatureIsExpired(uint256 deadline);
+
+/**
+ * @notice New currency does not match for a loan rollover request.
+ *
+ * @param oldCurrency                   The currency of the active loan.
+ * @param newCurrency                   The currency of the new loan.
+ */
+error OC_RolloverCurrencyMismatch(address oldCurrency, address newCurrency);
+
+/**
+ * @notice New currency does not match for a loan rollover request.
+ *
+ * @param oldCollateralAddress          The address of the active loan's collateral.
+ * @param newCollateralAddress          The token ID of the active loan's collateral.
+ * @param oldCollateralId               The address of the new loan's collateral.
+ * @param newCollateralId               The token ID of the new loan's collateral.
+ */
+error OC_RolloverCollateralMismatch(
+    address oldCollateralAddress, uint256 oldCollateralId,
+    address newCollateralAddress, uint256 newCollateralId
+);
 
 // ==================================== ITEMS VERIFIER ======================================
 /// @notice All errors prefixed with IV_, to separate from other contracts in the protocol.
@@ -226,11 +254,16 @@ error LC_ZeroAddress();
 error LC_CollateralInUse(address collateralAddress, uint256 collateralId);
 
 /**
- * @notice Ensure valid initial loan state when starting loan.
+ * @notice Collateral is not in use for an attempted rollover.
+ */
+error LC_CollateralNotInUse();
+
+/**
+ * @notice Ensure valid loan state for loan lifceycle operations.
  *
  * @param state                         Current state of a loan according to LoanState enum.
  */
-error LC_StartInvalidState(LoanLibrary.LoanState state);
+error LC_InvalidState(LoanLibrary.LoanState state);
 
 /**
  * @notice Loan duration has not expired.
