@@ -1247,7 +1247,7 @@ describe("LoanCore", () => {
         });
     });
 
-    describe("Nonce management", () => {
+    describe.only("Nonce management", () => {
         let context: TestContext;
 
         beforeEach(async () => {
@@ -1261,10 +1261,21 @@ describe("LoanCore", () => {
             ).to.be.revertedWith(`AccessControl: account ${await (await other.getAddress()).toLocaleLowerCase()} is missing role ${ORIGINATOR_ROLE}`);
         });
 
-        // TODO: Take care of these in signature expiry PR
-        it("reverts if attempting to use a nonce that has already been consumed");
-        it("consumes a nonce");
-        it("reverts if attempting to use a nonce that has already been cancelled");
+        it("consumes a nonce", async () => {
+            const { loanCore, user } = context;
+
+            await expect(
+                loanCore.connect(user).consumeNonce(user.address, 10)
+            ).to.not.be.reverted;
+
+            expect(await loanCore.isNonceUsed(user.address, 10)).to.be.true
+            expect(await loanCore.isNonceUsed(user.address, 20)).to.be.false;;
+        });
+
+        it("reverts if attempting to use a nonce that has already been consumed", async () => {
+        });
+
         it("cancels a nonce");
+        it("reverts if attempting to use a nonce that has already been cancelled");
     });
 });
