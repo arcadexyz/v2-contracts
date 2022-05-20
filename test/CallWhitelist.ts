@@ -256,5 +256,17 @@ describe("CallWhitelist", () => {
             await whitelist.remove(mockERC20.address, selector);
             expect(await whitelist.isWhitelisted(mockERC20.address, selector)).to.be.false;
         });
+        it("add again after removing", async () => {
+            const { whitelist, mockERC20 } = await loadFixture(fixture);
+            const selector = mockERC20.interface.getSighash("mint");
+
+            expect(await whitelist.isWhitelisted(mockERC20.address, selector)).to.be.false;
+            await whitelist.add(mockERC20.address, selector);
+            expect(await whitelist.isWhitelisted(mockERC20.address, selector)).to.be.true;
+            await whitelist.remove(mockERC20.address, selector);
+            expect(await whitelist.isWhitelisted(mockERC20.address, selector)).to.be.false;
+            await whitelist.add(mockERC20.address, selector);
+            expect(await whitelist.isWhitelisted(mockERC20.address, selector)).to.be.true;
+        });
     });
 });

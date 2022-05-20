@@ -271,6 +271,31 @@ describe("OriginationController", () => {
             ).to.be.revertedWith("ERC20: transfer amount exceeds allowance");
         });
 
+        it("Reverts if principal below minimum allowable amount", async () => {
+            const { originationController, mockERC20, vaultFactory, user: lender, other: borrower } = ctx;
+
+            const bundleId = await initializeBundle(vaultFactory, borrower);
+            const loanTerms = createLoanTerms(mockERC20.address, vaultFactory.address, { collateralId: bundleId, principal:BigNumber.from("9999") });
+            await mint(mockERC20, lender, loanTerms.principal);
+
+            const sig = await createLoanTermsSignature(
+                originationController.address,
+                "OriginationController",
+                loanTerms,
+                borrower,
+                "2",
+                BigNumber.from(1)
+            );
+
+            await vaultFactory.connect(borrower).approve(originationController.address, bundleId);
+            // no approval of principal token
+            await expect(
+                originationController
+                    .connect(lender)
+                    .initializeLoan(loanTerms, await borrower.getAddress(), await lender.getAddress(), sig, 1),
+            ).to.be.revertedWith("OC_PrincipalTooLow");
+        });
+
         it("Reverts if approving own loan", async () => {
             const { originationController, mockERC20, vaultFactory, user: lender, other: borrower } = ctx;
 
