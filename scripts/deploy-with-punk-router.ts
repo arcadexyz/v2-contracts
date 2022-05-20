@@ -22,10 +22,12 @@ export async function main(
         lenderNote,
         repaymentController,
         originationController,
+        whitelist,
+        vaultFactory
     } = await deployMain(ORIGINATOR_ROLE, REPAYER_ROLE);
 
     const PunkRouter = await ethers.getContractFactory("PunkRouter");
-    const punkRouter = await PunkRouter.deploy(assetVault.address, WRAPPED_PUNKS, CRYPTO_PUNKS);
+    const punkRouter = await PunkRouter.deploy(WRAPPED_PUNKS, CRYPTO_PUNKS);
     await punkRouter.deployed();
 
     console.log("PunkRouter deployed to:", punkRouter.address);
@@ -39,6 +41,8 @@ export async function main(
         repaymentController,
         originationController,
         punkRouter,
+        whitelist,
+        vaultFactory
     };
 }
 
