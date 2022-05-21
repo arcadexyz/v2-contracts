@@ -1768,7 +1768,7 @@ describe("OriginationController", () => {
                 originationController
                     .connect(lender)
                     .initializeLoan(loanTerms, await borrower.getAddress(), await lender.getAddress(), sig, 1),
-            ).to.be.revertedWith("OC_InvalidSignature");
+            ).to.be.revertedWith("OC_ApprovedOwnLoan");
         });
     });
 

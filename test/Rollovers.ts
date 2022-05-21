@@ -1074,7 +1074,7 @@ describe("Rollovers", () => {
                 newLender,
                 "2",
                 2,
-                "b"
+                "l"
             );
 
             // Figure out amounts owed
@@ -1169,7 +1169,7 @@ describe("Rollovers", () => {
                 lender,
                 "2",
                 3,
-                "b"
+                "l"
             );
 
             // Figure out amounts owed

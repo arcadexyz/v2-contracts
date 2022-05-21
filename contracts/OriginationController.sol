@@ -41,8 +41,6 @@ import {
     OC_RolloverCollateralMismatch
 } from "./errors/Lending.sol";
 
-import "hardhat/console.sol";
-
 /**
  * @title OriginationController
  * @author Non-Fungible Technologies, Inc.
@@ -690,10 +688,7 @@ contract OriginationController is
         bytes32 sighash,
         Side neededSide
     ) internal view {
-        console.log("Borrower:", borrower);
-        console.log("Lender:", lender);
-        console.log("Caller:", caller);
-        console.log("Signer:", signer);
+        if (caller == signer) revert OC_ApprovedOwnLoan(caller);
 
         address shouldBeSigner = neededSide == Side.LEND ? lender : borrower;
         address shouldBeCaller = shouldBeSigner == lender ? borrower : lender;
