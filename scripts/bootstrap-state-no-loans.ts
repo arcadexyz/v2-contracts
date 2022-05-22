@@ -3,7 +3,6 @@
 import { ethers } from "hardhat";
 
 import { main as deploy } from "./deploy";
-import { main as flashRolloverDeploy } from "./deploy-flash-rollover";
 import { deployNFTs, mintAndDistribute, SECTION_SEPARATOR } from "./bootstrap-tools";
 
 export async function main(): Promise<void> {
@@ -18,8 +17,11 @@ export async function main(): Promise<void> {
     // Deploy the smart contracts
     const { loanCore } = await deploy();
     console.log(SECTION_SEPARATOR);
-    const { mockAddressProvider } = await flashRolloverDeploy(loanCore.address);
-    const lendingPool = await mockAddressProvider.getLendingPool();
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //DELETE THE FOLLOWING LINES
+    // const { mockAddressProvider } = await flashRolloverDeploy(loanCore.address);
+    // const lendingPool = await mockAddressProvider.getLendingPool();
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     // Mint some NFTs
     console.log(SECTION_SEPARATOR);
@@ -28,7 +30,7 @@ export async function main(): Promise<void> {
     // Distribute NFTs and ERC20s
     console.log(SECTION_SEPARATOR);
     console.log("Distributing assets...\n");
-    await mintAndDistribute(signers, weth, pawnToken, usd, punks, art, beats, lendingPool);
+    await mintAndDistribute(signers, weth, pawnToken, usd, punks, art, beats);
 }
 
 // We recommend this pattern to be able to use async/await everywhere
