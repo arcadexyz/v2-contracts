@@ -37,6 +37,7 @@ interface TestContext {
     mockERC20: MockERC20;
     mockERC721: MockERC721;
     vaultFactory: VaultFactory;
+    vault: AssetVault;
     lenderPromissoryNote: PromissoryNote;
     borrowerPromissoryNote: PromissoryNote;
     loanCore: LoanCore;
@@ -44,6 +45,29 @@ interface TestContext {
     other: Signer;
     signers: Signer[];
 }
+
+/**
+ * Creates a vault instance using the vault factory
+ */
+const createVault = async (factory: VaultFactory, user: Signer): Promise<AssetVault> => {
+    const tx = await factory.connect(user).initializeBundle(await user.getAddress());
+    const receipt = await tx.wait();
+
+    let vault: AssetVault | undefined;
+    if (receipt && receipt.events) {
+        for (const event of receipt.events) {
+            if (event.args && event.args.vault) {
+                vault = <AssetVault>await hre.ethers.getContractAt("AssetVault", event.args.vault);
+            }
+        }
+    } else {
+        throw new Error("Unable to create new vault");
+    }
+    if (!vault) {
+        throw new Error("Unable to create new vault");
+    }
+    return vault;
+};
 
 const fixture = async (): Promise<TestContext> => {
     const signers: Signer[] = await hre.ethers.getSigners();
@@ -70,6 +94,7 @@ const fixture = async (): Promise<TestContext> => {
     const VaultFactoryFactory = await hre.ethers.getContractFactory("VaultFactory");
     const vaultFactory = <VaultFactory>(await upgrades.deployProxy(VaultFactoryFactory, [vaultTemplate.address, whitelist.address], { kind: 'uups' })
     );
+    const vault = await createVault(vaultFactory, signers[0]);
 
     const mockERC20 = <MockERC20>await deploy("MockERC20", deployer, ["Mock ERC20", "MOCK"]);
     const mockERC721 = <MockERC721>await deploy("MockERC721", deployer, ["Mock ERC721", "MOCK"]);
@@ -89,6 +114,7 @@ const fixture = async (): Promise<TestContext> => {
         mockERC20,
         mockERC721,
         vaultFactory,
+        vault,
         lenderPromissoryNote: lenderNote,
         borrowerPromissoryNote: borrowerNote,
         loanCore,
@@ -1411,6 +1437,14 @@ describe("OriginationController", () => {
             await expect(
                 originationController.connect(other).setAllowedVerifier(verifier.address, true),
             ).to.be.revertedWith("Ownable: caller is not the owner");
+        });
+
+        it("Try to set 0x0000 as address, should revert.", async () => {
+            const { user, originationController } = ctx;
+
+            await expect(
+                originationController.connect(user).setAllowedVerifier("0x0000000000000000000000000000000000000000", true),
+            ).to.be.revertedWith("OC_ZeroAddress");
         });
 
         it("allows the contract owner to update the whitelist", async () => {
