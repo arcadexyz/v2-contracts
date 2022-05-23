@@ -4,6 +4,8 @@ import { Contract, Signer } from "ethers";
 
 const { deployContract } = hre.waffle;
 
+export const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+
 /**
  * Deploy a contract with the given artifact name
  * Will be deployed by the given deployer address with the given params

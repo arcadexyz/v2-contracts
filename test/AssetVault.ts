@@ -16,12 +16,13 @@ import {
 import { mint } from "./utils/erc20";
 import { mint as mintERC721 } from "./utils/erc721";
 import { mint as mintERC1155 } from "./utils/erc1155";
-import { deploy } from "./utils/contracts";
+import { deploy, ZERO_ADDRESS } from "./utils/contracts";
 
 type Signer = SignerWithAddress;
 
 interface TestContext {
     vault: AssetVault;
+    vaultTemplate: AssetVault;
     nft: VaultFactory;
     whitelist: CallWhitelist;
     bundleId: BigNumberish;
@@ -69,13 +70,13 @@ describe("AssetVault", () => {
 
         const vaultTemplate = <AssetVault>await deploy("AssetVault", signers[0], []);
         const VaultFactoryFactory = await hre.ethers.getContractFactory("VaultFactory");
-        const factory = <VaultFactory>(await upgrades.deployProxy(VaultFactoryFactory, [vaultTemplate.address, whitelist.address], { kind: 'uups' })
-        );
+        const factory = <VaultFactory>(await upgrades.deployProxy(VaultFactoryFactory, [vaultTemplate.address, whitelist.address], { kind: 'uups' }));
         const vault = await createVault(factory, signers[0]);
 
         return {
             nft: factory,
             vault,
+            vaultTemplate,
             whitelist,
             bundleId: vault.address,
             mockERC20,
@@ -87,7 +88,19 @@ describe("AssetVault", () => {
         };
     };
 
-    describe("Initialize Bundle", function () {
+    describe("Deployment", () => {
+        it("should fail to initialize if deployed as a standalone (not by factory)", async () => {
+            const { user, whitelist } = await loadFixture(fixture);
+
+            const vault = <AssetVault>await deploy("AssetVault", user, []);
+
+            await expect(
+                vault.initialize(whitelist.address)
+            ).to.be.revertedWith("AV_AlreadyInitialized");
+        });
+    });
+
+    describe("Initialize Bundle", () => {
         it("should successfully initialize a bundle", async () => {
             const { nft, user } = await loadFixture(fixture);
 
@@ -335,6 +348,29 @@ describe("AssetVault", () => {
                 .withArgs(await user.getAddress(), mockERC20.address, mintData.data);
             const endingBalance = await mockERC20.balanceOf(await user.getAddress());
             expect(endingBalance.sub(startingBalance)).to.equal(ethers.utils.parseEther("1"));
+        });
+
+        it("fails if withdraw enabled on vault", async () => {
+            const { whitelist, vault, mockERC20, user, other } = await loadFixture(fixture);
+
+            const mockCallDelegator = <MockCallDelegator>await deploy("MockCallDelegator", other, []);
+            await mockCallDelegator.connect(other).setCanCall(true);
+
+            const selector = mockERC20.interface.getSighash("mint");
+            const mintData = await mockERC20.populateTransaction.mint(
+                await user.getAddress(),
+                ethers.utils.parseEther("1"),
+            );
+            if (!mintData || !mintData.data) throw new Error("Populate transaction failed");
+
+            await whitelist.add(mockERC20.address, selector);
+
+            // enable withdraw on the vault
+            await vault.connect(user).enableWithdraw();
+
+            await expect(vault.connect(user).call(mockERC20.address, mintData.data)).to.be.revertedWith(
+                "AV_WithdrawsEnabled",
+            );
         });
 
         it("fails if delegator disallows", async () => {
