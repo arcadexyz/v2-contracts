@@ -160,16 +160,13 @@ contract RepaymentController is
         // get loan from borrower note
         if (data.state == LoanLibrary.LoanState.DUMMY_DO_NOT_USE) revert RC_CannotDereference(loanId);
 
-        uint256 startDate = data.startDate;
-        if (startDate > block.timestamp) revert RC_BeforeStartDate(startDate);
-
         uint256 installments = data.terms.numInstallments;
         if (installments == 0) revert RC_NoInstallments(installments);
 
         // get the current minimum balance due for the installment
         (uint256 minInterestDue, uint256 lateFees, uint256 numMissedPayments) = _calcAmountsDue(
             data.balance,
-            startDate,
+            data.startDate,
             data.terms.durationSecs,
             installments,
             data.numInstallmentsPaid,

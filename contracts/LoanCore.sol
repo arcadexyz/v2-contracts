@@ -211,8 +211,6 @@ contract LoanCore is
         if (data.state != LoanLibrary.LoanState.Active) revert LC_InvalidState(data.state);
 
         uint256 returnAmount = getFullInterestAmount(data.terms.principal, data.terms.interestRate);
-        // ensure balance to be paid is greater than zero
-        if (returnAmount == 0) revert LC_BalanceGTZero(returnAmount);
 
         // transfer from msg.sender to this contract
         IERC20Upgradeable(data.terms.payableCurrency).safeTransferFrom(_msgSender(), address(this), returnAmount);
