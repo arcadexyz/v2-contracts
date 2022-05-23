@@ -39,6 +39,7 @@ export interface ItemsPayload {
     payableCurrency: string;
     numInstallments: BigNumberish;
     nonce: BigNumberish;
+    side: 0 | 1;
     deadline: BigNumberish;
 }
 

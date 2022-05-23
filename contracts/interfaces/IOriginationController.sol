@@ -7,6 +7,11 @@ import "../libraries/LoanLibrary.sol";
 interface IOriginationController {
     // ================ Data Types =============
 
+    enum Side {
+        BORROW,
+        LEND
+    }
+
     struct Signature {
         uint8 v;
         bytes32 r;
@@ -102,13 +107,15 @@ interface IOriginationController {
     function recoverTokenSignature(
         LoanLibrary.LoanTerms calldata loanTerms,
         Signature calldata sig,
-        uint160 nonce
+        uint160 nonce,
+        Side side
     ) external view returns (bytes32 sighash, address signer);
 
     function recoverItemsSignature(
         LoanLibrary.LoanTerms calldata loanTerms,
         Signature calldata sig,
         uint160 nonce,
+        Side side,
         bytes32 itemsHash
     ) external view returns (bytes32 sighash, address signer);
 

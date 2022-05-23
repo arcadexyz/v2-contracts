@@ -34,6 +34,8 @@ library LoanLibrary {
         // The number of seconds representing relative due date of the loan.
         /// @dev Max is 94,608,000, fits in 32 bits
         uint32 durationSecs;
+        // Timestamp for when signature for terms expires
+        uint32 deadline;
         // Total number of installment periods within the loan duration.
         /// @dev Max is 1,000,000, fits in 24 bits
         uint24 numInstallments;
@@ -41,8 +43,8 @@ library LoanLibrary {
         // Input conversion: 0.01% = (1 * 10**18) ,  10.00% = (1000 * 10**18)
         // This represents the rate over the lifetime of the loan, not APR.
         // 0.01% is the minimum interest rate allowed by the protocol.
-        /// @dev Max is 10,000%, fits in 200 bits
-        uint200 interestRate;
+        /// @dev Max is 10,000%, fits in 160 bits
+        uint160 interestRate;
 
         /// @dev Full-slot variables
         // The amount of principal in terms of the payableCurrency.
@@ -54,8 +56,6 @@ library LoanLibrary {
         uint256 collateralId;
         // The payable currency for the loan principal and interest.
         address payableCurrency;
-        // Timestamp for when signature for terms expires
-        uint256 deadline;
     }
 
     /**
@@ -68,6 +68,8 @@ library LoanLibrary {
         // The number of seconds representing relative due date of the loan.
         /// @dev Max is 94,608,000, fits in 32 bits
         uint32 durationSecs;
+        // Timestamp for when signature for terms expires
+        uint32 deadline;
         // Total number of installment periods within the loan duration.
         /// @dev Max is 1,000,000, fits in 24 bits
         uint24 numInstallments;
@@ -75,8 +77,8 @@ library LoanLibrary {
         // Input conversion: 0.01% = (1 * 10**18) ,  10.00% = (1000 * 10**18)
         // This represents the rate over the lifetime of the loan, not APR.
         // 0.01% is the minimum interest rate allowed by the protocol.
-        /// @dev Max is 10,000%, fits in 200 bits
-        uint200 interestRate;
+        /// @dev Max is 10,000%, fits in 160 bits
+        uint160 interestRate;
 
         /// @dev Full-slot variables
         uint256 principal;
@@ -87,8 +89,6 @@ library LoanLibrary {
         bytes items;
         // The payable currency for the loan principal and interest
         address payableCurrency;
-        // Timestamp for when signature for terms expires
-        uint256 deadline;
     }
 
     /**

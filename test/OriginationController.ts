@@ -241,7 +241,8 @@ describe("OriginationController", () => {
                 loanTerms,
                 borrower,
                 "2",
-                BigNumber.from(1)
+                1,
+                "b"
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -268,7 +269,8 @@ describe("OriginationController", () => {
                 loanTerms,
                 borrower,
                 "2",
-                BigNumber.from(1)
+                1,
+                "b"
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -293,7 +295,8 @@ describe("OriginationController", () => {
                 loanTerms,
                 borrower,
                 "2",
-                BigNumber.from(1)
+                1,
+                "b"
             );
 
             await vaultFactory.connect(borrower).approve(originationController.address, bundleId);
@@ -318,7 +321,8 @@ describe("OriginationController", () => {
                 loanTerms,
                 borrower,
                 "2",
-                BigNumber.from(1)
+                1,
+                "b"
             );
 
             await vaultFactory.connect(borrower).approve(originationController.address, bundleId);
@@ -343,7 +347,8 @@ describe("OriginationController", () => {
                 loanTerms,
                 borrower,
                 "2",
-                BigNumber.from(1)
+                1,
+                "b"
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -353,7 +358,7 @@ describe("OriginationController", () => {
                     // sender is the borrower, signer is also the borrower
                     .connect(borrower)
                     .initializeLoan(loanTerms, await borrower.getAddress(), await lender.getAddress(), sig, 1),
-            ).to.be.revertedWith("OC_ApprovedOwnLoan");
+            ).to.be.revertedWith("OC_InvalidSignature");
         });
 
         it("Reverts if signer is not a participant", async () => {
@@ -370,7 +375,8 @@ describe("OriginationController", () => {
                 loanTerms,
                 signers[3],
                 "2",
-                BigNumber.from(1)
+                1,
+                "b"
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -395,7 +401,8 @@ describe("OriginationController", () => {
                 loanTerms,
                 borrower,
                 "2",
-                "3", // Use nonce 3
+                3, // Use nonce 3
+                "b"
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -421,7 +428,8 @@ describe("OriginationController", () => {
                 loanTerms,
                 borrower,
                 "2",
-                "3", // Use nonce 3
+                3, // Use nonce 3
+                "b"
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -446,7 +454,8 @@ describe("OriginationController", () => {
                 loanTerms,
                 borrower,
                 "2",
-                BigNumber.from(2), // Use nonce 2
+                2, // Use nonce 2
+                "b"
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -471,7 +480,8 @@ describe("OriginationController", () => {
                 loanTerms,
                 borrower,
                 "2",
-                BigNumber.from(1)
+                1,
+                "b"
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -498,7 +508,8 @@ describe("OriginationController", () => {
                 loanTerms,
                 lender,
                 "2",
-                BigNumber.from(1)
+                1,
+                "l"
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -526,7 +537,8 @@ describe("OriginationController", () => {
                 loanTerms,
                 borrower,
                 "2",
-                BigNumber.from(1)
+                1,
+                "b"
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -553,7 +565,8 @@ describe("OriginationController", () => {
                 loanTerms,
                 lender,
                 "2",
-                BigNumber.from(1)
+                1,
+                "l"
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -615,7 +628,8 @@ describe("OriginationController", () => {
                     loanTerms,
                     user,
                     "2",
-                    BigNumber.from(1)
+                    1,
+                    "b"
                 );
 
                 await expect(
@@ -671,7 +685,8 @@ describe("OriginationController", () => {
                     loanTerms,
                     user,
                     "2",
-                    BigNumber.from(1)
+                    1,
+                    "b"
                 );
 
                 await expect(
@@ -717,7 +732,8 @@ describe("OriginationController", () => {
                     loanTerms,
                     borrower,
                     "2",
-                    BigNumber.from(1)
+                    1,
+                    "b"
                 );
 
                 await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -784,6 +800,8 @@ describe("OriginationController", () => {
                 encodePredicates(predicates),
                 lender,
                 "2",
+                "1",
+                "l"
             );
 
             await expect(
@@ -831,6 +849,8 @@ describe("OriginationController", () => {
                 encodePredicates(predicates),
                 lender,
                 "2",
+                "1",
+                "l"
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -883,7 +903,8 @@ describe("OriginationController", () => {
                 encodePredicates(predicates),
                 borrower,
                 "2",
-                "3", // Use nonce 2
+                "2", // Use nonce 2
+                "l"
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -936,7 +957,8 @@ describe("OriginationController", () => {
                 encodePredicates(predicates),
                 borrower,
                 "2",
-                "2", // Use nonce 2
+                "2", // Use nonce 2,
+                "b"
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -992,6 +1014,8 @@ describe("OriginationController", () => {
                 encodePredicates(predicates),
                 borrower,
                 "2",
+                "1",
+                "b"
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -1044,6 +1068,8 @@ describe("OriginationController", () => {
                 encodePredicates(predicates),
                 borrower,
                 "2",
+                "1",
+                "b"
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -1098,6 +1124,8 @@ describe("OriginationController", () => {
                 encodePredicates(predicates),
                 lender,
                 "2",
+                "1",
+                "l"
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -1161,6 +1189,8 @@ describe("OriginationController", () => {
                 encodePredicates(predicates),
                 lender,
                 "2",
+                "1",
+                "l"
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -1244,6 +1274,8 @@ describe("OriginationController", () => {
               encodePredicates(predicates),
               borrower,
               "2",
+              "1",
+              "b"
           );
 
           await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -1326,6 +1358,8 @@ describe("OriginationController", () => {
                     encodePredicates(predicates),
                     lender,
                     "2",
+                    "1",
+                    "b"
                 );
 
                 await expect(
@@ -1402,6 +1436,8 @@ describe("OriginationController", () => {
                     encodePredicates(predicates),
                     lender,
                     "2",
+                    "1",
+                    "b"
                 );
 
                 await expect(
@@ -1530,7 +1566,8 @@ describe("OriginationController", () => {
                 loanTerms,
                 newSigner, // Now signed by a third party
                 "2",
-                BigNumber.from(1)
+                1,
+                "b"
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -1562,7 +1599,8 @@ describe("OriginationController", () => {
                 loanTerms,
                 newSigner, // Now signed by a third party
                 "2",
-                BigNumber.from(1)
+                1,
+                "l"
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -1594,7 +1632,8 @@ describe("OriginationController", () => {
                 loanTerms,
                 lender,
                 "2",
-                BigNumber.from(1)
+                1,
+                "l"
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -1626,7 +1665,8 @@ describe("OriginationController", () => {
                 loanTerms,
                 borrower,
                 "2",
-                BigNumber.from(1)
+                1,
+                "b"
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -1659,7 +1699,8 @@ describe("OriginationController", () => {
                 loanTerms,
                 lender,
                 "2",
-                BigNumber.from(1)
+                1,
+                "l"
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -1690,7 +1731,8 @@ describe("OriginationController", () => {
                 loanTerms,
                 borrower,
                 "2",
-                BigNumber.from(1)
+                1,
+                "b"
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -1699,7 +1741,7 @@ describe("OriginationController", () => {
                 originationController
                     .connect(borrower)
                     .initializeLoan(loanTerms, await borrower.getAddress(), await lender.getAddress(), sig, 1),
-            ).to.be.revertedWith("OC_ApprovedOwnLoan");
+            ).to.be.revertedWith("OC_InvalidSignature");
         });
 
         it("does not allow unilateral lender origination even if the borrower approves", async () => {
@@ -1719,7 +1761,8 @@ describe("OriginationController", () => {
                 loanTerms,
                 lender,
                 "2",
-                BigNumber.from(1)
+                1,
+                "l"
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
