@@ -7,14 +7,17 @@ import "@nomiclabs/hardhat-ethers";
 import "@openzeppelin/hardhat-upgrades";
 import "hardhat-contract-sizer";
 
-import "./tasks/accounts";
+import "./tasks/account";
 import "./tasks/clean";
+import "./tasks/functions/generate";
 
 import { resolve } from "path";
 
 import { config as dotenvConfig } from "dotenv";
 import { HardhatUserConfig } from "hardhat/config";
 import { NetworkUserConfig, HardhatNetworkUserConfig } from "hardhat/types";
+
+import { getMnemonic } from './tasks/functions/mnemonic';
 
 dotenvConfig({ path: resolve(__dirname, "./.env") });
 
@@ -31,11 +34,8 @@ const chainIds = {
 
 // Ensure that we have all the environment variables we need.
 let mnemonic: string;
-if (!process.env.MNEMONIC) {
-    mnemonic = "test test test test test test test test test test test junk";
-} else {
-    mnemonic = process.env.MNEMONIC;
-}
+mnemonic = getMnemonic();
+
 
 const forkMainnet = process.env.FORK_MAINNET === "true";
 

@@ -27,10 +27,10 @@
         "eslint": "^7.11.0",
         "eslint-config-prettier": "^6.12.0",
         "ethereum-waffle": "^3.4.4",
-        "ethereumjs-util": "^7.0.10",
+        "ethereumjs-util": "^7.1.4",
         "ethers": "^5.0.32",
         "fs-extra": "^9.0.1",
-        "hardhat": "^2.0.10",
+        "hardhat": "^2.9.0",
         "hardhat-contract-sizer": "^2.5.1",
         "hardhat-gas-reporter": "^1.0.4",
         "husky": "^4.3.0",
@@ -93,7 +93,15 @@
         "bootstrap-no-loans": "npx hardhat --network localhost run scripts/bootstrap-state-no-loans.ts"
     },
     "dependencies": {
+        "@ethersproject/address": "^5.6.0",
         "@openzeppelin/contracts-upgradeable": "^4.5.2",
-        "@openzeppelin/hardhat-upgrades": "^1.17.0"
+        "@openzeppelin/hardhat-upgrades": "^1.17.0",
+        "@types/ethereumjs-util": "^6.1.0",
+        "@types/qrcode-terminal": "^0.12.0",
+        "bip39": "^3.0.4",
+        "ethereumjs-wallet": "^1.0.2",
+        "fs": "^0.0.1-security",
+        "hardhat-deploy": "^0.11.10",
+        "qrcode-terminal": "^0.12.0"
     }
 }
