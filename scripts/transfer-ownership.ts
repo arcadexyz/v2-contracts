@@ -16,7 +16,7 @@ export async function main(
         throw new Error("Must specify ADMIN_ADDRESS in environment!");
     }
 
-    const [deployer] = await ethers.getSigners();
+    const [deployer, lender, borrower] = await ethers.getSigners(); // added lines for example
     console.log(`Deployer address: ${await deployer.getAddress()}`);
     console.log(`Admin address: ${ADMIN_ADDRESS}`);
     console.log(`Loan core address: ${LOAN_CORE_ADDRESS}`);
@@ -26,10 +26,14 @@ export async function main(
 
     const loanCore = await ethers.getContractAt("LoanCore", LOAN_CORE_ADDRESS);
     // set LoanCore admin and fee claimer
-    const updateLoanCoreFeeClaimer = await loanCore.grantRole(FEE_CLAIMER_ROLE, ADMIN_ADDRESS);
+    const updateLoanCoreFeeClaimer = await loanCore.connect(borrower).grantRole(FEE_CLAIMER_ROLE, ADMIN_ADDRESS); // ADDED LINES FOR EXAMPLE
+    // MAK FOR EXPLANATION :  granteRole(name of new role, recipient address)
     await updateLoanCoreFeeClaimer.wait();
     const updateLoanCoreAdmin = await loanCore.grantRole(ADMIN_ROLE, ADMIN_ADDRESS);
     await updateLoanCoreAdmin.wait();
+
+    const updateFactoryAdmin = await loanCore.grantRole(ADMIN_ROLE, ADMIN_ADDRESS);
+    await updateFactoryAdmin.wait();
 
     // renounce ownership from deployer
     const renounceAdmin = await loanCore.renounceRole(ADMIN_ROLE, await deployer.getAddress());

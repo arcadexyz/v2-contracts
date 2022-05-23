@@ -4,13 +4,13 @@ import hre, { ethers } from "hardhat";
 
 import { main as deploy } from "./redeploy-loancore";
 import { main as transferOwnership } from "./transfer-ownership";
-import { main as flashRolloverDeploy } from "./deploy-flash-rollover";
+
 import {
     getBalance,
     deployNFTs,
     mintAndDistribute,
     SECTION_SEPARATOR,
-    wrapAssetsAndMakeLoans,
+    vaultAssetsAndMakeLoans,
 } from "./bootstrap-tools";
 
 export async function main(): Promise<void> {
@@ -25,9 +25,7 @@ export async function main(): Promise<void> {
     console.log("Deploying resources...\n");
 
     // Deploy the smart contracts
-    const { assetWrapper, originationController, repaymentController, borrowerNote, loanCore } = await deploy();
-    const { mockAddressProvider } = await flashRolloverDeploy(loanCore.address);
-    const lendingPool = await mockAddressProvider.getLendingPool();
+    const { assetVault, originationController, repaymentController, borrowerNote, loanCore } = await deploy();
 
     // Mint some NFTs
     console.log(SECTION_SEPARATOR);
@@ -36,17 +34,12 @@ export async function main(): Promise<void> {
     // Distribute NFTs and ERC20s
     console.log(SECTION_SEPARATOR);
     console.log("Distributing assets...\n");
-    await mintAndDistribute(signers, weth, pawnToken, usd, punks, art, beats, lendingPool);
+    await mintAndDistribute(signers, weth, pawnToken, usd, punks, art, beats);
 
-    // Wrap some assets
+    // Vault some assets
     console.log(SECTION_SEPARATOR);
     console.log("Wrapping assets...\n");
-    await wrapAssetsAndMakeLoans(
-        signers,
-        assetWrapper,
-        originationController,
-        borrowerNote,
-        repaymentController,
+    await vaultAssetsAndMakeLoans(
         punks,
         usd,
         beats,
