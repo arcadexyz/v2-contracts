@@ -290,6 +290,10 @@ describe("PromissoryNote", () => {
 
             approved = await promissoryNote.getApproved(promissoryNoteId);
             expect(approved).to.equal(await other.getAddress());
+            //check nonce was incremented to one
+            expect(await promissoryNote.nonces(await user.getAddress())).to.equal(1);
+            //test coverage checking domain separator
+            expect(await promissoryNote.DOMAIN_SEPARATOR());
         });
 
         it("rejects if given owner is not real owner", async () => {
@@ -413,6 +417,15 @@ describe("PromissoryNote", () => {
                     s,
                 ),
             ).to.be.revertedWith("ERC721P_DeadlineExpired");
+        });
+    });
+
+    describe("Introspection", function () {
+        it("should return true for declaring support for eip165 interface contract", async () => {
+            const { borrowerPromissoryNote } = await loadFixture(fixture);
+            // https://eips.ethereum.org/EIPS/eip-165#test-cases
+            expect(await borrowerPromissoryNote.supportsInterface("0x01ffc9a7")).to.be.true;
+            expect(await borrowerPromissoryNote.supportsInterface("0xfafafafa")).to.be.false;
         });
     });
 });

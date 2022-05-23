@@ -395,5 +395,21 @@ describe("RepaymentController", () => {
         await repaymentController.connect(borrower).repay(loanId);
 
         expect(await mockERC20.balanceOf(borrower.address)).to.equal(0);
+
+        // LC_BalanceGTZero unreachable?
+        await mint(mockERC20, borrower, ethers.utils.parseEther("1"));
+        await mockERC20.connect(borrower).approve(repaymentController.address, ethers.utils.parseEther("1"));
+        await expect(repaymentController.connect(borrower).repay(loanId)).to.be.revertedWith("LC_InvalidState");
+
     });
+});
+
+describe("RepaymentController revert branches", () => {
+    it("Get full interest with invaild rate, should revert.", async () => {
+        const context = await loadFixture(fixture);
+        const { repaymentController } = context;
+        await expect(repaymentController.getFullInterestAmount(ethers.utils.parseEther("100"), ethers.utils.parseEther("0.9")))
+         .to.be.revertedWith("FIAC_InterestRate");
+    });
+
 });

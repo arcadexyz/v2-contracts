@@ -612,8 +612,8 @@ contract OriginationController is
         // and less than 10,000% (1e8 basis points)
         if (terms.interestRate < 1e18 || terms.interestRate > 1e26) revert OC_InterestRate(terms.interestRate);
 
-        // number of installments must be an even number.
-        if (terms.numInstallments % 2 != 0 || terms.numInstallments > 1_000_000)
+        // number of installments must be between 2 and 1000.
+        if (terms.numInstallments == 1 || terms.numInstallments > 1_000)
             revert OC_NumberInstallments(terms.numInstallments);
 
         // signature must not have already expired

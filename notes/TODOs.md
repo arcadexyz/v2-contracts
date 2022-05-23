@@ -7,6 +7,27 @@ Final Cleanup:
 - Run prettier
 - Delete notes/ folder
 
+Evan:
+
+> V2 Protocol Planning/ Progress:
+
+- (DONE) Installment Claims
+- (DONE) Rollover Review
+- (IN PROGRESS) Test coverage
+ - need rebase after rollovers merge
+ - remove modulus(2) require statement and try a 1 installment loan.
+   - modify:
+   ```
+   if (terms.numInstallments % 2 != 0 || terms.numInstallments > 1_000_000)
+           revert OC_NumberInstallments(terms.numInstallments);
+   ```
+   to
+   ```
+   if (terms.numInstallments <= 1 || terms.numInstallments > 1_000)
+           revert OC_NumberInstallments(terms.numInstallments);
+   ```
+   To allow for loan terms anywhere between 2 - 1000 installment periods. One not allowed, this is a legacy loan type.
+
 Mouzayan:
 
 - Upgradeability and dependency architecture\

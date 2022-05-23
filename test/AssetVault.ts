@@ -34,6 +34,9 @@ interface TestContext {
 }
 
 describe("AssetVault", () => {
+    /**
+     * Creates a vault instance using the vault factory
+     */
     const createVault = async (factory: VaultFactory, user: Signer): Promise<AssetVault> => {
         const tx = await factory.connect(user).initializeBundle(await user.getAddress());
         const receipt = await tx.wait();
@@ -511,7 +514,7 @@ describe("AssetVault", () => {
                 const amount = hre.ethers.utils.parseUnits("50", 18);
                 await deposit(mockERC20, vault, amount, user);
 
-                await vault.enableWithdraw();
+                await vault.connect(user).enableWithdraw();
                 await expect(vault.connect(user).withdrawERC20(mockERC20.address, await user.getAddress()))
                     .to.emit(vault, "WithdrawERC20")
                     .withArgs(await user.getAddress(), mockERC20.address, await user.getAddress(), amount)
@@ -779,6 +782,15 @@ describe("AssetVault", () => {
                 await expect(vault.connect(other).withdrawETH(await other.getAddress())).to.be.revertedWith(
                     "OERC721_CallerNotOwner",
                 );
+            });
+        });
+
+        describe("Introspection", function () {
+            it("should return true for declaring support for eip165 interface contract", async () => {
+                const { nft } = await loadFixture(fixture);
+                // https://eips.ethereum.org/EIPS/eip-165#test-cases
+                expect(await nft.supportsInterface("0x01ffc9a7")).to.be.true;
+                expect(await nft.supportsInterface("0xfafafafa")).to.be.false;
             });
         });
     });
