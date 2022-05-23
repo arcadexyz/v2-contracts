@@ -337,21 +337,21 @@ describe("Installments", () => {
             ).to.be.revertedWith("OC_NumberInstallments");
         });
 
-        // it("Create a loan with interest rate greater than 1e18 and less than 1e26.", async () => {
-        //     const context = await loadFixture(fixture);
-        //     const { mockERC20 } = context;
-        //     await expect(
-        //         initializeInstallmentLoan(
-        //             context,
-        //             mockERC20.address,
-        //             BigNumber.from(86400), // durationSecs
-        //             hre.ethers.utils.parseEther("100"), // principal
-        //             hre.ethers.utils.parseEther("1000001"), // interest 10,000.01%
-        //             2, // numInstallments
-        //             1754884800 // deadline
-        //         )
-        //     ).to.be.revertedWith("OC_InterestRate");
-        // });
+        it("Create a loan with interest rate greater than 1e18 and less than 1e26.", async () => {
+            const context = await loadFixture(fixture);
+            const { mockERC20 } = context;
+            await expect(
+                initializeInstallmentLoan(
+                    context,
+                    mockERC20.address,
+                    BigNumber.from(86400), // durationSecs
+                    hre.ethers.utils.parseEther("100"), // principal
+                    hre.ethers.utils.parseEther("1000001"), // interest 10,000.01%
+                    2, // numInstallments
+                    1754884800 // deadline
+                )
+            ).to.be.revertedWith("OC_InterestRate");
+        });
 
         it("Create a loan with invalid signature deadline.", async () => {
             const context = await loadFixture(fixture);
@@ -395,6 +395,43 @@ describe("Installments", () => {
             expect(lateFees).to.equal(ethers.utils.parseEther("0"));
             expect(numMissedPayments).to.equal(0);
         });
+
+        it("reverts if trying to repay part on a closed loan", async () => {
+            const context = await loadFixture(fixture);
+            const { repaymentController, mockERC20, borrower, blockchainTime } = context;
+            const { loanId } = await initializeInstallmentLoan(
+                context,
+                mockERC20.address,
+                BigNumber.from(36000), // durationSecs
+                hre.ethers.utils.parseEther("100"), // principal
+                hre.ethers.utils.parseEther("1000"), // interest
+                4, // numInstallments
+                1754884800 // deadline
+            );
+
+            //increase time slightly
+            await blockchainTime.increaseTime(10);
+
+            const res = await repaymentController
+                .connect(borrower)
+                .callStatic.amountToCloseLoan(loanId);
+            const amountDue = res[0];
+            const numMissedPayments = res[1].toNumber();
+            expect(amountDue).to.equal(ethers.utils.parseEther("102.5"));
+            expect(numMissedPayments).to.equal(0);
+
+            await mockERC20.connect(borrower).approve(repaymentController.address, ethers.utils.parseEther("210"));
+            await expect(repaymentController.connect(borrower).closeLoan(loanId))
+                .to.emit(mockERC20, "Transfer")
+                .withArgs(await borrower.getAddress(), repaymentController.address, ethers.utils.parseEther("102.5"));
+
+            await expect(
+                repaymentController
+                    .connect(borrower)
+                    .repayPart(loanId, ethers.utils.parseEther("102.5"))
+            )
+                .to.be.revertedWith("LC_InvalidState")
+        })
 
         it("Fast Forward to 2nd period. Verify missed payments equals one.", async () => {
             const context = await loadFixture(fixture);

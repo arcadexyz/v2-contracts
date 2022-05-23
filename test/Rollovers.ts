@@ -573,6 +573,73 @@ describe("Rollovers", () => {
             expect(await loanCore.canCallOn(borrower.address, bundleId.toString())).to.eq(true);
         });
 
+        it("should fail to roll over an already closed loan", async () => {
+            const {
+                originationController,
+                mockERC20,
+                vaultFactory,
+                borrower,
+                lender,
+                borrowerNote,
+                lenderNote,
+                loanCore
+            } = ctx;
+            const { loanId, loanTerms, bundleId } = loan;
+
+            // create new terms for rollover and sign them
+            const newTerms = createLoanTerms(
+                mockERC20.address,
+                vaultFactory.address,
+                loanTerms
+            );
+
+            const sig = await createLoanTermsSignature(
+                originationController.address,
+                "OriginationController",
+                loanTerms,
+                lender,
+                "2",
+                2,
+                "l"
+            );
+
+            // Figure out amounts owed
+            // With same terms, borrower will have to pay interest plus 0.1%
+            // 10% interest on 100, plus 0.1% eq 11.1
+
+            await mockERC20.mint(borrower.address, ethers.utils.parseEther("12"));
+            await mockERC20.connect(borrower).approve(originationController.address, ethers.utils.parseEther("25"));
+
+            const newLoanId = Number(loanId) + 1;
+
+            await expect(
+                originationController.connect(borrower).rolloverLoan(
+                    loanId,
+                    newTerms,
+                    lender.address,
+                    sig,
+                    2
+                )
+            )
+                .to.emit(loanCore, "LoanRepaid")
+                .withArgs(loanId)
+                .to.emit(loanCore, "LoanStarted")
+                .withArgs(newLoanId, lender.address, borrower.address)
+                .to.emit(loanCore, "LoanRolledOver")
+                .withArgs(loanId, newLoanId);
+
+            // Try to roll over again
+            await expect(
+                originationController.connect(borrower).rolloverLoan(
+                    loanId,
+                    newTerms,
+                    lender.address,
+                    sig,
+                    2
+                )
+            ).to.be.revertedWith("OC_InvalidState");
+        });
+
         it("should roll over to a different lender", async () => {
             const {
                 originationController,

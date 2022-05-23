@@ -157,6 +157,34 @@ describe("PromissoryNote", () => {
 
             expect(PromissoryNote).exist;
         });
+
+        it("fails to initialize if not called by the deployer", async () => {
+            const { loanCore } = await loadFixture(fixture);
+            const signers: Signer[] = await hre.ethers.getSigners();
+
+            const PromissoryNote = <PromissoryNote>await deploy("PromissoryNote", signers[0], ["PromissoryNote", "BN"]);
+
+            await expect(
+                PromissoryNote.connect(signers[1]).initialize(loanCore.address)
+            ).to.be.revertedWith("PN_CannotInitialize");
+
+        });
+
+        it("fails to initialize if already initialized", async () => {
+            const { loanCore } = await loadFixture(fixture);
+            const signers: Signer[] = await hre.ethers.getSigners();
+
+            const PromissoryNote = <PromissoryNote>await deploy("PromissoryNote", signers[0], ["PromissoryNote", "BN"]);
+
+            await expect(
+                PromissoryNote.connect(signers[0]).initialize(loanCore.address)
+            ).to.not.be.reverted;
+
+            // Try to call again
+            await expect(
+                PromissoryNote.connect(signers[0]).initialize(loanCore.address)
+            ).to.be.revertedWith("PN_AlreadyInitialized");
+        });
     });
 
     describe("mint", () => {
@@ -199,6 +227,109 @@ describe("PromissoryNote", () => {
 
             const promissoryNoteId = await mintPromissoryNote(promissoryNote, user);
             await expect(promissoryNote.connect(user).burn(promissoryNoteId)).to.not.be.reverted;
+        });
+    });
+
+    describe("pause", () => {
+        it("does not allow a non-admin to pause", async () => {
+            const signers: Signer[] = await hre.ethers.getSigners();
+
+            const PromissoryNote = <PromissoryNote>await deploy("PromissoryNote", signers[0], ["PromissoryNote", "BN"]);
+
+            await expect(
+                PromissoryNote.connect(signers[0]).initialize(signers[0].address)
+            ).to.not.be.reverted;
+
+            await expect(
+                PromissoryNote.connect(signers[1]).setPaused(true)
+            ).to.be.revertedWith(
+                "AccessControl: account 0xadd93e738a415c5248f7cb044fcfc71d86b18572 is missing role 0xa49807205ce4d355092ef5a8a18f56e8913cf4a201fbe287825b095693c21775"
+            );
+        });
+
+        it("does not allow a non-admin to unpause", async () => {
+            const signers: Signer[] = await hre.ethers.getSigners();
+
+            const PromissoryNote = <PromissoryNote>await deploy("PromissoryNote", signers[0], ["PromissoryNote", "BN"]);
+
+            await expect(
+                PromissoryNote.connect(signers[0]).initialize(signers[0].address)
+            ).to.not.be.reverted;
+
+            await expect(
+                PromissoryNote.connect(signers[1]).setPaused(false)
+            ).to.be.revertedWith(
+                "AccessControl: account 0xadd93e738a415c5248f7cb044fcfc71d86b18572 is missing role 0xa49807205ce4d355092ef5a8a18f56e8913cf4a201fbe287825b095693c21775"
+            );
+        });
+
+        it("allows an admin to pause", async () => {
+            const signers: Signer[] = await hre.ethers.getSigners();
+
+            const PromissoryNote = <PromissoryNote>await deploy("PromissoryNote", signers[0], ["PromissoryNote", "BN"]);
+
+            await expect(
+                PromissoryNote.connect(signers[0]).initialize(signers[0].address)
+            ).to.not.be.reverted;
+
+            await expect(
+                PromissoryNote.connect(signers[0]).setPaused(true)
+            ).to.emit(PromissoryNote, "Paused")
+                .withArgs(signers[0].address);
+        });
+
+        it("allows an admin to unpause", async () => {
+            const signers: Signer[] = await hre.ethers.getSigners();
+
+            const PromissoryNote = <PromissoryNote>await deploy("PromissoryNote", signers[0], ["PromissoryNote", "BN"]);
+
+            await expect(
+                PromissoryNote.connect(signers[0]).initialize(signers[0].address)
+            ).to.not.be.reverted;
+
+            await expect(
+                PromissoryNote.connect(signers[0]).setPaused(true)
+            ).to.emit(PromissoryNote, "Paused")
+                .withArgs(signers[0].address);
+
+            await expect(
+                PromissoryNote.connect(signers[0]).setPaused(false)
+            ).to.emit(PromissoryNote, "Unpaused")
+                .withArgs(signers[0].address);
+        });
+
+        it("transfers revert on pause", async () => {
+            const signers: Signer[] = await hre.ethers.getSigners();
+
+            const PromissoryNote = <PromissoryNote>await deploy("PromissoryNote", signers[0], ["PromissoryNote", "BN"]);
+
+            // Mint to first signer
+            await expect(
+                PromissoryNote.connect(signers[0]).initialize(signers[0].address)
+            ).to.not.be.reverted;
+
+            await PromissoryNote.mint(signers[0].address, 1);
+
+            // Pause
+            await expect(
+                PromissoryNote.connect(signers[0]).setPaused(true)
+            ).to.emit(PromissoryNote, "Paused")
+                .withArgs(signers[0].address);
+
+            // Try to transfer, should fail
+            await expect(
+                PromissoryNote.connect(signers[0]).transferFrom(signers[0].address, signers[1].address, 1)
+            ).to.be.revertedWith("PN_ContractPaused");
+
+            await expect(
+                PromissoryNote.connect(signers[0]).setPaused(false)
+            ).to.emit(PromissoryNote, "Unpaused")
+                .withArgs(signers[0].address);
+
+            // After unpause, should transfer successfully
+            await expect(
+                PromissoryNote.connect(signers[0]).transferFrom(signers[0].address, signers[1].address, 1)
+            ).to.not.be.reverted;
         });
     });
 

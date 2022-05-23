@@ -314,14 +314,8 @@ contract LoanCore is
         onlyRole(ORIGINATOR_ROLE)
         returns (uint256 newLoanId)
     {
-        bytes32 collateralKey = keccak256(abi.encode(terms.collateralAddress, terms.collateralId));
-        if (!collateralInUse[collateralKey]) revert LC_CollateralNotInUse();
-
         // Repay loan
-
         LoanLibrary.LoanData storage data = loans[oldLoanId];
-        // ensure valid initial loan state when starting loan
-        if (data.state != LoanLibrary.LoanState.Active) revert LC_InvalidState(data.state);
         data.state = LoanLibrary.LoanState.Repaid;
 
         address oldLender = lenderNote.ownerOf(oldLoanId);

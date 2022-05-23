@@ -94,6 +94,7 @@ contract PromissoryNote is
         _setupRole(ADMIN_ROLE, loanCore);
 
         owner = loanCore;
+        initialized = true;
     }
 
 
@@ -133,6 +134,21 @@ contract PromissoryNote is
         _burn(tokenId);
     }
 
+    /**
+     * @notice Pauses transfers on the note. This essentially blocks all loan lifecycle
+     *         operations, since all originations and transfers require transfers of
+     *         the note.
+     *
+     * @param paused                Whether the contract should be paused.
+     */
+    function setPaused(bool paused) external override onlyRole(ADMIN_ROLE) {
+        if (paused) {
+            _pause();
+        } else {
+            _unpause();
+        }
+    }
+
     // ===================================== ERC721 UTILITIES ===========================================
 
     /**
@@ -163,8 +179,8 @@ contract PromissoryNote is
         address to,
         uint256 tokenId
     ) internal virtual override(ERC721, ERC721Enumerable, ERC721Pausable) {
-        super._beforeTokenTransfer(from, to, tokenId);
-
         if (paused()) revert PN_ContractPaused();
+
+        super._beforeTokenTransfer(from, to, tokenId);
     }
 }
