@@ -70,8 +70,6 @@ contract VaultFactory is ERC721EnumerableUpgradeable, ERC721PermitUpgradeable, I
      */
     function _authorizeUpgrade(address newImplementation) internal override onlyRole(DEFAULT_ADMIN_ROLE) {}
 
-
-
     /**
      * @notice Check if the given address is a vault instance created by this factory.
      *

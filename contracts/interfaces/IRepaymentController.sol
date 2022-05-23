@@ -6,9 +6,13 @@ interface IRepaymentController {
     // ============== Lifeycle Operations ==============
 
     function repay(uint256 loanId) external;
+
     function claim(uint256 loanId) external;
+
     function repayPartMinimum(uint256 loanId) external;
+
     function repayPart(uint256 loanId, uint256 amount) external;
+
     function closeLoan(uint256 loanId) external;
 
     // ============== View Functions ==============

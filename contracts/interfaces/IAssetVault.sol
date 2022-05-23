@@ -29,6 +29,7 @@ interface IAssetVault {
     // ================ View Functions ================
 
     function withdrawEnabled() external view returns (bool);
+
     function whitelist() external view returns (ICallWhitelist);
 
     // ================ Withdrawal Operations ================

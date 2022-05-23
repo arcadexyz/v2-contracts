@@ -69,7 +69,7 @@ describe("VaultFactory", () => {
 
         const VaultFactory = await hre.ethers.getContractFactory("VaultFactory");
         await expect(
-            upgrades.deployProxy(VaultFactory, [ZERO_ADDRESS, whitelist.address], { kind: "uups" })
+            upgrades.deployProxy(VaultFactory, [ZERO_ADDRESS, whitelist.address], { kind: "uups" }),
         ).to.be.revertedWith("VF_InvalidTemplate");
     });
 
@@ -341,15 +341,7 @@ describe("VaultFactory", () => {
             expect(approved).to.equal(hre.ethers.constants.AddressZero);
 
             await expect(
-                factory.permit(
-                    await user.getAddress(),
-                    await other.getAddress(),
-                    bundleId,
-                    "1234",
-                    v,
-                    r,
-                    s,
-                ),
+                factory.permit(await user.getAddress(), await other.getAddress(), bundleId, "1234", v, r, s),
             ).to.be.revertedWith("ERC721P_DeadlineExpired");
         });
     });

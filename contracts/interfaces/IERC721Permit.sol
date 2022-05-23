@@ -20,6 +20,7 @@ interface IERC721Permit is IERC721 {
     // ================ View Functions ================
 
     function nonces(address owner) external view returns (uint256);
+
     // solhint-disable-next-line func-name-mixedcase
     function DOMAIN_SEPARATOR() external view returns (bytes32);
 }

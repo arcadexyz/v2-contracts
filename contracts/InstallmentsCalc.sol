@@ -46,7 +46,7 @@ abstract contract InstallmentsCalc is IInstallmentsCalc {
         return principal + ((principal * (interestRate / INTEREST_RATE_DENOMINATOR)) / BASIS_POINTS_DENOMINATOR);
     }
 
-        /**
+    /**
      * @notice Calculates and returns the current installment period relative to the loan's startDate,
      *         durationSecs, and numInstallments. Using these three paremeters and the blocks current timestamp
      *         we are able to determine the current timeframe relative to the total number of installments.

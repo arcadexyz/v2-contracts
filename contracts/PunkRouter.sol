@@ -33,10 +33,7 @@ contract PunkRouter is ERC721Holder, Ownable {
      * @param _wrappedPunks         The wrapped punks contract.
      * @param _punks                The CryptoPUnks contract.
      */
-    constructor(
-        IWrappedPunks _wrappedPunks,
-        IPunks _punks
-    ) {
+    constructor(IWrappedPunks _wrappedPunks, IPunks _punks) {
         punks = _punks;
         wrappedPunks = _wrappedPunks;
 

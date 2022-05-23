@@ -101,7 +101,8 @@ contract CallWhitelist is Ownable, ICallWhitelist {
      *
      * @param callee                The contract to whitelist.
      * @param selector              The function selector to whitelist.
-     */    function remove(address callee, bytes4 selector) external override onlyOwner {
+     */
+    function remove(address callee, bytes4 selector) external override onlyOwner {
         whitelist[callee][selector] = false;
         emit CallRemoved(msg.sender, callee, selector);
     }

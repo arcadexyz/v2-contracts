@@ -97,7 +97,6 @@ contract PromissoryNote is
         initialized = true;
     }
 
-
     // ======================================= TOKEN OPERATIONS =========================================
 
     /**

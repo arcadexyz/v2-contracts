@@ -127,7 +127,7 @@ abstract contract ERC721PermitUpgradeable is
         _approve(spender, tokenId);
     }
 
-   /**
+    /**
      * @notice Returns the current nonce for `owner`. This value must be
      * included whenever a signature is generated.
      *
@@ -152,7 +152,7 @@ abstract contract ERC721PermitUpgradeable is
         return _domainSeparatorV4();
     }
 
-   /**
+    /**
      * @dev Consumes the nonce - returns the current value and increments.
      *
      * @param owner                 The address of the user to consume a nonce for.

@@ -20,6 +20,7 @@ interface IERC721PermitUpgradeable is IERC721Upgradeable {
     // ================ View Functions ================
 
     function nonces(address owner) external view returns (uint256);
+
     // solhint-disable-next-line func-name-mixedcase
     function DOMAIN_SEPARATOR() external view returns (bytes32);
 }

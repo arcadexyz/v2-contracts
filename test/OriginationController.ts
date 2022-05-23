@@ -21,7 +21,7 @@ import {
     FeeController,
     ERC1271LenderMock,
     MockOriginationController,
-    ERC721Permit
+    ERC721Permit,
 } from "../typechain";
 import { approve, mint, ZERO_ADDRESS } from "./utils/erc20";
 import { mint as mint721 } from "./utils/erc721";
@@ -80,7 +80,9 @@ const fixture = async (): Promise<TestContext> => {
 
     const LoanCore = await hre.ethers.getContractFactory("LoanCore");
     const loanCore = <LoanCore>(
-        await upgrades.deployProxy(LoanCore, [feeController.address, borrowerNote.address, lenderNote.address], { kind: 'uups' })
+        await upgrades.deployProxy(LoanCore, [feeController.address, borrowerNote.address, lenderNote.address], {
+            kind: "uups",
+        })
     );
 
     // Grant correct permissions for promissory note
@@ -92,7 +94,8 @@ const fixture = async (): Promise<TestContext> => {
     const vaultTemplate = <AssetVault>await deploy("AssetVault", deployer, []);
 
     const VaultFactoryFactory = await hre.ethers.getContractFactory("VaultFactory");
-    const vaultFactory = <VaultFactory>(await upgrades.deployProxy(VaultFactoryFactory, [vaultTemplate.address, whitelist.address], { kind: 'uups' })
+    const vaultFactory = <VaultFactory>(
+        await upgrades.deployProxy(VaultFactoryFactory, [vaultTemplate.address, whitelist.address], { kind: "uups" })
     );
     const vault = await createVault(vaultFactory, signers[0]);
 
@@ -101,7 +104,7 @@ const fixture = async (): Promise<TestContext> => {
 
     const OriginationController = await hre.ethers.getContractFactory("OriginationController");
     const originationController = <OriginationController>(
-        await upgrades.deployProxy(OriginationController, [loanCore.address], { kind: 'uups' })
+        await upgrades.deployProxy(OriginationController, [loanCore.address], { kind: "uups" })
     );
     const updateOriginationControllerPermissions = await loanCore.grantRole(
         ORIGINATOR_ROLE,
@@ -157,7 +160,7 @@ const createLoanTerms = (
         interestRate = hre.ethers.utils.parseEther("1"),
         collateralId = "1",
         numInstallments = 0,
-        deadline = 1754884800
+        deadline = 1754884800,
     }: Partial<LoanTerms> = {},
 ): LoanTerms => {
     return {
@@ -178,7 +181,9 @@ describe("OriginationController", () => {
     describe("initializer", () => {
         it("Reverts if _loanCore address is not provided", async () => {
             const OriginationController = await hre.ethers.getContractFactory("OriginationController");
-            await expect(upgrades.deployProxy(OriginationController, [ZERO_ADDRESS])).to.be.revertedWith("OC_ZeroAddress");
+            await expect(upgrades.deployProxy(OriginationController, [ZERO_ADDRESS])).to.be.revertedWith(
+                "OC_ZeroAddress",
+            );
         });
 
         it("Instantiates the OriginationController", async () => {
@@ -201,22 +206,26 @@ describe("OriginationController", () => {
         });
 
         it("v1 functionality can be upgraded in v2", async () => {
-            const { originationController, user: lender, other: borrower} = ctx;
+            const { originationController, user: lender, other: borrower } = ctx;
 
             // THIS IS WHERE ORIGINATION CONTROLLER UPGRADES TO V2 / BECOMES MOCKORIGINATION CONTROLLER
             const MockOriginationController = await hre.ethers.getContractFactory("MockOriginationController");
-            const mockOriginationController = <MockOriginationController>(await hre.upgrades.upgradeProxy(originationController.address, MockOriginationController));
+            const mockOriginationController = <MockOriginationController>(
+                await hre.upgrades.upgradeProxy(originationController.address, MockOriginationController)
+            );
             // THE .version() FUNCTION RETURNS THAT THIS IS V2
             expect(await mockOriginationController.version()).to.equal("This is OriginationController V2!");
             // isApproved() IS CALLED AND RETURNS TRUE FOR FOR THE 2 ARGUMENTS NOT BEING EQUAL
-            expect(await mockOriginationController.isApproved(await borrower.getAddress(), await lender.getAddress())).to.be.true;
+            expect(await mockOriginationController.isApproved(await borrower.getAddress(), await lender.getAddress()))
+                .to.be.true;
         });
         it("v1 functionality cannot be upgraded to v2 by non authorized user", async () => {
             const { originationController, user: lender, other } = ctx;
 
             const MockOriginationController = await hre.ethers.getContractFactory("MockOriginationController", other);
-            await expect(hre.upgrades.upgradeProxy(originationController.address, MockOriginationController))
-            .to.be.revertedWith("Ownable: caller is not the owner");
+            await expect(
+                hre.upgrades.upgradeProxy(originationController.address, MockOriginationController),
+            ).to.be.revertedWith("Ownable: caller is not the owner");
         });
     });
 
@@ -242,7 +251,7 @@ describe("OriginationController", () => {
                 borrower,
                 "2",
                 1,
-                "b"
+                "b",
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -252,7 +261,7 @@ describe("OriginationController", () => {
                 originationController
                     // some random guy
                     .connect(signers[3])
-                    .initializeLoan(loanTerms, await borrower.getAddress(), await lender.getAddress(), sig, 1 ),
+                    .initializeLoan(loanTerms, await borrower.getAddress(), await lender.getAddress(), sig, 1),
             ).to.be.revertedWith("OC_CallerNotParticipant");
         });
 
@@ -270,7 +279,7 @@ describe("OriginationController", () => {
                 borrower,
                 "2",
                 1,
-                "b"
+                "b",
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -296,7 +305,7 @@ describe("OriginationController", () => {
                 borrower,
                 "2",
                 1,
-                "b"
+                "b",
             );
 
             await vaultFactory.connect(borrower).approve(originationController.address, bundleId);
@@ -312,7 +321,10 @@ describe("OriginationController", () => {
             const { originationController, mockERC20, vaultFactory, user: lender, other: borrower } = ctx;
 
             const bundleId = await initializeBundle(vaultFactory, borrower);
-            const loanTerms = createLoanTerms(mockERC20.address, vaultFactory.address, { collateralId: bundleId, principal:BigNumber.from("9999") });
+            const loanTerms = createLoanTerms(mockERC20.address, vaultFactory.address, {
+                collateralId: bundleId,
+                principal: BigNumber.from("9999"),
+            });
             await mint(mockERC20, lender, loanTerms.principal);
 
             const sig = await createLoanTermsSignature(
@@ -322,7 +334,7 @@ describe("OriginationController", () => {
                 borrower,
                 "2",
                 1,
-                "b"
+                "b",
             );
 
             await vaultFactory.connect(borrower).approve(originationController.address, bundleId);
@@ -348,7 +360,7 @@ describe("OriginationController", () => {
                 borrower,
                 "2",
                 1,
-                "b"
+                "b",
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -376,7 +388,7 @@ describe("OriginationController", () => {
                 signers[3],
                 "2",
                 1,
-                "b"
+                "b",
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -402,7 +414,7 @@ describe("OriginationController", () => {
                 borrower,
                 "2",
                 3, // Use nonce 3
-                "b"
+                "b",
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -418,7 +430,9 @@ describe("OriginationController", () => {
         it("Reverts on an expired signature", async () => {
             const { originationController, mockERC20, vaultFactory, user: lender, other: borrower } = ctx;
             const bundleId = await initializeBundle(vaultFactory, borrower);
-            const loanTerms = createLoanTermsExpired(mockERC20.address, vaultFactory.address, { collateralId: bundleId });
+            const loanTerms = createLoanTermsExpired(mockERC20.address, vaultFactory.address, {
+                collateralId: bundleId,
+            });
 
             await mint(mockERC20, lender, loanTerms.principal);
 
@@ -429,7 +443,7 @@ describe("OriginationController", () => {
                 borrower,
                 "2",
                 3, // Use nonce 3
-                "b"
+                "b",
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -455,7 +469,7 @@ describe("OriginationController", () => {
                 borrower,
                 "2",
                 2, // Use nonce 2
-                "b"
+                "b",
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -481,7 +495,7 @@ describe("OriginationController", () => {
                 borrower,
                 "2",
                 1,
-                "b"
+                "b",
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -509,7 +523,7 @@ describe("OriginationController", () => {
                 lender,
                 "2",
                 1,
-                "l"
+                "l",
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -538,7 +552,7 @@ describe("OriginationController", () => {
                 borrower,
                 "2",
                 1,
-                "b"
+                "b",
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -566,7 +580,7 @@ describe("OriginationController", () => {
                 lender,
                 "2",
                 1,
-                "l"
+                "l",
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -598,7 +612,7 @@ describe("OriginationController", () => {
                     mockERC721,
                     lenderPromissoryNote,
                     borrowerPromissoryNote,
-                    loanCore
+                    loanCore,
                 } = ctx;
 
                 const tokenId = await mint721(mockERC721, other);
@@ -629,7 +643,7 @@ describe("OriginationController", () => {
                     user,
                     "2",
                     1,
-                    "b"
+                    "b",
                 );
 
                 await expect(
@@ -656,10 +670,9 @@ describe("OriginationController", () => {
                     mockERC20,
                     lenderPromissoryNote,
                     borrowerPromissoryNote,
-
                 } = ctx;
 
-                const bundleId = await initializeBundle(vaultFactory,  user);
+                const bundleId = await initializeBundle(vaultFactory, user);
                 const loanTerms = createLoanTerms(mockERC20.address, vaultFactory.address, { collateralId: bundleId });
                 await mint(mockERC20, other, loanTerms.principal);
 
@@ -686,7 +699,7 @@ describe("OriginationController", () => {
                     user,
                     "2",
                     1,
-                    "b"
+                    "b",
                 );
 
                 await expect(
@@ -733,7 +746,7 @@ describe("OriginationController", () => {
                     borrower,
                     "2",
                     1,
-                    "b"
+                    "b",
                 );
 
                 await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -750,8 +763,8 @@ describe("OriginationController", () => {
                             maxDeadline,
                         ),
                 )
-                .to.emit(mockERC20, "Transfer")
-                .withArgs(await lender.getAddress(), originationController.address, loanTerms.principal);
+                    .to.emit(mockERC20, "Transfer")
+                    .withArgs(await lender.getAddress(), originationController.address, loanTerms.principal);
             });
         });
     });
@@ -801,7 +814,7 @@ describe("OriginationController", () => {
                 lender,
                 "2",
                 "1",
-                "l"
+                "l",
             );
 
             await expect(
@@ -850,7 +863,7 @@ describe("OriginationController", () => {
                 lender,
                 "2",
                 "1",
-                "l"
+                "l",
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -904,7 +917,7 @@ describe("OriginationController", () => {
                 borrower,
                 "2",
                 "2", // Use nonce 2
-                "l"
+                "l",
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -958,7 +971,7 @@ describe("OriginationController", () => {
                 borrower,
                 "2",
                 "2", // Use nonce 2,
-                "b"
+                "b",
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -1015,7 +1028,7 @@ describe("OriginationController", () => {
                 borrower,
                 "2",
                 "1",
-                "b"
+                "b",
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -1069,7 +1082,7 @@ describe("OriginationController", () => {
                 borrower,
                 "2",
                 "1",
-                "b"
+                "b",
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -1125,7 +1138,7 @@ describe("OriginationController", () => {
                 lender,
                 "2",
                 "1",
-                "l"
+                "l",
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -1190,7 +1203,7 @@ describe("OriginationController", () => {
                 lender,
                 "2",
                 "1",
-                "l"
+                "l",
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -1226,76 +1239,85 @@ describe("OriginationController", () => {
             ).to.be.revertedWith("LC_NonceUsed");
         });
         it("Initializes a loan with permit and items", async () => {
-          const { originationController, mockERC20, mockERC721, vaultFactory, user: lender, other: borrower, lenderPromissoryNote, borrowerPromissoryNote } = ctx;
+            const {
+                originationController,
+                mockERC20,
+                mockERC721,
+                vaultFactory,
+                user: lender,
+                other: borrower,
+                lenderPromissoryNote,
+                borrowerPromissoryNote,
+            } = ctx;
 
-          const bundleId = await initializeBundle(vaultFactory, borrower);
-          const bundleAddress = await vaultFactory.instanceAt(bundleId);
-          const tokenId = await mint721(mockERC721, borrower);
-          await mockERC721.connect(borrower).transferFrom(borrower.address, bundleAddress, tokenId);
+            const bundleId = await initializeBundle(vaultFactory, borrower);
+            const bundleAddress = await vaultFactory.instanceAt(bundleId);
+            const tokenId = await mint721(mockERC721, borrower);
+            await mockERC721.connect(borrower).transferFrom(borrower.address, bundleAddress, tokenId);
 
-          const loanTerms = createLoanTerms(mockERC20.address, vaultFactory.address, { collateralId: bundleId });
-          const signatureItems: SignatureItem[] = [
-              {
-                  cType: 0,
-                  asset: mockERC721.address,
-                  tokenId,
-                  amount: 0, // not used for 721
-              },
-          ];
+            const loanTerms = createLoanTerms(mockERC20.address, vaultFactory.address, { collateralId: bundleId });
+            const signatureItems: SignatureItem[] = [
+                {
+                    cType: 0,
+                    asset: mockERC721.address,
+                    tokenId,
+                    amount: 0, // not used for 721
+                },
+            ];
 
-          const predicates: ItemsPredicate[] = [
-              {
-                  verifier: verifier.address,
-                  data: encodeSignatureItems(signatureItems),
-              },
-          ];
+            const predicates: ItemsPredicate[] = [
+                {
+                    verifier: verifier.address,
+                    data: encodeSignatureItems(signatureItems),
+                },
+            ];
 
-          await mint(mockERC20, lender, loanTerms.principal);
+            await mint(mockERC20, lender, loanTerms.principal);
 
-          const permitData = {
-             owner: await borrower.getAddress(),
-             spender: originationController.address,
-             tokenId: bundleAddress,
-             nonce: 0,
-             deadline: maxDeadline,
-         };
+            const permitData = {
+                owner: await borrower.getAddress(),
+                spender: originationController.address,
+                tokenId: bundleAddress,
+                nonce: 0,
+                deadline: maxDeadline,
+            };
 
-         const collateralSig = await createPermitSignature(
-             vaultFactory.address,
-             await vaultFactory.name(),
-             permitData,
-             borrower,
-         );
+            const collateralSig = await createPermitSignature(
+                vaultFactory.address,
+                await vaultFactory.name(),
+                permitData,
+                borrower,
+            );
 
-          const sig = await createLoanItemsSignature(
-              originationController.address,
-              "OriginationController",
-              loanTerms,
-              encodePredicates(predicates),
-              borrower,
-              "2",
-              "1",
-              "b"
-          );
+            const sig = await createLoanItemsSignature(
+                originationController.address,
+                "OriginationController",
+                loanTerms,
+                encodePredicates(predicates),
+                borrower,
+                "2",
+                "1",
+                "b",
+            );
 
-          await approve(mockERC20, lender, originationController.address, loanTerms.principal);
-          await vaultFactory.connect(borrower).approve(originationController.address, bundleId);
-          await expect(
-              originationController
-                  .connect(lender)
-                  .initializeLoanWithCollateralPermitAndItems(
-                    loanTerms,
-                    await borrower.getAddress(),
-                    await lender.getAddress(),
-                    sig,
-                    1,
-                    collateralSig,
-                    maxDeadline,
-                    predicates,
-                  ),
-          )
-              .to.emit(mockERC20, "Transfer")
-              .withArgs(await lender.getAddress(), originationController.address, loanTerms.principal);
+            await approve(mockERC20, lender, originationController.address, loanTerms.principal);
+            await vaultFactory.connect(borrower).approve(originationController.address, bundleId);
+            await expect(
+                originationController
+                    .connect(lender)
+                    .initializeLoanWithCollateralPermitAndItems(
+                        loanTerms,
+                        await borrower.getAddress(),
+                        await lender.getAddress(),
+                        sig,
+                        1,
+                        collateralSig,
+                        maxDeadline,
+                        predicates,
+                    ),
+            )
+                .to.emit(mockERC20, "Transfer")
+                .withArgs(await lender.getAddress(), originationController.address, loanTerms.principal);
         });
 
         describe("initializeLoanWithCollateralPermitAndItems", () => {
@@ -1308,7 +1330,7 @@ describe("OriginationController", () => {
                     mockERC20,
                     mockERC721,
                     lenderPromissoryNote,
-                    borrowerPromissoryNote
+                    borrowerPromissoryNote,
                 } = ctx;
 
                 const bundleId = await initializeBundle(vaultFactory, borrower);
@@ -1359,7 +1381,7 @@ describe("OriginationController", () => {
                     lender,
                     "2",
                     "1",
-                    "b"
+                    "b",
                 );
 
                 await expect(
@@ -1387,7 +1409,7 @@ describe("OriginationController", () => {
                     mockERC20,
                     mockERC721,
                     lenderPromissoryNote,
-                    borrowerPromissoryNote
+                    borrowerPromissoryNote,
                 } = ctx;
 
                 const bundleId = await initializeBundle(vaultFactory, borrower);
@@ -1437,7 +1459,7 @@ describe("OriginationController", () => {
                     lender,
                     "2",
                     "1",
-                    "b"
+                    "b",
                 );
 
                 await expect(
@@ -1479,7 +1501,9 @@ describe("OriginationController", () => {
             const { user, originationController } = ctx;
 
             await expect(
-                originationController.connect(user).setAllowedVerifier("0x0000000000000000000000000000000000000000", true),
+                originationController
+                    .connect(user)
+                    .setAllowedVerifier("0x0000000000000000000000000000000000000000", true),
             ).to.be.revertedWith("OC_ZeroAddress");
         });
 
@@ -1551,8 +1575,9 @@ describe("OriginationController", () => {
         it("reverts if trying to approve oneself", async () => {
             const { originationController, other: borrower } = ctx;
 
-            await expect(originationController.connect(borrower).approve(borrower.address, true))
-                .to.be.revertedWith("OC_SelfApprove")
+            await expect(originationController.connect(borrower).approve(borrower.address, true)).to.be.revertedWith(
+                "OC_SelfApprove",
+            );
         });
 
         it("allows the borrower to approve another signer", async () => {
@@ -1574,7 +1599,7 @@ describe("OriginationController", () => {
                 newSigner, // Now signed by a third party
                 "2",
                 1,
-                "b"
+                "b",
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -1607,7 +1632,7 @@ describe("OriginationController", () => {
                 newSigner, // Now signed by a third party
                 "2",
                 1,
-                "l"
+                "l",
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -1640,7 +1665,7 @@ describe("OriginationController", () => {
                 lender,
                 "2",
                 1,
-                "l"
+                "l",
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -1673,7 +1698,7 @@ describe("OriginationController", () => {
                 borrower,
                 "2",
                 1,
-                "b"
+                "b",
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -1707,7 +1732,7 @@ describe("OriginationController", () => {
                 lender,
                 "2",
                 1,
-                "l"
+                "l",
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -1739,7 +1764,7 @@ describe("OriginationController", () => {
                 borrower,
                 "2",
                 1,
-                "b"
+                "b",
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -1769,7 +1794,7 @@ describe("OriginationController", () => {
                 lender,
                 "2",
                 1,
-                "l"
+                "l",
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -1781,5 +1806,4 @@ describe("OriginationController", () => {
             ).to.be.revertedWith("OC_ApprovedOwnLoan");
         });
     });
-
 });

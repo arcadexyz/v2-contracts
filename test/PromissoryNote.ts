@@ -73,19 +73,25 @@ describe("PromissoryNote", () => {
         const whitelist = <CallWhitelist>await deploy("CallWhitelist", signers[0], []);
         const vaultTemplate = <AssetVault>await deploy("AssetVault", signers[0], []);
         const VaultFactoryFactory = await hre.ethers.getContractFactory("VaultFactory");
-        const vaultFactory = <VaultFactory>(await upgrades.deployProxy(
-            VaultFactoryFactory, [vaultTemplate.address, whitelist.address], { kind: 'uups' })
+        const vaultFactory = <VaultFactory>(
+            await upgrades.deployProxy(VaultFactoryFactory, [vaultTemplate.address, whitelist.address], {
+                kind: "uups",
+            })
         );
         const mockERC20 = <MockERC20>await deploy("MockERC20", signers[0], ["Mock ERC20", "MOCK"]);
 
         const feeController = <FeeController>await deploy("FeeController", signers[0], []);
 
-        const borrowerNote = <PromissoryNote>await deploy("PromissoryNote", signers[0], ["Arcade.xyz BorrowerNote", "aBN"]);
+        const borrowerNote = <PromissoryNote>(
+            await deploy("PromissoryNote", signers[0], ["Arcade.xyz BorrowerNote", "aBN"])
+        );
         const lenderNote = <PromissoryNote>await deploy("PromissoryNote", signers[0], ["Arcade.xyz LenderNote", "aLN"]);
 
         const LoanCore = await hre.ethers.getContractFactory("LoanCore");
         const loanCore = <LoanCore>(
-            await upgrades.deployProxy(LoanCore, [feeController.address, borrowerNote.address, lenderNote.address], { kind: 'uups' })
+            await upgrades.deployProxy(LoanCore, [feeController.address, borrowerNote.address, lenderNote.address], {
+                kind: "uups",
+            })
         );
 
         // Grant correct permissions for promissory note
@@ -96,7 +102,7 @@ describe("PromissoryNote", () => {
 
         const OriginationController = await hre.ethers.getContractFactory("OriginationController");
         const originationController = <OriginationController>(
-            await upgrades.deployProxy(OriginationController, [loanCore.address], { kind: 'uups' })
+            await upgrades.deployProxy(OriginationController, [loanCore.address], { kind: "uups" })
         );
         await originationController.deployed();
         const originator = signers[0];
@@ -164,10 +170,9 @@ describe("PromissoryNote", () => {
 
             const PromissoryNote = <PromissoryNote>await deploy("PromissoryNote", signers[0], ["PromissoryNote", "BN"]);
 
-            await expect(
-                PromissoryNote.connect(signers[1]).initialize(loanCore.address)
-            ).to.be.revertedWith("PN_CannotInitialize");
-
+            await expect(PromissoryNote.connect(signers[1]).initialize(loanCore.address)).to.be.revertedWith(
+                "PN_CannotInitialize",
+            );
         });
 
         it("fails to initialize if already initialized", async () => {
@@ -176,14 +181,12 @@ describe("PromissoryNote", () => {
 
             const PromissoryNote = <PromissoryNote>await deploy("PromissoryNote", signers[0], ["PromissoryNote", "BN"]);
 
-            await expect(
-                PromissoryNote.connect(signers[0]).initialize(loanCore.address)
-            ).to.not.be.reverted;
+            await expect(PromissoryNote.connect(signers[0]).initialize(loanCore.address)).to.not.be.reverted;
 
             // Try to call again
-            await expect(
-                PromissoryNote.connect(signers[0]).initialize(loanCore.address)
-            ).to.be.revertedWith("PN_AlreadyInitialized");
+            await expect(PromissoryNote.connect(signers[0]).initialize(loanCore.address)).to.be.revertedWith(
+                "PN_AlreadyInitialized",
+            );
         });
     });
 
@@ -209,21 +212,14 @@ describe("PromissoryNote", () => {
 
     describe("burn", () => {
         it("Reverts if sender does not own the note", async () => {
-            const {
-                borrowerPromissoryNote: promissoryNote,
-                user,
-                other
-            } = await loadFixture(fixture);
+            const { borrowerPromissoryNote: promissoryNote, user, other } = await loadFixture(fixture);
 
             const promissoryNoteId = await mintPromissoryNote(promissoryNote, user);
             await expect(promissoryNote.connect(other).burn(promissoryNoteId)).to.be.revertedWith("PN_BurningRole");
         });
 
         it("Burns a PromissoryNote NFT", async () => {
-            const {
-                borrowerPromissoryNote: promissoryNote,
-                user
-            } = await loadFixture(fixture);
+            const { borrowerPromissoryNote: promissoryNote, user } = await loadFixture(fixture);
 
             const promissoryNoteId = await mintPromissoryNote(promissoryNote, user);
             await expect(promissoryNote.connect(user).burn(promissoryNoteId)).to.not.be.reverted;
@@ -236,14 +232,10 @@ describe("PromissoryNote", () => {
 
             const PromissoryNote = <PromissoryNote>await deploy("PromissoryNote", signers[0], ["PromissoryNote", "BN"]);
 
-            await expect(
-                PromissoryNote.connect(signers[0]).initialize(signers[0].address)
-            ).to.not.be.reverted;
+            await expect(PromissoryNote.connect(signers[0]).initialize(signers[0].address)).to.not.be.reverted;
 
-            await expect(
-                PromissoryNote.connect(signers[1]).setPaused(true)
-            ).to.be.revertedWith(
-                "AccessControl: account 0xadd93e738a415c5248f7cb044fcfc71d86b18572 is missing role 0xa49807205ce4d355092ef5a8a18f56e8913cf4a201fbe287825b095693c21775"
+            await expect(PromissoryNote.connect(signers[1]).setPaused(true)).to.be.revertedWith(
+                "AccessControl: account 0xadd93e738a415c5248f7cb044fcfc71d86b18572 is missing role 0xa49807205ce4d355092ef5a8a18f56e8913cf4a201fbe287825b095693c21775",
             );
         });
 
@@ -252,14 +244,10 @@ describe("PromissoryNote", () => {
 
             const PromissoryNote = <PromissoryNote>await deploy("PromissoryNote", signers[0], ["PromissoryNote", "BN"]);
 
-            await expect(
-                PromissoryNote.connect(signers[0]).initialize(signers[0].address)
-            ).to.not.be.reverted;
+            await expect(PromissoryNote.connect(signers[0]).initialize(signers[0].address)).to.not.be.reverted;
 
-            await expect(
-                PromissoryNote.connect(signers[1]).setPaused(false)
-            ).to.be.revertedWith(
-                "AccessControl: account 0xadd93e738a415c5248f7cb044fcfc71d86b18572 is missing role 0xa49807205ce4d355092ef5a8a18f56e8913cf4a201fbe287825b095693c21775"
+            await expect(PromissoryNote.connect(signers[1]).setPaused(false)).to.be.revertedWith(
+                "AccessControl: account 0xadd93e738a415c5248f7cb044fcfc71d86b18572 is missing role 0xa49807205ce4d355092ef5a8a18f56e8913cf4a201fbe287825b095693c21775",
             );
         });
 
@@ -268,13 +256,10 @@ describe("PromissoryNote", () => {
 
             const PromissoryNote = <PromissoryNote>await deploy("PromissoryNote", signers[0], ["PromissoryNote", "BN"]);
 
-            await expect(
-                PromissoryNote.connect(signers[0]).initialize(signers[0].address)
-            ).to.not.be.reverted;
+            await expect(PromissoryNote.connect(signers[0]).initialize(signers[0].address)).to.not.be.reverted;
 
-            await expect(
-                PromissoryNote.connect(signers[0]).setPaused(true)
-            ).to.emit(PromissoryNote, "Paused")
+            await expect(PromissoryNote.connect(signers[0]).setPaused(true))
+                .to.emit(PromissoryNote, "Paused")
                 .withArgs(signers[0].address);
         });
 
@@ -283,18 +268,14 @@ describe("PromissoryNote", () => {
 
             const PromissoryNote = <PromissoryNote>await deploy("PromissoryNote", signers[0], ["PromissoryNote", "BN"]);
 
-            await expect(
-                PromissoryNote.connect(signers[0]).initialize(signers[0].address)
-            ).to.not.be.reverted;
+            await expect(PromissoryNote.connect(signers[0]).initialize(signers[0].address)).to.not.be.reverted;
 
-            await expect(
-                PromissoryNote.connect(signers[0]).setPaused(true)
-            ).to.emit(PromissoryNote, "Paused")
+            await expect(PromissoryNote.connect(signers[0]).setPaused(true))
+                .to.emit(PromissoryNote, "Paused")
                 .withArgs(signers[0].address);
 
-            await expect(
-                PromissoryNote.connect(signers[0]).setPaused(false)
-            ).to.emit(PromissoryNote, "Unpaused")
+            await expect(PromissoryNote.connect(signers[0]).setPaused(false))
+                .to.emit(PromissoryNote, "Unpaused")
                 .withArgs(signers[0].address);
         });
 
@@ -304,32 +285,27 @@ describe("PromissoryNote", () => {
             const PromissoryNote = <PromissoryNote>await deploy("PromissoryNote", signers[0], ["PromissoryNote", "BN"]);
 
             // Mint to first signer
-            await expect(
-                PromissoryNote.connect(signers[0]).initialize(signers[0].address)
-            ).to.not.be.reverted;
+            await expect(PromissoryNote.connect(signers[0]).initialize(signers[0].address)).to.not.be.reverted;
 
             await PromissoryNote.mint(signers[0].address, 1);
 
             // Pause
-            await expect(
-                PromissoryNote.connect(signers[0]).setPaused(true)
-            ).to.emit(PromissoryNote, "Paused")
+            await expect(PromissoryNote.connect(signers[0]).setPaused(true))
+                .to.emit(PromissoryNote, "Paused")
                 .withArgs(signers[0].address);
 
             // Try to transfer, should fail
             await expect(
-                PromissoryNote.connect(signers[0]).transferFrom(signers[0].address, signers[1].address, 1)
+                PromissoryNote.connect(signers[0]).transferFrom(signers[0].address, signers[1].address, 1),
             ).to.be.revertedWith("PN_ContractPaused");
 
-            await expect(
-                PromissoryNote.connect(signers[0]).setPaused(false)
-            ).to.emit(PromissoryNote, "Unpaused")
+            await expect(PromissoryNote.connect(signers[0]).setPaused(false))
+                .to.emit(PromissoryNote, "Unpaused")
                 .withArgs(signers[0].address);
 
             // After unpause, should transfer successfully
-            await expect(
-                PromissoryNote.connect(signers[0]).transferFrom(signers[0].address, signers[1].address, 1)
-            ).to.not.be.reverted;
+            await expect(PromissoryNote.connect(signers[0]).transferFrom(signers[0].address, signers[1].address, 1)).to
+                .not.be.reverted;
         });
     });
 

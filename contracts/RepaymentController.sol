@@ -27,17 +27,7 @@ import "./interfaces/IPromissoryNote.sol";
 import "./interfaces/ILoanCore.sol";
 import "./interfaces/IRepaymentController.sol";
 
-import {
-    RC_CannotDereference,
-    RC_NoPaymentDue,
-    RC_OnlyLender,
-    RC_BeforeStartDate,
-    RC_NoInstallments,
-    RC_NoMinPaymentDue,
-    RC_RepayPartZero,
-    RC_RepayPartLTMin,
-    RC_HasInstallments
- } from "./errors/Lending.sol";
+import { RC_CannotDereference, RC_NoPaymentDue, RC_OnlyLender, RC_BeforeStartDate, RC_NoInstallments, RC_NoMinPaymentDue, RC_RepayPartZero, RC_RepayPartLTMin, RC_HasInstallments } from "./errors/Lending.sol";
 
 /**
  * @title RepaymentController
@@ -50,11 +40,7 @@ import {
  * claim collateral on a defaulted loan. It is this contract's responsibility
  * to verify loan conditions before calling LoanCore.
  */
-contract RepaymentController is
-    IRepaymentController,
-    InstallmentsCalc,
-    AccessControl
-{
+contract RepaymentController is IRepaymentController, InstallmentsCalc, AccessControl {
     using SafeERC20 for IERC20;
 
     // ============================================ STATE ===============================================
@@ -91,7 +77,7 @@ contract RepaymentController is
         if (terms.durationSecs == 0) revert RC_CannotDereference(loanId);
 
         //cannot use for installment loans, call repayPart or repayPartMinimum
-        if(terms.numInstallments != 0) revert RC_HasInstallments(terms.numInstallments);
+        if (terms.numInstallments != 0) revert RC_HasInstallments(terms.numInstallments);
 
         // withdraw principal plus interest from borrower and send to loan core
         uint256 total = getFullInterestAmount(terms.principal, terms.interestRate);
@@ -120,7 +106,11 @@ contract RepaymentController is
         LoanLibrary.LoanData memory data = loanCore.getLoan(loanId);
         if (data.terms.numInstallments > 0) {
             // get the current installment period
-            uint256 _installmentPeriod = currentInstallmentPeriod(data.startDate, data.terms.durationSecs, data.terms.numInstallments);
+            uint256 _installmentPeriod = currentInstallmentPeriod(
+                data.startDate,
+                data.terms.durationSecs,
+                data.terms.numInstallments
+            );
             // call claim function in loan core
             loanCore.claim(loanId, _installmentPeriod);
         } else {
@@ -187,13 +177,11 @@ contract RepaymentController is
      */
     function repayPartMinimum(uint256 loanId) external override {
         // get current minimum balance due for the installment repayment, based on specific loanId.
-        (uint256 minBalanceDue, uint256 lateFees, uint256 numMissedPayments) = getInstallmentMinPayment(
-            loanId
-        );
+        (uint256 minBalanceDue, uint256 lateFees, uint256 numMissedPayments) = getInstallmentMinPayment(loanId);
         // total amount due, interest amount plus any late fees
         uint256 _minAmount = minBalanceDue + lateFees;
         // cannot call repayPartMinimum twice in the same installment period
-        if(_minAmount == 0) revert RC_NoPaymentDue();
+        if (_minAmount == 0) revert RC_NoPaymentDue();
 
         // load terms from loanId
         LoanLibrary.LoanData memory data = loanCore.getLoan(loanId);
@@ -221,9 +209,7 @@ contract RepaymentController is
         if (amount == 0) revert RC_RepayPartZero();
 
         // get current minimum balance due for the installment repayment, based on specific loanId.
-        (uint256 minBalanceDue, uint256 lateFees, uint256 numMissedPayments) = getInstallmentMinPayment(
-            loanId
-        );
+        (uint256 minBalanceDue, uint256 lateFees, uint256 numMissedPayments) = getInstallmentMinPayment(loanId);
         // total minimum amount due, interest amount plus any late fees
         uint256 _minAmount = minBalanceDue + lateFees;
         // require amount taken from the _msgSender() to be larger than or equal to minBalanceDue
@@ -252,9 +238,7 @@ contract RepaymentController is
      */
     function closeLoan(uint256 loanId) external override {
         // get current minimum balance due for the installment repayment, based on specific loanId.
-        (uint256 minBalanceDue, uint256 lateFees, uint256 numMissedPayments) = getInstallmentMinPayment(
-            loanId
-        );
+        (uint256 minBalanceDue, uint256 lateFees, uint256 numMissedPayments) = getInstallmentMinPayment(loanId);
         // load data from loanId
         LoanLibrary.LoanData memory data = loanCore.getLoan(loanId);
         // total amount to close loan (remaining balance + current interest + late fees)
@@ -285,9 +269,7 @@ contract RepaymentController is
      */
     function amountToCloseLoan(uint256 loanId) external view override returns (uint256, uint256) {
         // get current minimum balance due for the installment repayment, based on specific loanId.
-        (uint256 minBalanceDue, uint256 lateFees, uint256 numMissedPayments) = getInstallmentMinPayment(
-            loanId
-        );
+        (uint256 minBalanceDue, uint256 lateFees, uint256 numMissedPayments) = getInstallmentMinPayment(loanId);
         // load data from loanId
         LoanLibrary.LoanData memory data = loanCore.getLoan(loanId);
 

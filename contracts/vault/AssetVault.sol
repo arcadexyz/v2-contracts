@@ -219,5 +219,4 @@ contract AssetVault is IAssetVault, OwnableERC721, Initializable, ERC1155Holder,
      *      which can be accessed using withdrawETH.
      */
     receive() external payable {}
-
 }

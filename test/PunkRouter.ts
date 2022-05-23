@@ -13,10 +13,9 @@ import {
     WrappedPunk,
     OriginationController,
     LoanCore,
-    FeeController
+    FeeController,
 } from "../typechain";
 import { deploy } from "./utils/contracts";
-
 
 type Signer = SignerWithAddress;
 
@@ -43,7 +42,6 @@ interface TestContextForDepositStuck {
 }
 
 describe("PunkRouter", async () => {
-
     /**
      * Sets up a test context, deploying new contracts and returning them for use in a test
      */
@@ -55,17 +53,24 @@ describe("PunkRouter", async () => {
         const vaultTemplate = <AssetVault>await deploy("AssetVault", signers[0], []);
 
         const VaultFactoryFactory = await hre.ethers.getContractFactory("VaultFactory");
-        const vaultFactory = <VaultFactory>(await upgrades.deployProxy(VaultFactoryFactory, [vaultTemplate.address, whitelist.address], { kind: 'uups' })
+        const vaultFactory = <VaultFactory>(
+            await upgrades.deployProxy(VaultFactoryFactory, [vaultTemplate.address, whitelist.address], {
+                kind: "uups",
+            })
         );
 
         const feeController = <FeeController>await deploy("FeeController", signers[0], []);
 
-        const borrowerNote = <PromissoryNote>await deploy("PromissoryNote", signers[0], ["Arcade.xyz BorrowerNote", "aBN"]);
+        const borrowerNote = <PromissoryNote>(
+            await deploy("PromissoryNote", signers[0], ["Arcade.xyz BorrowerNote", "aBN"])
+        );
         const lenderNote = <PromissoryNote>await deploy("PromissoryNote", signers[0], ["Arcade.xyz LenderNote", "aLN"]);
 
         const LoanCore = await hre.ethers.getContractFactory("LoanCore");
         const loanCore = <LoanCore>(
-            await upgrades.deployProxy(LoanCore, [feeController.address, borrowerNote.address, lenderNote.address], { kind: 'uups' })
+            await upgrades.deployProxy(LoanCore, [feeController.address, borrowerNote.address, lenderNote.address], {
+                kind: "uups",
+            })
         );
 
         // Grant correct permissions for promissory note
@@ -76,14 +81,11 @@ describe("PunkRouter", async () => {
 
         const OriginationController = await hre.ethers.getContractFactory("OriginationController");
         const originationController = <OriginationController>(
-            await upgrades.deployProxy(OriginationController, [loanCore.address], { kind: 'uups' })
+            await upgrades.deployProxy(OriginationController, [loanCore.address], { kind: "uups" })
         );
         await originationController.deployed();
 
-
-        const punkRouter = <PunkRouter>(
-            await deploy("PunkRouter", signers[0], [wrappedPunks.address, punks.address])
-        );
+        const punkRouter = <PunkRouter>await deploy("PunkRouter", signers[0], [wrappedPunks.address, punks.address]);
 
         return {
             vaultFactory,
@@ -95,7 +97,7 @@ describe("PunkRouter", async () => {
             signers: signers.slice(2),
             originationController,
             loanCore,
-            feeController
+            feeController,
         };
     };
 
@@ -113,10 +115,9 @@ describe("PunkRouter", async () => {
             punkIndex,
             punks,
             punkRouter,
-            vaultFactory
+            vaultFactory,
         };
     };
-
 
     /**
      * Set up a test asset vault for the user passed as a parameter
@@ -137,7 +138,6 @@ describe("PunkRouter", async () => {
         }
     };
 
-
     describe("Deposit CryptoPunk", async () => {
         it("should successfully deposit a cryptopunk into bundle", async () => {
             const { vaultFactory, punks, wrappedPunks, punkRouter, user } = await setupTestContext();
@@ -153,10 +153,9 @@ describe("PunkRouter", async () => {
                 .to.emit(wrappedPunks, "Transfer")
                 .withArgs(punkRouter.address, bundleId, punkIndex);
 
-            const owner = await wrappedPunks.ownerOf(punkIndex)
+            const owner = await wrappedPunks.ownerOf(punkIndex);
             expect(owner).to.equal(bundleId);
         });
-
 
         it("should fail if not approved", async () => {
             const { vaultFactory, punks, punkRouter, user } = await setupTestContext();
@@ -168,7 +167,7 @@ describe("PunkRouter", async () => {
 
             const bundleId = await initializeBundle(vaultFactory, user);
             await expect(punkRouter.depositPunk(punkIndex, bundleId)).to.be.reverted;
-        })
+        });
 
         it("should fail if not owner", async () => {
             const { vaultFactory, punks, punkRouter, user, other } = await setupTestContext();
@@ -181,8 +180,7 @@ describe("PunkRouter", async () => {
             await punks.offerPunkForSaleToAddress(punkIndex, 0, punkRouter.address);
             const bundleId = await initializeBundle(vaultFactory, user);
 
-            await expect(punkRouter.connect(other).depositPunk(punkIndex, bundleId)).to.be.revertedWith(
-                "PR_NotOwner",)
+            await expect(punkRouter.connect(other).depositPunk(punkIndex, bundleId)).to.be.revertedWith("PR_NotOwner");
         });
     });
 
@@ -204,4 +202,3 @@ describe("PunkRouter", async () => {
         });
     });
 });
-
