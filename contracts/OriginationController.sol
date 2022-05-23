@@ -834,15 +834,15 @@ contract OriginationController is
             repayAmount = oldLoanData.balance + interestDue + lateFees;
         }
 
-        uint256 fee = newTerms.principal * rolloverFee / BASIS_POINTS_DENOMINATOR;
-        uint256 borrowerWillGet = newTerms.principal - fee;
+        amounts.fee = newTerms.principal * rolloverFee / BASIS_POINTS_DENOMINATOR;
+        uint256 borrowerWillGet = newTerms.principal - amounts.fee;
 
         // Settle amounts
         if (repayAmount > borrowerWillGet) {
             amounts.needFromBorrower = repayAmount - borrowerWillGet;
-        } else if (borrowerWillGet > repayAmount) {
+        } else {
             amounts.leftoverPrincipal = newTerms.principal - repayAmount;
-            amounts.amountToBorrower = amounts.leftoverPrincipal - fee;
+            amounts.amountToBorrower = amounts.leftoverPrincipal - amounts.fee;
         }
 
         // Collect funds
@@ -852,7 +852,7 @@ contract OriginationController is
         } else {
             amounts.amountToOldLender = 0;
 
-            if (amounts.needFromBorrower > 0) {
+            if (amounts.needFromBorrower > 0 && repayAmount > newTerms.principal) {
                 amounts.amountToLender = repayAmount - newTerms.principal;
             }
         }

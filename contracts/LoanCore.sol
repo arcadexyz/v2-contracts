@@ -362,10 +362,7 @@ contract LoanCore is
         // Distribute notes and principal
         _mintLoanNotes(newLoanId, borrower, lender);
 
-        if (_settledAmount > 0) {
-            IERC20Upgradeable(payableCurrency).safeTransferFrom(_msgSender(), address(this), _settledAmount);
-        }
-
+        IERC20Upgradeable(payableCurrency).safeTransferFrom(_msgSender(), address(this), _settledAmount);
         _transferIfNonzero(payableCurrency, oldLender, _amountToOldLender);
         _transferIfNonzero(payableCurrency, lender, _amountToLender);
         _transferIfNonzero(payableCurrency, borrower, _amountToBorrower);
