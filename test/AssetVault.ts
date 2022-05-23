@@ -16,7 +16,7 @@ import {
 import { mint } from "./utils/erc20";
 import { mint as mintERC721 } from "./utils/erc721";
 import { mint as mintERC1155 } from "./utils/erc1155";
-import { deploy, ZERO_ADDRESS } from "./utils/contracts";
+import { deploy } from "./utils/contracts";
 
 type Signer = SignerWithAddress;
 

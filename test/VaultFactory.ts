@@ -14,6 +14,7 @@ type Signer = SignerWithAddress;
 interface TestContext {
     factory: VaultFactory;
     vaultTemplate: AssetVault;
+    whitelist: CallWhitelist;
     user: Signer;
     other: Signer;
     signers: Signer[];
@@ -35,6 +36,7 @@ describe("VaultFactory", () => {
 
         return {
             factory,
+            whitelist,
             vaultTemplate,
             user: signers[0],
             other: signers[1],
@@ -61,6 +63,15 @@ describe("VaultFactory", () => {
         }
         return vault;
     };
+
+    it("should fail to initialize if passed an invalid template", async () => {
+        const { whitelist } = await loadFixture(fixture);
+
+        const VaultFactory = await hre.ethers.getContractFactory("VaultFactory");
+        await expect(
+            upgrades.deployProxy(VaultFactory, [ZERO_ADDRESS, whitelist.address], { kind: "uups" })
+        ).to.be.revertedWith("VF_InvalidTemplate");
+    });
 
     it("should return template address", async () => {
         const { factory, vaultTemplate } = await loadFixture(fixture);
