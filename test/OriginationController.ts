@@ -321,7 +321,8 @@ describe("OriginationController", () => {
                 loanTerms,
                 borrower,
                 "2",
-                BigNumber.from(1)
+                1,
+                "b"
             );
 
             await vaultFactory.connect(borrower).approve(originationController.address, bundleId);
@@ -1273,6 +1274,8 @@ describe("OriginationController", () => {
               encodePredicates(predicates),
               borrower,
               "2",
+              "1",
+              "b"
           );
 
           await approve(mockERC20, lender, originationController.address, loanTerms.principal);
