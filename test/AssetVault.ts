@@ -70,7 +70,11 @@ describe("AssetVault", () => {
 
         const vaultTemplate = <AssetVault>await deploy("AssetVault", signers[0], []);
         const VaultFactoryFactory = await hre.ethers.getContractFactory("VaultFactory");
-        const factory = <VaultFactory>(await upgrades.deployProxy(VaultFactoryFactory, [vaultTemplate.address, whitelist.address], { kind: 'uups' }));
+        const factory = <VaultFactory>(
+            await upgrades.deployProxy(VaultFactoryFactory, [vaultTemplate.address, whitelist.address], {
+                kind: "uups",
+            })
+        );
         const vault = await createVault(factory, signers[0]);
 
         return {
@@ -94,9 +98,7 @@ describe("AssetVault", () => {
 
             const vault = <AssetVault>await deploy("AssetVault", user, []);
 
-            await expect(
-                vault.initialize(whitelist.address)
-            ).to.be.revertedWith("AV_AlreadyInitialized");
+            await expect(vault.initialize(whitelist.address)).to.be.revertedWith("AV_AlreadyInitialized");
         });
     });
 
@@ -296,9 +298,7 @@ describe("AssetVault", () => {
         it("should fail to close the vault by non-owner", async () => {
             const { vault, other } = await loadFixture(fixture);
             expect(await vault.withdrawEnabled()).to.equal(false);
-            await expect(vault.connect(other).enableWithdraw()).to.be.revertedWith(
-                "OERC721_CallerNotOwner",
-            );
+            await expect(vault.connect(other).enableWithdraw()).to.be.revertedWith("OERC721_CallerNotOwner");
 
             expect(await vault.withdrawEnabled()).to.equal(false);
         });
@@ -414,9 +414,8 @@ describe("AssetVault", () => {
 
             await whitelist.add(await user.getAddress(), selector);
 
-            await expect(vault.connect(user).call(await user.getAddress(), mintData.data))
-            .to.be.revertedWith(
-               "Address: call to non-contract",
+            await expect(vault.connect(user).call(await user.getAddress(), mintData.data)).to.be.revertedWith(
+                "Address: call to non-contract",
             );
         });
 

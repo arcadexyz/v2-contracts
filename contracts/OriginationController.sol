@@ -22,24 +22,7 @@ import "./interfaces/ISignatureVerifier.sol";
 
 import "./InstallmentsCalc.sol";
 import "./verifiers/ItemsVerifier.sol";
-import {
-    OC_ZeroAddress,
-    OC_InvalidState,
-    OC_InvalidVerifier,
-    OC_BatchLengthMismatch,
-    OC_PredicateFailed,
-    OC_SelfApprove,
-    OC_ApprovedOwnLoan,
-    OC_InvalidSignature,
-    OC_CallerNotParticipant,
-    OC_PrincipalTooLow,
-    OC_LoanDuration,
-    OC_InterestRate,
-    OC_NumberInstallments,
-    OC_SignatureIsExpired,
-    OC_RolloverCurrencyMismatch,
-    OC_RolloverCollateralMismatch
-} from "./errors/Lending.sol";
+import { OC_ZeroAddress, OC_InvalidState, OC_InvalidVerifier, OC_BatchLengthMismatch, OC_PredicateFailed, OC_SelfApprove, OC_ApprovedOwnLoan, OC_InvalidSignature, OC_CallerNotParticipant, OC_PrincipalTooLow, OC_LoanDuration, OC_InterestRate, OC_NumberInstallments, OC_SignatureIsExpired, OC_RolloverCurrencyMismatch, OC_RolloverCollateralMismatch } from "./errors/Lending.sol";
 
 /**
  * @title OriginationController
@@ -614,15 +597,12 @@ contract OriginationController is
 
     // =========================================== HELPERS ==============================================
 
-
     /**
      * @dev Validates argument bounds for the loan terms.
      *
      * @param terms                     The terms of the loan.
      */
-    function _validateLoanTerms(
-        LoanLibrary.LoanTerms memory terms
-    ) internal view {
+    function _validateLoanTerms(LoanLibrary.LoanTerms memory terms) internal view {
         // principal must be greater than or equal to 10000 wei
         if (terms.principal < 10_000) revert OC_PrincipalTooLow(terms.principal);
 
@@ -648,17 +628,14 @@ contract OriginationController is
      * @param oldTerms              The terms of the old loan, fetched from LoanCore.
      * @param newTerms              The terms of the new loan, provided by the caller.
      */
-    function _validateRollover(
-        LoanLibrary.LoanTerms memory oldTerms,
-        LoanLibrary.LoanTerms memory newTerms
-    ) internal pure {
+    function _validateRollover(LoanLibrary.LoanTerms memory oldTerms, LoanLibrary.LoanTerms memory newTerms)
+        internal
+        pure
+    {
         if (newTerms.payableCurrency != oldTerms.payableCurrency)
             revert OC_RolloverCurrencyMismatch(oldTerms.payableCurrency, newTerms.payableCurrency);
 
-        if (
-            newTerms.collateralAddress != oldTerms.collateralAddress
-            || newTerms.collateralId != oldTerms.collateralId
-        )
+        if (newTerms.collateralAddress != oldTerms.collateralAddress || newTerms.collateralId != oldTerms.collateralId)
             revert OC_RolloverCollateralMismatch(
                 oldTerms.collateralAddress,
                 oldTerms.collateralId,
@@ -753,7 +730,13 @@ contract OriginationController is
         uint256 rolloverFee = ILoanCore(loanCore).feeController().getRolloverFee();
 
         // Settle amounts
-        RolloverAmounts memory amounts  = _calculateRolloverAmounts(oldLoanData, newTerms, lender, oldLender, rolloverFee);
+        RolloverAmounts memory amounts = _calculateRolloverAmounts(
+            oldLoanData,
+            newTerms,
+            lender,
+            oldLender,
+            rolloverFee
+        );
 
         // Collect funds
         uint256 settledAmount;
@@ -813,16 +796,14 @@ contract OriginationController is
         address lender,
         address oldLender,
         uint256 rolloverFee
-    ) internal view returns (
-        RolloverAmounts memory amounts
-    ) {
+    ) internal view returns (RolloverAmounts memory amounts) {
         LoanLibrary.LoanTerms memory oldTerms = oldLoanData.terms;
 
         uint256 repayAmount;
         if (oldTerms.numInstallments == 0) {
             repayAmount = getFullInterestAmount(oldTerms.principal, oldTerms.interestRate);
         } else {
-            (uint256 interestDue, uint256 lateFees,) = _calcAmountsDue(
+            (uint256 interestDue, uint256 lateFees, ) = _calcAmountsDue(
                 oldLoanData.balance,
                 oldLoanData.startDate,
                 oldTerms.durationSecs,
@@ -834,7 +815,7 @@ contract OriginationController is
             repayAmount = oldLoanData.balance + interestDue + lateFees;
         }
 
-        amounts.fee = newTerms.principal * rolloverFee / BASIS_POINTS_DENOMINATOR;
+        amounts.fee = (newTerms.principal * rolloverFee) / BASIS_POINTS_DENOMINATOR;
         uint256 borrowerWillGet = newTerms.principal - amounts.fee;
 
         // Settle amounts

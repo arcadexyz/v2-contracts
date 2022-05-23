@@ -34,7 +34,6 @@ abstract contract ERC721Permit is ERC721, IERC721Permit, EIP712 {
     bytes32 private immutable _PERMIT_TYPEHASH =
         keccak256("Permit(address owner,address spender,uint256 tokenId,uint256 nonce,uint256 deadline)");
 
-
     /// @dev Nonce for permit signatures.
     mapping(address => Counters.Counter) private _nonces;
 

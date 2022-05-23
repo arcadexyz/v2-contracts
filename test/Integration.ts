@@ -47,8 +47,8 @@ describe("Integration", () => {
      * Sets up a test context, deploying new contracts and returning them for use in a test
      */
     const fixture = async (): Promise<TestContext> => {
-         const blockchainTime = new BlockchainTime();
-         const currentTimestamp = await blockchainTime.secondsFromNow(0);
+        const blockchainTime = new BlockchainTime();
+        const currentTimestamp = await blockchainTime.secondsFromNow(0);
 
         const signers: SignerWithAddress[] = await hre.ethers.getSigners();
         const [borrower, lender, admin] = signers;
@@ -56,7 +56,10 @@ describe("Integration", () => {
         const whitelist = <CallWhitelist>await deploy("CallWhitelist", signers[0], []);
         const vaultTemplate = <AssetVault>await deploy("AssetVault", signers[0], []);
         const VaultFactoryFactory = await hre.ethers.getContractFactory("VaultFactory");
-        const vaultFactory = <VaultFactory>(await upgrades.deployProxy(VaultFactoryFactory, [vaultTemplate.address, whitelist.address], { kind: 'uups' })
+        const vaultFactory = <VaultFactory>(
+            await upgrades.deployProxy(VaultFactoryFactory, [vaultTemplate.address, whitelist.address], {
+                kind: "uups",
+            })
         );
         const feeController = <FeeController>await deploy("FeeController", admin, []);
 
@@ -65,7 +68,9 @@ describe("Integration", () => {
 
         const LoanCore = await hre.ethers.getContractFactory("LoanCore");
         const loanCore = <LoanCore>(
-            await upgrades.deployProxy(LoanCore, [feeController.address, borrowerNote.address, lenderNote.address], { kind: 'uups' })
+            await upgrades.deployProxy(LoanCore, [feeController.address, borrowerNote.address, lenderNote.address], {
+                kind: "uups",
+            })
         );
 
         // Grant correct permissions for promissory note
@@ -90,7 +95,7 @@ describe("Integration", () => {
 
         const OriginationController = await hre.ethers.getContractFactory("OriginationController");
         const originationController = <OriginationController>(
-            await upgrades.deployProxy(OriginationController, [loanCore.address], { kind: 'uups' })
+            await upgrades.deployProxy(OriginationController, [loanCore.address], { kind: "uups" })
         );
         await originationController.deployed();
         const updateOriginationControllerPermissions = await loanCore.grantRole(
@@ -111,7 +116,7 @@ describe("Integration", () => {
             lender,
             admin,
             currentTimestamp,
-            blockchainTime
+            blockchainTime,
         };
     };
 
@@ -138,7 +143,7 @@ describe("Integration", () => {
             collateralId,
             payableCurrency,
             numInstallments,
-            deadline
+            deadline,
         };
     };
 
@@ -169,7 +174,7 @@ describe("Integration", () => {
                 borrower,
                 "2",
                 1,
-                "b"
+                "b",
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -201,7 +206,7 @@ describe("Integration", () => {
                 borrower,
                 "2",
                 1,
-                "b"
+                "b",
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -230,7 +235,7 @@ describe("Integration", () => {
                 borrower,
                 "2",
                 1,
-                "b"
+                "b",
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -257,7 +262,7 @@ describe("Integration", () => {
                 borrower,
                 "2",
                 1,
-                "b"
+                "b",
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -278,7 +283,11 @@ describe("Integration", () => {
             loanData: LoanData;
         }
 
-        const initializeLoan = async (context: TestContext, nonce: number, terms?: Partial<LoanTerms>): Promise<LoanDef> => {
+        const initializeLoan = async (
+            context: TestContext,
+            nonce: number,
+            terms?: Partial<LoanTerms>,
+        ): Promise<LoanDef> => {
             const { originationController, mockERC20, vaultFactory, loanCore, lender, borrower } = context;
             const bundleId = terms?.collateralId ?? (await createWnft(vaultFactory, borrower));
             const loanTerms = createLoanTerms(mockERC20.address, vaultFactory.address, { collateralId: bundleId });
@@ -293,7 +302,7 @@ describe("Integration", () => {
                 borrower,
                 "2",
                 nonce,
-                "b"
+                "b",
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -393,9 +402,7 @@ describe("Integration", () => {
                 .connect(borrower)
                 .approve(repaymentController.address, loanTerms.principal.add(loanTerms.interestRate));
 
-            await expect(repaymentController.connect(borrower).repay(1234)).to.be.revertedWith(
-                "RC_CannotDereference",
-            );
+            await expect(repaymentController.connect(borrower).repay(1234)).to.be.revertedWith("RC_CannotDereference");
         });
     });
 
@@ -407,7 +414,11 @@ describe("Integration", () => {
             loanData: LoanData;
         }
 
-        const initializeLoan = async (context: TestContext, nonce: number, terms?: Partial<LoanTerms>): Promise<LoanDef> => {
+        const initializeLoan = async (
+            context: TestContext,
+            nonce: number,
+            terms?: Partial<LoanTerms>,
+        ): Promise<LoanDef> => {
             const { originationController, mockERC20, vaultFactory, loanCore, lender, borrower } = context;
             const durationSecs = BigNumber.from(3600);
             const bundleId = terms?.collateralId ?? (await createWnft(vaultFactory, borrower));
@@ -425,7 +436,7 @@ describe("Integration", () => {
                 borrower,
                 "2",
                 nonce,
-                "b"
+                "b",
             );
 
             await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -501,9 +512,7 @@ describe("Integration", () => {
             const { repaymentController, lender } = context;
             const { loanId } = await initializeLoan(context, 1);
 
-            await expect(repaymentController.connect(lender).claim(loanId)).to.be.revertedWith(
-                "LC_NotExpired",
-            );
+            await expect(repaymentController.connect(lender).claim(loanId)).to.be.revertedWith("LC_NotExpired");
         });
 
         it("fails for invalid noteId", async () => {
@@ -522,9 +531,7 @@ describe("Integration", () => {
             const { loanId } = await initializeLoan(context, 1);
 
             await blockchainTime.increaseTime(20000);
-            await expect(repaymentController.connect(borrower).claim(loanId)).to.be.revertedWith(
-                "RC_OnlyLender",
-            );
+            await expect(repaymentController.connect(borrower).claim(loanId)).to.be.revertedWith("RC_OnlyLender");
         });
     });
 });

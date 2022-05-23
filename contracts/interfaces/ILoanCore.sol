@@ -57,13 +57,18 @@ interface ILoanCore {
     // ============== Nonce Management ==============
 
     function consumeNonce(address user, uint160 nonce) external;
+
     function cancelNonce(uint160 nonce) external;
 
     // ============== View Functions ==============
 
     function getLoan(uint256 loanId) external view returns (LoanLibrary.LoanData calldata loanData);
+
     function isNonceUsed(address user, uint160 nonce) external view returns (bool);
+
     function borrowerNote() external returns (IPromissoryNote);
+
     function lenderNote() external returns (IPromissoryNote);
+
     function feeController() external returns (IFeeController);
 }

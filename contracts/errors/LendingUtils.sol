@@ -36,7 +36,6 @@ error ERC721P_NotTokenOwner(address owner);
  */
 error ERC721P_InvalidSignature(address signer);
 
-
 // ==================================== Punk Router ======================================
 /// @notice All errors prefixed with PR_, to separate from other contracts in the protocol.
 

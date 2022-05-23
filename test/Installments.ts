@@ -82,7 +82,8 @@ const fixture = async (): Promise<TestContext> => {
     const whitelist = <CallWhitelist>await deploy("CallWhitelist", admin, []);
     const vaultTemplate = <AssetVault>await deploy("AssetVault", admin, []);
     const VaultFactoryFactory = await hre.ethers.getContractFactory("VaultFactory");
-    const vaultFactory = <VaultFactory>(await upgrades.deployProxy(VaultFactoryFactory, [vaultTemplate.address, whitelist.address], { kind: 'uups' })
+    const vaultFactory = <VaultFactory>(
+        await upgrades.deployProxy(VaultFactoryFactory, [vaultTemplate.address, whitelist.address], { kind: "uups" })
     );
 
     const feeController = <FeeController>await deploy("FeeController", admin, []);
@@ -92,7 +93,9 @@ const fixture = async (): Promise<TestContext> => {
 
     const LoanCore = await hre.ethers.getContractFactory("LoanCore");
     const loanCore = <LoanCore>(
-        await upgrades.deployProxy(LoanCore, [feeController.address, borrowerNote.address, lenderNote.address], { kind: 'uups' })
+        await upgrades.deployProxy(LoanCore, [feeController.address, borrowerNote.address, lenderNote.address], {
+            kind: "uups",
+        })
     );
 
     // Grant correct permissions for promissory note
@@ -105,7 +108,7 @@ const fixture = async (): Promise<TestContext> => {
 
     const OriginationController = await hre.ethers.getContractFactory("OriginationController");
     const originationController = <OriginationController>(
-        await upgrades.deployProxy(OriginationController, [loanCore.address], { kind: 'uups' })
+        await upgrades.deployProxy(OriginationController, [loanCore.address], { kind: "uups" })
     );
     await originationController.deployed();
 
@@ -162,7 +165,7 @@ const createLoanTerms = (
         collateralId,
         payableCurrency,
         numInstallments,
-        deadline
+        deadline,
     };
 };
 
@@ -187,7 +190,7 @@ const createInstallmentLoanTerms = (
         collateralId,
         payableCurrency,
         numInstallments,
-        deadline
+        deadline,
     };
 };
 
@@ -207,7 +210,7 @@ const initializeLoan = async (context: TestContext): Promise<LoanDef> => {
         borrower,
         "2",
         1,
-        "b"
+        "b",
     );
 
     await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -220,7 +223,8 @@ const initializeLoan = async (context: TestContext): Promise<LoanDef> => {
 
     let loanId;
     if (receipt && receipt.events) {
-        const loanCreatedLog = new hre.ethers.utils.Interface(["event LoanStarted(uint256 loanId, address lender, address borrower)",
+        const loanCreatedLog = new hre.ethers.utils.Interface([
+            "event LoanStarted(uint256 loanId, address lender, address borrower)",
         ]);
         const log = loanCreatedLog.parseLog(receipt.events[receipt.events.length - 1]);
         loanId = log.args.loanId;
@@ -273,7 +277,7 @@ const initializeInstallmentLoan = async (
         borrower,
         "2",
         1,
-        "b"
+        "b",
     );
 
     await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -285,7 +289,8 @@ const initializeInstallmentLoan = async (
 
     let loanId;
     if (receipt && receipt.events) {
-        const loanCreatedLog = new hre.ethers.utils.Interface(["event LoanStarted(uint256 loanId, address lender, address borrower)",
+        const loanCreatedLog = new hre.ethers.utils.Interface([
+            "event LoanStarted(uint256 loanId, address lender, address borrower)",
         ]);
         const log = loanCreatedLog.parseLog(receipt.events[receipt.events.length - 1]);
         loanId = log.args.loanId;
@@ -315,7 +320,7 @@ describe("Installments", () => {
                 hre.ethers.utils.parseEther("100"), // principal
                 hre.ethers.utils.parseEther("1000"), // interest
                 8, // numInstallments
-                1754884800 // deadline
+                1754884800, // deadline
             );
 
             //increase one installment period
@@ -323,10 +328,8 @@ describe("Installments", () => {
 
             // Check invalid loan ID
             await expect(
-                repaymentController
-                    .connect(borrower)
-                    .getInstallmentMinPayment(Number(loanId) * 2)
-            ).to.be.revertedWith("RC_CannotDereference")
+                repaymentController.connect(borrower).getInstallmentMinPayment(Number(loanId) * 2),
+            ).to.be.revertedWith("RC_CannotDereference");
         });
 
         it("returns 0 for an already closed loan", async () => {
@@ -339,15 +342,13 @@ describe("Installments", () => {
                 hre.ethers.utils.parseEther("100"), // principal
                 hre.ethers.utils.parseEther("1000"), // interest
                 4, // numInstallments
-                1754884800 // deadline
+                1754884800, // deadline
             );
 
             //increase time slightly
             await blockchainTime.increaseTime(10);
 
-            const res = await repaymentController
-                .connect(borrower)
-                .callStatic.amountToCloseLoan(loanId);
+            const res = await repaymentController.connect(borrower).callStatic.amountToCloseLoan(loanId);
             const amountDue = res[0];
             const numMissedPayments = res[1].toNumber();
             expect(amountDue).to.equal(ethers.utils.parseEther("102.5"));
@@ -382,7 +383,7 @@ describe("Installments", () => {
                     hre.ethers.utils.parseEther("100"), // principal
                     hre.ethers.utils.parseEther("1000"), // interest
                     1, // numInstallments
-                    BigNumber.from(259200)
+                    BigNumber.from(259200),
                 ),
             ).to.be.revertedWith("OC_NumberInstallments");
         });
@@ -398,7 +399,7 @@ describe("Installments", () => {
                     hre.ethers.utils.parseEther("100"), // principal
                     hre.ethers.utils.parseEther("1000"), // interest
                     1001, // numInstallments
-                    BigNumber.from(259200)
+                    BigNumber.from(259200),
                 ),
             ).to.be.revertedWith("OC_NumberInstallments");
         });
@@ -414,8 +415,8 @@ describe("Installments", () => {
                     hre.ethers.utils.parseEther("100"), // principal
                     hre.ethers.utils.parseEther("1000001"), // interest 10,000.01%
                     2, // numInstallments
-                    1754884800 // deadline
-                )
+                    1754884800, // deadline
+                ),
             ).to.be.revertedWith("OC_InterestRate");
         });
 
@@ -430,8 +431,8 @@ describe("Installments", () => {
                     hre.ethers.utils.parseEther("100"), // principal
                     hre.ethers.utils.parseEther("1000"), // interest
                     11, // numInstallments
-                    BigNumber.from(259200) //deadline
-                )
+                    BigNumber.from(259200), //deadline
+                ),
             ).to.be.revertedWith("OC_SignatureIsExpired");
         });
 
@@ -445,15 +446,13 @@ describe("Installments", () => {
                 hre.ethers.utils.parseEther("100"), // principal
                 hre.ethers.utils.parseEther("1000"), // interest
                 4, // numInstallments
-                1754884800 // deadline
+                1754884800, // deadline
             );
 
             //increase time barely, so getInstallmentMinPayment fn call does not occur in the same block
             await blockchainTime.increaseTime(1);
 
-            const res = await repaymentController
-                .connect(borrower)
-                .callStatic.getInstallmentMinPayment(loanId);
+            const res = await repaymentController.connect(borrower).callStatic.getInstallmentMinPayment(loanId);
             const minInterestDue = res[0];
             const lateFees = res[1];
             const numMissedPayments = res[2].toNumber();
@@ -472,15 +471,13 @@ describe("Installments", () => {
                 hre.ethers.utils.parseEther("100"), // principal
                 hre.ethers.utils.parseEther("1000"), // interest
                 4, // numInstallments
-                1754884800 // deadline
+                1754884800, // deadline
             );
 
             //increase time slightly
             await blockchainTime.increaseTime(10);
 
-            const res = await repaymentController
-                .connect(borrower)
-                .callStatic.amountToCloseLoan(loanId);
+            const res = await repaymentController.connect(borrower).callStatic.amountToCloseLoan(loanId);
             const amountDue = res[0];
             const numMissedPayments = res[1].toNumber();
             expect(amountDue).to.equal(ethers.utils.parseEther("102.5"));
@@ -492,12 +489,9 @@ describe("Installments", () => {
                 .withArgs(await borrower.getAddress(), repaymentController.address, ethers.utils.parseEther("102.5"));
 
             await expect(
-                repaymentController
-                    .connect(borrower)
-                    .repayPart(loanId, ethers.utils.parseEther("102.5"))
-            )
-                .to.be.revertedWith("LC_InvalidState")
-        })
+                repaymentController.connect(borrower).repayPart(loanId, ethers.utils.parseEther("102.5")),
+            ).to.be.revertedWith("LC_InvalidState");
+        });
 
         it("Fast Forward to 2nd period. Verify missed payments equals one.", async () => {
             const context = await loadFixture(fixture);
@@ -509,15 +503,13 @@ describe("Installments", () => {
                 hre.ethers.utils.parseEther("100"), // principal
                 hre.ethers.utils.parseEther("1000"), // interest
                 8, // numInstallments
-                1754884800 // deadline
+                1754884800, // deadline
             );
 
             //increase one installment period
             await blockchainTime.increaseTime(100000 / 8);
 
-            const res = await repaymentController
-                .connect(borrower)
-                .callStatic.getInstallmentMinPayment(loanId);
+            const res = await repaymentController.connect(borrower).callStatic.getInstallmentMinPayment(loanId);
             const minInterestDue = res[0];
             const lateFees = res[1];
             const numMissedPayments = res[2].toNumber();
@@ -536,15 +528,13 @@ describe("Installments", () => {
                 hre.ethers.utils.parseEther("100"), // principal
                 hre.ethers.utils.parseEther("1000"), // interest
                 8, // numInstallments
-                1754884800 // deadline
+                1754884800, // deadline
             );
 
             //increase four installment periods
             await blockchainTime.increaseTime(100000 / 8 + 100000 / 8 + 100000 / 8 + 100000 / 8);
 
-            const res = await repaymentController
-                .connect(borrower)
-                .callStatic.getInstallmentMinPayment(loanId);
+            const res = await repaymentController.connect(borrower).callStatic.getInstallmentMinPayment(loanId);
             const minInterestDue = res[0];
             const lateFees = res[1];
             const numMissedPayments = res[2].toNumber();
@@ -563,15 +553,13 @@ describe("Installments", () => {
                 hre.ethers.utils.parseEther("100"), // principal
                 hre.ethers.utils.parseEther("1000"), // interest
                 10, // numInstallments
-                1754884800 // deadline
+                1754884800, // deadline
             );
 
             //increase half the loan duration
             await blockchainTime.increaseTime((86400 * 365) / 2);
 
-            const res = await repaymentController
-                .connect(borrower)
-                .callStatic.getInstallmentMinPayment(loanId);
+            const res = await repaymentController.connect(borrower).callStatic.getInstallmentMinPayment(loanId);
             const minInterestDue = res[0];
             const lateFees = res[1];
             const numMissedPayments = res[2].toNumber();
@@ -590,7 +578,7 @@ describe("Installments", () => {
                 hre.ethers.utils.parseEther("100"), // principal
                 hre.ethers.utils.parseEther("1000"), // interest
                 4, // numInstallments
-                1754884800 // deadline
+                1754884800, // deadline
             );
             // pay first installment
             await mockERC20.connect(borrower).approve(repaymentController.address, ethers.utils.parseEther("2.5"));
@@ -600,9 +588,7 @@ describe("Installments", () => {
             //increase three installment periods
             await blockchainTime.increaseTime(36000 / 4 + 36000 / 4 + 36000 / 4);
 
-            const res = await repaymentController
-                .connect(borrower)
-                .callStatic.getInstallmentMinPayment(loanId);
+            const res = await repaymentController.connect(borrower).callStatic.getInstallmentMinPayment(loanId);
             const minInterestDue = res[0];
             const lateFees = res[1];
             const numMissedPayments = res[2].toNumber();
@@ -621,7 +607,7 @@ describe("Installments", () => {
                 hre.ethers.utils.parseEther("100"), // principal
                 hre.ethers.utils.parseEther("1000"), // interest
                 8, // numInstallments
-                1754884800 // deadline
+                1754884800, // deadline
             );
             //increase time to the second installment period
             await blockchainTime.increaseTime(36000 / 8 + 10);
@@ -634,9 +620,7 @@ describe("Installments", () => {
             //increase four installment periods
             await blockchainTime.increaseTime(36000 / 8 + 36000 / 8 + 36000 / 8 + 36000 / 8 + 36000 / 8);
 
-            const res = await repaymentController
-                .connect(borrower)
-                .callStatic.getInstallmentMinPayment(loanId);
+            const res = await repaymentController.connect(borrower).callStatic.getInstallmentMinPayment(loanId);
             const minInterestDue = res[0];
             const lateFees = res[1];
             const numMissedPayments = res[2].toNumber();
@@ -658,9 +642,9 @@ describe("Installments", () => {
                 .approve(repaymentController.address, loanTerms.principal.add(loanTerms.interestRate));
             expect(await vaultFactory.ownerOf(bundleId)).to.equal(loanCore.address);
 
-            await expect(
-                repaymentController.connect(borrower).getInstallmentMinPayment(loanId),
-            ).to.be.revertedWith("RC_NoInstallments");
+            await expect(repaymentController.connect(borrower).getInstallmentMinPayment(loanId)).to.be.revertedWith(
+                "RC_NoInstallments",
+            );
         });
 
         it("Scenario: numInstallments: 0. Tries to use installment loan with legacy repay functions.", async () => {
@@ -673,7 +657,7 @@ describe("Installments", () => {
                 hre.ethers.utils.parseEther("100"), // principal
                 hre.ethers.utils.parseEther("1000"), // interest
                 8, // numInstallments
-                1754884800 // deadline
+                1754884800, // deadline
             );
 
             await mint(mockERC20, borrower, loanTerms.principal.add(loanTerms.interestRate));
@@ -682,9 +666,7 @@ describe("Installments", () => {
                 .approve(repaymentController.address, loanTerms.principal.add(loanTerms.interestRate));
             expect(await vaultFactory.ownerOf(bundleId)).to.equal(loanCore.address);
 
-            await expect(
-                repaymentController.connect(borrower).repay(loanId),
-            ).to.be.revertedWith("RC_HasInstallments");
+            await expect(repaymentController.connect(borrower).repay(loanId)).to.be.revertedWith("RC_HasInstallments");
         });
         it("Scenario: numInstallments: 8, durationSecs: 36000, principal: 100, interest: 10%. Repay minimum on first payment.", async () => {
             const context = await loadFixture(fixture);
@@ -696,7 +678,7 @@ describe("Installments", () => {
                 hre.ethers.utils.parseEther("100"), // principal
                 hre.ethers.utils.parseEther("1000"), // interest
                 8, // numInstallments
-                1754884800 // deadline
+                1754884800, // deadline
             );
             const borrowerBalanceBefore = await mockERC20.balanceOf(await borrower.getAddress());
             const lenderBalanceBefore = await mockERC20.balanceOf(await lender.getAddress());
@@ -712,8 +694,9 @@ describe("Installments", () => {
             //increase time
             await blockchainTime.increaseTime(100);
             // try to repay again in same period
-            await expect(repaymentController.connect(borrower).repayPartMinimum(loanId))
-                .to.be.revertedWith("RC_NoPaymentDue");
+            await expect(repaymentController.connect(borrower).repayPartMinimum(loanId)).to.be.revertedWith(
+                "RC_NoPaymentDue",
+            );
 
             const loanDATA = await loanCore.connect(borrower).getLoan(loanId);
             expect(loanDATA.balance).to.equal(ethers.utils.parseEther("100"));
@@ -736,7 +719,7 @@ describe("Installments", () => {
                 hre.ethers.utils.parseEther("100"), // principal
                 hre.ethers.utils.parseEther("1000"), // interest
                 4, // numInstallments
-                1754884800 // deadline
+                1754884800, // deadline
             );
             const borrowerBalanceBefore = await mockERC20.balanceOf(await borrower.getAddress());
             const lenderBalanceBefore = await mockERC20.balanceOf(await lender.getAddress());
@@ -770,14 +753,14 @@ describe("Installments", () => {
                 hre.ethers.utils.parseEther("100"), // principal
                 hre.ethers.utils.parseEther("1000"), // interest
                 4, // numInstallments
-                1754884800 // deadline
+                1754884800, // deadline
             );
             const borrowerBalanceBefore = await mockERC20.balanceOf(await borrower.getAddress());
 
             await mockERC20.connect(borrower).approve(repaymentController.address, ethers.utils.parseEther("2.49"));
-            await expect(
-                repaymentController.connect(borrower).repayPartMinimum(loanId),
-            ).to.be.revertedWith("ERC20: transfer amount exceeds allowance");
+            await expect(repaymentController.connect(borrower).repayPartMinimum(loanId)).to.be.revertedWith(
+                "ERC20: transfer amount exceeds allowance",
+            );
 
             await expect(await mockERC20.balanceOf(await borrower.getAddress())).to.equal(borrowerBalanceBefore);
         });
@@ -793,17 +776,23 @@ describe("Installments", () => {
                     hre.ethers.utils.parseEther("100"), // principal
                     hre.ethers.utils.parseEther("1000"), // interest
                     4, // numInstallments
-                    1754884800 // deadline
+                    1754884800, // deadline
                 );
                 const borrowerBalanceBefore = await mockERC20.balanceOf(await borrower.getAddress());
                 const lenderBalanceBefore = await mockERC20.balanceOf(await lender.getAddress());
                 // increase one installment period
                 await blockchainTime.increaseTime(36000 / 4 + 10);
 
-                await mockERC20.connect(borrower).approve(repaymentController.address, ethers.utils.parseEther("5.575"));
+                await mockERC20
+                    .connect(borrower)
+                    .approve(repaymentController.address, ethers.utils.parseEther("5.575"));
                 await expect(repaymentController.connect(borrower).repayPartMinimum(loanId))
                     .to.emit(mockERC20, "Transfer")
-                    .withArgs(await borrower.getAddress(), repaymentController.address, ethers.utils.parseEther("5.575"));
+                    .withArgs(
+                        await borrower.getAddress(),
+                        repaymentController.address,
+                        ethers.utils.parseEther("5.575"),
+                    );
 
                 const loanDATA = await loanCore.connect(borrower).getLoan(loanId);
                 expect(loanDATA.balance).to.equal(ethers.utils.parseEther("100"));
@@ -812,7 +801,9 @@ describe("Installments", () => {
 
                 const borrowerBalanceAfter = await mockERC20.balanceOf(await borrower.getAddress());
                 const lenderBalanceAfter = await mockERC20.balanceOf(await lender.getAddress());
-                await expect(borrowerBalanceAfter).to.equal(borrowerBalanceBefore.sub(ethers.utils.parseEther("5.575")));
+                await expect(borrowerBalanceAfter).to.equal(
+                    borrowerBalanceBefore.sub(ethers.utils.parseEther("5.575")),
+                );
                 await expect(lenderBalanceAfter).to.equal(lenderBalanceBefore.add(ethers.utils.parseEther("5.575")));
             });
 
@@ -826,17 +817,23 @@ describe("Installments", () => {
                     hre.ethers.utils.parseEther("100"), // principal
                     hre.ethers.utils.parseEther("1000"), // interest
                     4, // numInstallments
-                    1754884800 // deadline
+                    1754884800, // deadline
                 );
                 const borrowerBalanceBefore = await mockERC20.balanceOf(await borrower.getAddress());
                 const lenderBalanceBefore = await mockERC20.balanceOf(await lender.getAddress());
                 //increase two installment period
                 await blockchainTime.increaseTime(36000 / 4 + 36000 / 4);
 
-                await mockERC20.connect(borrower).approve(repaymentController.address, ethers.utils.parseEther("8.75475"));
+                await mockERC20
+                    .connect(borrower)
+                    .approve(repaymentController.address, ethers.utils.parseEther("8.75475"));
                 await expect(repaymentController.connect(borrower).repayPartMinimum(loanId))
                     .to.emit(mockERC20, "Transfer")
-                    .withArgs(await borrower.getAddress(), repaymentController.address, ethers.utils.parseEther("8.75475"));
+                    .withArgs(
+                        await borrower.getAddress(),
+                        repaymentController.address,
+                        ethers.utils.parseEther("8.75475"),
+                    );
 
                 const loanDATA = await loanCore.connect(borrower).getLoan(loanId);
                 expect(loanDATA.balance).to.equal(ethers.utils.parseEther("100"));
@@ -845,7 +842,9 @@ describe("Installments", () => {
 
                 const borrowerBalanceAfter = await mockERC20.balanceOf(await borrower.getAddress());
                 const lenderBalanceAfter = await mockERC20.balanceOf(await lender.getAddress());
-                await expect(borrowerBalanceAfter).to.equal(borrowerBalanceBefore.sub(ethers.utils.parseEther("8.75475")));
+                await expect(borrowerBalanceAfter).to.equal(
+                    borrowerBalanceBefore.sub(ethers.utils.parseEther("8.75475")),
+                );
                 await expect(lenderBalanceAfter).to.equal(lenderBalanceBefore.add(ethers.utils.parseEther("8.75475")));
             });
 
@@ -859,15 +858,17 @@ describe("Installments", () => {
                     hre.ethers.utils.parseEther("100"), // principal
                     hre.ethers.utils.parseEther("1000"), // interest
                     4, // numInstallments
-                    1754884800 // deadline
+                    1754884800, // deadline
                 );
                 //increase two installment period
                 await blockchainTime.increaseTime(36000 / 4 + 36000 / 4);
 
-                await mockERC20.connect(borrower).approve(repaymentController.address, ethers.utils.parseEther("8.75474"));
-                await expect(
-                    repaymentController.connect(borrower).repayPartMinimum(loanId),
-                ).to.be.revertedWith("ERC20: transfer amount exceeds allowance");
+                await mockERC20
+                    .connect(borrower)
+                    .approve(repaymentController.address, ethers.utils.parseEther("8.75474"));
+                await expect(repaymentController.connect(borrower).repayPartMinimum(loanId)).to.be.revertedWith(
+                    "ERC20: transfer amount exceeds allowance",
+                );
             });
 
             it("Scenario: numInstallments: 4, durationSecs: 36000, principal: 100, interest: 10%. Make repayment after three skipped payments.", async () => {
@@ -880,7 +881,7 @@ describe("Installments", () => {
                     hre.ethers.utils.parseEther("100"), // principal
                     hre.ethers.utils.parseEther("1000"), // interest
                     4, // numInstallments
-                    1754884800 // deadline
+                    1754884800, // deadline
                 );
                 const borrowerBalanceBefore = await mockERC20.balanceOf(await borrower.getAddress());
                 const lenderBalanceBefore = await mockERC20.balanceOf(await lender.getAddress());
@@ -909,7 +910,9 @@ describe("Installments", () => {
                 await expect(borrowerBalanceAfter).to.equal(
                     borrowerBalanceBefore.sub(ethers.utils.parseEther("12.0577675")),
                 );
-                await expect(lenderBalanceAfter).to.equal(lenderBalanceBefore.add(ethers.utils.parseEther("12.0577675")));
+                await expect(lenderBalanceAfter).to.equal(
+                    lenderBalanceBefore.add(ethers.utils.parseEther("12.0577675")),
+                );
             });
 
             describe("After Loan Duration Payments", () => {
@@ -923,7 +926,7 @@ describe("Installments", () => {
                         hre.ethers.utils.parseEther("100"), // principal
                         hre.ethers.utils.parseEther("1000"), // interest
                         4, // numInstallments
-                        1754884800 // deadline
+                        1754884800, // deadline
                     );
                     const borrowerBalanceBefore = await mockERC20.balanceOf(await borrower.getAddress());
                     const lenderBalanceBefore = await mockERC20.balanceOf(await lender.getAddress());
@@ -967,7 +970,7 @@ describe("Installments", () => {
                         hre.ethers.utils.parseEther("100"), // principal
                         hre.ethers.utils.parseEther("1000"), // interest
                         4, // numInstallments
-                        1754884800 // deadline
+                        1754884800, // deadline
                     );
                     const borrowerBalanceBefore = await mockERC20.balanceOf(await borrower.getAddress());
 
@@ -977,11 +980,13 @@ describe("Installments", () => {
                     await mockERC20
                         .connect(borrower)
                         .approve(repaymentController.address, ethers.utils.parseEther("19.11319634074"));
-                    await expect(
-                        repaymentController.connect(borrower).repayPartMinimum(loanId),
-                    ).to.be.revertedWith("ERC20: transfer amount exceeds allowance");
+                    await expect(repaymentController.connect(borrower).repayPartMinimum(loanId)).to.be.revertedWith(
+                        "ERC20: transfer amount exceeds allowance",
+                    );
 
-                    await expect(await mockERC20.balanceOf(await borrower.getAddress())).to.equal(borrowerBalanceBefore);
+                    await expect(await mockERC20.balanceOf(await borrower.getAddress())).to.equal(
+                        borrowerBalanceBefore,
+                    );
                 });
 
                 it("Repay minimum after skipping whole loan duration x 2.", async () => {
@@ -994,7 +999,7 @@ describe("Installments", () => {
                         hre.ethers.utils.parseEther("100"), // principal
                         hre.ethers.utils.parseEther("1000"), // interest
                         4, // numInstallments
-                        1754884800 // deadline
+                        1754884800, // deadline
                     );
                     const borrowerBalanceBefore = await mockERC20.balanceOf(await borrower.getAddress());
                     const lenderBalanceBefore = await mockERC20.balanceOf(await lender.getAddress());
@@ -1038,7 +1043,7 @@ describe("Installments", () => {
                         hre.ethers.utils.parseEther("100"), // principal
                         hre.ethers.utils.parseEther("1000"), // interest
                         4, // numInstallments
-                        1754884800 // deadline
+                        1754884800, // deadline
                     );
                     const borrowerBalanceBefore = await mockERC20.balanceOf(await borrower.getAddress());
                     const lenderBalanceBefore = await mockERC20.balanceOf(await lender.getAddress());
@@ -1085,7 +1090,7 @@ describe("Installments", () => {
                     hre.ethers.utils.parseEther("100"), // principal
                     hre.ethers.utils.parseEther("1000"), // interest
                     8, // numInstallments
-                    1754884800 // deadline
+                    1754884800, // deadline
                 );
                 const borrowerBalanceBefore = await mockERC20.balanceOf(await borrower.getAddress());
                 const lenderBalanceBefore = await mockERC20.balanceOf(await lender.getAddress());
@@ -1093,14 +1098,22 @@ describe("Installments", () => {
                 await mockERC20.connect(borrower).approve(repaymentController.address, ethers.utils.parseEther("1.25"));
                 await expect(repaymentController.connect(borrower).repayPartMinimum(loanId))
                     .to.emit(mockERC20, "Transfer")
-                    .withArgs(await borrower.getAddress(), repaymentController.address, ethers.utils.parseEther("1.25"));
+                    .withArgs(
+                        await borrower.getAddress(),
+                        repaymentController.address,
+                        ethers.utils.parseEther("1.25"),
+                    );
 
                 await blockchainTime.increaseTime(36000 / 8);
 
                 await mockERC20.connect(borrower).approve(repaymentController.address, ethers.utils.parseEther("1.25"));
                 await expect(repaymentController.connect(borrower).repayPartMinimum(loanId))
                     .to.emit(mockERC20, "Transfer")
-                    .withArgs(await borrower.getAddress(), repaymentController.address, ethers.utils.parseEther("1.25"));
+                    .withArgs(
+                        await borrower.getAddress(),
+                        repaymentController.address,
+                        ethers.utils.parseEther("1.25"),
+                    );
 
                 const loanDATA = await loanCore.connect(borrower).getLoan(loanId);
                 expect(loanDATA.balance).to.equal(ethers.utils.parseEther("100"));
@@ -1123,7 +1136,7 @@ describe("Installments", () => {
                     hre.ethers.utils.parseEther("100"), // principal
                     hre.ethers.utils.parseEther("1000"), // interest
                     4, // numInstallments
-                    1754884800 // deadline
+                    1754884800, // deadline
                 );
                 const borrowerBalanceBefore = await mockERC20.balanceOf(await borrower.getAddress());
                 const lenderBalanceBefore = await mockERC20.balanceOf(await lender.getAddress());
@@ -1131,44 +1144,42 @@ describe("Installments", () => {
                 await blockchainTime.increaseTime(10);
 
                 await mockERC20.connect(borrower).approve(repaymentController.address, ethers.utils.parseEther("27.5"));
-                await expect(
-                    repaymentController
-                        .connect(borrower)
-                        .repayPart(loanId, ethers.utils.parseEther("27.5")),
-                )
+                await expect(repaymentController.connect(borrower).repayPart(loanId, ethers.utils.parseEther("27.5")))
                     .to.emit(mockERC20, "Transfer")
-                    .withArgs(await borrower.getAddress(), repaymentController.address, ethers.utils.parseEther("27.5"));
+                    .withArgs(
+                        await borrower.getAddress(),
+                        repaymentController.address,
+                        ethers.utils.parseEther("27.5"),
+                    );
 
                 await blockchainTime.increaseTime(36000 / 4);
 
-                await mockERC20.connect(borrower).approve(repaymentController.address, ethers.utils.parseEther("26.875"));
-                await expect(
-                    repaymentController
-                        .connect(borrower)
-                        .repayPart(loanId, ethers.utils.parseEther("26.875")),
-                )
+                await mockERC20
+                    .connect(borrower)
+                    .approve(repaymentController.address, ethers.utils.parseEther("26.875"));
+                await expect(repaymentController.connect(borrower).repayPart(loanId, ethers.utils.parseEther("26.875")))
                     .to.emit(mockERC20, "Transfer")
-                    .withArgs(await borrower.getAddress(), repaymentController.address, ethers.utils.parseEther("26.875"));
+                    .withArgs(
+                        await borrower.getAddress(),
+                        repaymentController.address,
+                        ethers.utils.parseEther("26.875"),
+                    );
 
                 await blockchainTime.increaseTime(36000 / 4);
 
-                await mockERC20.connect(borrower).approve(repaymentController.address, ethers.utils.parseEther("26.25"));
-                await expect(
-                    repaymentController
-                        .connect(borrower)
-                        .repayPart(loanId, ethers.utils.parseEther("26.25")),
-                )
+                await mockERC20
+                    .connect(borrower)
+                    .approve(repaymentController.address, ethers.utils.parseEther("26.25"));
+                await expect(repaymentController.connect(borrower).repayPart(loanId, ethers.utils.parseEther("26.25")))
                     .to.emit(loanCore, "InstallmentPaymentReceived")
                     .withArgs(loanId, ethers.utils.parseEther("25.0"), ethers.utils.parseEther("25.0"));
 
                 await blockchainTime.increaseTime(36000 / 4);
 
-                await mockERC20.connect(borrower).approve(repaymentController.address, ethers.utils.parseEther("25.625"));
-                await expect(
-                    repaymentController
-                        .connect(borrower)
-                        .repayPart(loanId, ethers.utils.parseEther("25.625")),
-                )
+                await mockERC20
+                    .connect(borrower)
+                    .approve(repaymentController.address, ethers.utils.parseEther("25.625"));
+                await expect(repaymentController.connect(borrower).repayPart(loanId, ethers.utils.parseEther("25.625")))
                     .to.emit(loanCore, "LoanRepaid")
                     .withArgs(loanId);
 
@@ -1179,7 +1190,9 @@ describe("Installments", () => {
 
                 const borrowerBalanceAfter = await mockERC20.balanceOf(await borrower.getAddress());
                 const lenderBalanceAfter = await mockERC20.balanceOf(await lender.getAddress());
-                await expect(borrowerBalanceAfter).to.equal(borrowerBalanceBefore.sub(ethers.utils.parseEther("106.25")));
+                await expect(borrowerBalanceAfter).to.equal(
+                    borrowerBalanceBefore.sub(ethers.utils.parseEther("106.25")),
+                );
                 await expect(lenderBalanceAfter).to.equal(lenderBalanceBefore.add(ethers.utils.parseEther("106.25")));
             });
 
@@ -1193,8 +1206,7 @@ describe("Installments", () => {
                     hre.ethers.utils.parseEther("100"), // principal
                     hre.ethers.utils.parseEther("1000"), // interest
                     8, // numInstallments
-                    1754884800 // deadline
-
+                    1754884800, // deadline
                 );
                 const borrowerBalanceBefore = await mockERC20.balanceOf(await borrower.getAddress());
                 const lenderBalanceBefore = await mockERC20.balanceOf(await lender.getAddress());
@@ -1207,9 +1219,7 @@ describe("Installments", () => {
                     .connect(borrower)
                     .approve(repaymentController.address, ethers.utils.parseEther("28.021875"));
                 await expect(
-                    repaymentController
-                        .connect(borrower)
-                        .repayPart(loanId, ethers.utils.parseEther("28.021875")),
+                    repaymentController.connect(borrower).repayPart(loanId, ethers.utils.parseEther("28.021875")),
                 )
                     .to.emit(mockERC20, "Transfer")
                     .withArgs(
@@ -1224,9 +1234,7 @@ describe("Installments", () => {
                     .connect(borrower)
                     .approve(repaymentController.address, ethers.utils.parseEther("27.26640625"));
                 await expect(
-                    repaymentController
-                        .connect(borrower)
-                        .repayPart(loanId, ethers.utils.parseEther("27.26640625")),
+                    repaymentController.connect(borrower).repayPart(loanId, ethers.utils.parseEther("27.26640625")),
                 )
                     .to.emit(mockERC20, "Transfer")
                     .withArgs(
@@ -1242,9 +1250,7 @@ describe("Installments", () => {
                     .connect(borrower)
                     .approve(repaymentController.address, ethers.utils.parseEther("26.5109375"));
                 await expect(
-                    repaymentController
-                        .connect(borrower)
-                        .repayPart(loanId, ethers.utils.parseEther("26.5109375")),
+                    repaymentController.connect(borrower).repayPart(loanId, ethers.utils.parseEther("26.5109375")),
                 )
                     .to.emit(mockERC20, "Transfer")
                     .withArgs(
@@ -1260,9 +1266,7 @@ describe("Installments", () => {
                     .connect(borrower)
                     .approve(repaymentController.address, ethers.utils.parseEther("25.75546875"));
                 await expect(
-                    repaymentController
-                        .connect(borrower)
-                        .repayPart(loanId, ethers.utils.parseEther("25.75546875")),
+                    repaymentController.connect(borrower).repayPart(loanId, ethers.utils.parseEther("25.75546875")),
                 )
                     .to.emit(loanCore, "LoanRepaid")
                     .withArgs(loanId);
@@ -1277,7 +1281,9 @@ describe("Installments", () => {
                 await expect(borrowerBalanceAfter).to.equal(
                     borrowerBalanceBefore.sub(ethers.utils.parseEther("107.5546875")),
                 );
-                await expect(lenderBalanceAfter).to.equal(lenderBalanceBefore.add(ethers.utils.parseEther("107.5546875")));
+                await expect(lenderBalanceAfter).to.equal(
+                    lenderBalanceBefore.add(ethers.utils.parseEther("107.5546875")),
+                );
             });
 
             it("Scenario: numInstallments: 12, durationSecs: 1y, principal: 1000, interest: 6.25%. Repay minimum on 12 payments, verify the principal has not changed.", async () => {
@@ -1290,7 +1296,7 @@ describe("Installments", () => {
                     hre.ethers.utils.parseEther("1000"), // principal
                     hre.ethers.utils.parseEther("625"), // interest
                     12, // numInstallments
-                    1754884800 // deadline
+                    1754884800, // deadline
                 );
                 const borrowerBalanceBefore = await mockERC20.balanceOf(await borrower.getAddress());
                 const lenderBalanceBefore = await mockERC20.balanceOf(await lender.getAddress());
@@ -1323,7 +1329,9 @@ describe("Installments", () => {
                 await expect(borrowerBalanceAfter).to.equal(
                     borrowerBalanceBefore.sub(ethers.utils.parseEther("62.4999996")),
                 );
-                await expect(lenderBalanceAfter).to.equal(lenderBalanceBefore.add(ethers.utils.parseEther("62.4999996")));
+                await expect(lenderBalanceAfter).to.equal(
+                    lenderBalanceBefore.add(ethers.utils.parseEther("62.4999996")),
+                );
             });
 
             it("Scenario: numInstallments: 12, durationSecs: 1y, principal: 100000, interest: 10.00%. Repay min interest and monthly principal x 12.", async () => {
@@ -1336,7 +1344,7 @@ describe("Installments", () => {
                     hre.ethers.utils.parseEther("100000"), // principal
                     hre.ethers.utils.parseEther("1000"), // interest
                     12, // numInstallments
-                    1754884800 // deadline
+                    1754884800, // deadline
                 );
                 const borrowerBalanceBefore = await mockERC20.balanceOf(await borrower.getAddress());
                 const lenderBalanceBefore = await mockERC20.balanceOf(await lender.getAddress());
@@ -1349,9 +1357,7 @@ describe("Installments", () => {
                         .connect(borrower)
                         .approve(repaymentController.address, ethers.utils.parseEther("8791.599")); // first and maximum repayment
                     await expect(
-                        repaymentController
-                            .connect(borrower)
-                            .repayPart(loanId, ethers.utils.parseEther("8791.599")),
+                        repaymentController.connect(borrower).repayPart(loanId, ethers.utils.parseEther("8791.599")),
                     )
                         .to.emit(mockERC20, "Transfer")
                         .withArgs(
@@ -1389,7 +1395,7 @@ describe("Installments", () => {
                     hre.ethers.utils.parseEther("100"), // principal
                     hre.ethers.utils.parseEther("1000"), // interest
                     4, // numInstallments
-                    1754884800 // deadline
+                    1754884800, // deadline
                 );
                 const borrowerBalanceBefore = await mockERC20.balanceOf(await borrower.getAddress());
                 const lenderBalanceBefore = await mockERC20.balanceOf(await lender.getAddress());
@@ -1398,11 +1404,11 @@ describe("Installments", () => {
                 await blockchainTime.increaseTime(1);
 
                 for (let i = 0; i < 4; i++) {
-                    await mockERC20.connect(borrower).approve(repaymentController.address, ethers.utils.parseEther("27.5")); // first and maximum repayment
+                    await mockERC20
+                        .connect(borrower)
+                        .approve(repaymentController.address, ethers.utils.parseEther("27.5")); // first and maximum repayment
                     await expect(
-                        repaymentController
-                            .connect(borrower)
-                            .repayPart(loanId, ethers.utils.parseEther("27.5")),
+                        repaymentController.connect(borrower).repayPart(loanId, ethers.utils.parseEther("27.5")),
                     )
                         .to.emit(mockERC20, "Transfer")
                         .withArgs(
@@ -1440,7 +1446,7 @@ describe("Installments", () => {
                     hre.ethers.utils.parseEther("100"), // principal
                     hre.ethers.utils.parseEther("1000"), // interest
                     4, // numInstallments
-                    1754884800 // deadline
+                    1754884800, // deadline
                 );
                 const borrowerBalanceBefore = await mockERC20.balanceOf(await borrower.getAddress());
                 const lenderBalanceBefore = await mockERC20.balanceOf(await lender.getAddress());
@@ -1466,11 +1472,7 @@ describe("Installments", () => {
                 await blockchainTime.increaseTime(1);
                 // repay entire principal to close the loan
                 await mockERC20.connect(borrower).approve(repaymentController.address, ethers.utils.parseEther("100"));
-                await expect(
-                    repaymentController
-                        .connect(borrower)
-                        .repayPart(loanId, ethers.utils.parseEther("100")),
-                )
+                await expect(repaymentController.connect(borrower).repayPart(loanId, ethers.utils.parseEther("100")))
                     .to.emit(loanCore, "LoanRepaid")
                     .withArgs(loanId);
 
@@ -1495,7 +1497,7 @@ describe("Installments", () => {
                     hre.ethers.utils.parseEther("100"), // principal
                     hre.ethers.utils.parseEther("1000"), // interest
                     4, // numInstallments
-                    1754884800 // deadline
+                    1754884800, // deadline
                 );
                 const borrowerBalanceBefore = await mockERC20.balanceOf(await borrower.getAddress());
                 const lenderBalanceBefore = await mockERC20.balanceOf(await lender.getAddress());
@@ -1505,24 +1507,22 @@ describe("Installments", () => {
 
                 // 1st payment
                 await mockERC20.connect(borrower).approve(repaymentController.address, ethers.utils.parseEther("27.5")); // first and maximum repayment
-                await expect(
-                    repaymentController
-                        .connect(borrower)
-                        .repayPart(loanId, ethers.utils.parseEther("27.5")),
-                )
+                await expect(repaymentController.connect(borrower).repayPart(loanId, ethers.utils.parseEther("27.5")))
                     .to.emit(mockERC20, "Transfer")
-                    .withArgs(await borrower.getAddress(), repaymentController.address, ethers.utils.parseEther("27.5"));
+                    .withArgs(
+                        await borrower.getAddress(),
+                        repaymentController.address,
+                        ethers.utils.parseEther("27.5"),
+                    );
 
                 // increase one installment period
                 await blockchainTime.increaseTime(31536000 / 4);
 
                 // second payment
-                await mockERC20.connect(borrower).approve(repaymentController.address, ethers.utils.parseEther("76.875")); // first and maximum repayment
-                await expect(
-                    repaymentController
-                        .connect(borrower)
-                        .repayPart(loanId, ethers.utils.parseEther("76.875")),
-                )
+                await mockERC20
+                    .connect(borrower)
+                    .approve(repaymentController.address, ethers.utils.parseEther("76.875")); // first and maximum repayment
+                await expect(repaymentController.connect(borrower).repayPart(loanId, ethers.utils.parseEther("76.875")))
                     .to.emit(loanCore, "LoanRepaid")
                     .withArgs(loanId);
 
@@ -1534,7 +1534,9 @@ describe("Installments", () => {
 
                 const borrowerBalanceAfter = await mockERC20.balanceOf(await borrower.getAddress());
                 const lenderBalanceAfter = await mockERC20.balanceOf(await lender.getAddress());
-                await expect(borrowerBalanceAfter).to.equal(borrowerBalanceBefore.sub(ethers.utils.parseEther("104.375")));
+                await expect(borrowerBalanceAfter).to.equal(
+                    borrowerBalanceBefore.sub(ethers.utils.parseEther("104.375")),
+                );
                 await expect(lenderBalanceAfter).to.equal(lenderBalanceBefore.add(ethers.utils.parseEther("104.375")));
             });
 
@@ -1548,7 +1550,7 @@ describe("Installments", () => {
                     hre.ethers.utils.parseEther("1000"), // principal
                     hre.ethers.utils.parseEther("75"), // interest
                     24, // numInstallments
-                    1754884800 // deadline
+                    1754884800, // deadline
                 );
                 const borrowerBalanceBefore = await mockERC20.balanceOf(await borrower.getAddress());
                 const lenderBalanceBefore = await mockERC20.balanceOf(await lender.getAddress());
@@ -1591,18 +1593,20 @@ describe("Installments", () => {
                     hre.ethers.utils.parseEther("1000"), // principal
                     hre.ethers.utils.parseEther("75"), // interest
                     24, // numInstallments
-                    1754884800 // deadline
+                    1754884800, // deadline
                 );
                 await blockchainTime.increaseTime(10);
 
                 await mockERC20
                     .connect(borrower)
                     .approve(repaymentController.address, ethers.utils.parseEther(".3125"));
-                await expect(repaymentController.connect(borrower).repayPart(loanId, ethers.utils.parseEther("0")))
-                    .to.be.revertedWith("RC_RepayPartZero");
+                await expect(
+                    repaymentController.connect(borrower).repayPart(loanId, ethers.utils.parseEther("0")),
+                ).to.be.revertedWith("RC_RepayPartZero");
 
-                await expect(repaymentController.connect(borrower).repayPart(loanId, ethers.utils.parseEther(".1")))
-                    .to.be.revertedWith("RC_RepayPartLTMin");
+                await expect(
+                    repaymentController.connect(borrower).repayPart(loanId, ethers.utils.parseEther(".1")),
+                ).to.be.revertedWith("RC_RepayPartLTMin");
             });
         });
 
@@ -1617,7 +1621,7 @@ describe("Installments", () => {
                     hre.ethers.utils.parseEther("100"), // principal
                     hre.ethers.utils.parseEther("1000"), // interest
                     4, // numInstallments
-                    1754884800 // deadline
+                    1754884800, // deadline
                 );
                 const borrowerBalanceBefore = await mockERC20.balanceOf(await borrower.getAddress());
                 const lenderBalanceBefore = await mockERC20.balanceOf(await lender.getAddress());
@@ -1625,22 +1629,28 @@ describe("Installments", () => {
                 //increase time slightly
                 await blockchainTime.increaseTime(10);
 
-                const res = await repaymentController
-                    .connect(borrower)
-                    .callStatic.amountToCloseLoan(loanId);
+                const res = await repaymentController.connect(borrower).callStatic.amountToCloseLoan(loanId);
                 const amountDue = res[0];
                 const numMissedPayments = res[1].toNumber();
                 expect(amountDue).to.equal(ethers.utils.parseEther("102.5"));
                 expect(numMissedPayments).to.equal(0);
 
-                await mockERC20.connect(borrower).approve(repaymentController.address, ethers.utils.parseEther("102.5"));
+                await mockERC20
+                    .connect(borrower)
+                    .approve(repaymentController.address, ethers.utils.parseEther("102.5"));
                 await expect(repaymentController.connect(borrower).closeLoan(loanId))
                     .to.emit(mockERC20, "Transfer")
-                    .withArgs(await borrower.getAddress(), repaymentController.address, ethers.utils.parseEther("102.5"));
+                    .withArgs(
+                        await borrower.getAddress(),
+                        repaymentController.address,
+                        ethers.utils.parseEther("102.5"),
+                    );
 
                 const borrowerBalanceAfter = await mockERC20.balanceOf(await borrower.getAddress());
                 const lenderBalanceAfter = await mockERC20.balanceOf(await lender.getAddress());
-                await expect(borrowerBalanceAfter).to.equal(borrowerBalanceBefore.sub(ethers.utils.parseEther("102.5")));
+                await expect(borrowerBalanceAfter).to.equal(
+                    borrowerBalanceBefore.sub(ethers.utils.parseEther("102.5")),
+                );
                 await expect(lenderBalanceAfter).to.equal(lenderBalanceBefore.add(ethers.utils.parseEther("102.5")));
             });
 
@@ -1654,14 +1664,16 @@ describe("Installments", () => {
                     hre.ethers.utils.parseEther("100"), // principal
                     hre.ethers.utils.parseEther("1000"), // interest
                     4, // numInstallments
-                    1754884800 // deadline
+                    1754884800, // deadline
                 );
                 const borrowerBalanceBefore = await mockERC20.balanceOf(await borrower.getAddress());
 
                 //increase time slightly
                 await blockchainTime.increaseTime(10);
 
-                await mockERC20.connect(borrower).approve(repaymentController.address, ethers.utils.parseEther("102.4"));
+                await mockERC20
+                    .connect(borrower)
+                    .approve(repaymentController.address, ethers.utils.parseEther("102.4"));
                 await expect(repaymentController.connect(borrower).closeLoan(loanId)).to.be.revertedWith(
                     "ERC20: transfer amount exceeds allowance",
                 );
@@ -1680,7 +1692,7 @@ describe("Installments", () => {
                     hre.ethers.utils.parseEther("100"), // principal
                     hre.ethers.utils.parseEther("1000"), // interest
                     4, // numInstallments
-                    1754884800 // deadline
+                    1754884800, // deadline
                 );
                 const borrowerBalanceBefore = await mockERC20.balanceOf(await borrower.getAddress());
                 const lenderBalanceBefore = await mockERC20.balanceOf(await lender.getAddress());
@@ -1688,9 +1700,7 @@ describe("Installments", () => {
                 //increase time slightly
                 await blockchainTime.increaseTime(36000 - 100);
 
-                const res = await repaymentController
-                    .connect(borrower)
-                    .callStatic.amountToCloseLoan(loanId);
+                const res = await repaymentController.connect(borrower).callStatic.amountToCloseLoan(loanId);
                 const amountDue = res[0];
                 const numMissedPayments = res[1].toNumber();
                 expect(amountDue).to.equal(ethers.utils.parseEther("112.0577675"));
@@ -1712,7 +1722,9 @@ describe("Installments", () => {
                 await expect(borrowerBalanceAfter).to.equal(
                     borrowerBalanceBefore.sub(ethers.utils.parseEther("112.0577675")),
                 );
-                await expect(lenderBalanceAfter).to.equal(lenderBalanceBefore.add(ethers.utils.parseEther("112.0577675")));
+                await expect(lenderBalanceAfter).to.equal(
+                    lenderBalanceBefore.add(ethers.utils.parseEther("112.0577675")),
+                );
             });
 
             it("Close loan after paying 2 min payments (3rd installment period).", async () => {
@@ -1725,7 +1737,7 @@ describe("Installments", () => {
                     hre.ethers.utils.parseEther("100"), // principal
                     hre.ethers.utils.parseEther("1000"), // interest
                     4, // numInstallments
-                    1754884800 // deadline
+                    1754884800, // deadline
                 );
                 const borrowerBalanceBefore = await mockERC20.balanceOf(await borrower.getAddress());
                 const lenderBalanceBefore = await mockERC20.balanceOf(await lender.getAddress());
@@ -1750,22 +1762,28 @@ describe("Installments", () => {
                 await blockchainTime.increaseTime(36000 / 4);
 
                 //  pay off rest of the loan
-                const res = await repaymentController
-                    .connect(borrower)
-                    .callStatic.amountToCloseLoan(loanId);
+                const res = await repaymentController.connect(borrower).callStatic.amountToCloseLoan(loanId);
                 const amountDue = res[0];
                 const numMissedPayments = res[1].toNumber();
                 expect(amountDue).to.equal(ethers.utils.parseEther("102.5"));
                 expect(numMissedPayments).to.equal(0);
 
-                await mockERC20.connect(borrower).approve(repaymentController.address, ethers.utils.parseEther("102.5"));
+                await mockERC20
+                    .connect(borrower)
+                    .approve(repaymentController.address, ethers.utils.parseEther("102.5"));
                 await expect(repaymentController.connect(borrower).closeLoan(loanId))
                     .to.emit(mockERC20, "Transfer")
-                    .withArgs(await borrower.getAddress(), repaymentController.address, ethers.utils.parseEther("102.5"));
+                    .withArgs(
+                        await borrower.getAddress(),
+                        repaymentController.address,
+                        ethers.utils.parseEther("102.5"),
+                    );
 
                 const borrowerBalanceAfter = await mockERC20.balanceOf(await borrower.getAddress());
                 const lenderBalanceAfter = await mockERC20.balanceOf(await lender.getAddress());
-                await expect(borrowerBalanceAfter).to.equal(borrowerBalanceBefore.sub(ethers.utils.parseEther("107.5")));
+                await expect(borrowerBalanceAfter).to.equal(
+                    borrowerBalanceBefore.sub(ethers.utils.parseEther("107.5")),
+                );
                 await expect(lenderBalanceAfter).to.equal(lenderBalanceBefore.add(ethers.utils.parseEther("107.5")));
             });
 
@@ -1779,7 +1797,7 @@ describe("Installments", () => {
                     hre.ethers.utils.parseEther("100"), // principal
                     hre.ethers.utils.parseEther("1000"), // interest
                     4, // numInstallments
-                    1754884800 // deadline
+                    1754884800, // deadline
                 );
                 const borrowerBalanceBefore = await mockERC20.balanceOf(await borrower.getAddress());
                 const lenderBalanceBefore = await mockERC20.balanceOf(await lender.getAddress());
@@ -1823,7 +1841,7 @@ describe("Installments", () => {
                     hre.ethers.utils.parseEther("100"), // principal
                     hre.ethers.utils.parseEther("1000"), // interest
                     4, // numInstallments
-                    1754884800 // deadline
+                    1754884800, // deadline
                 );
                 const borrowerBalanceBefore = await mockERC20.balanceOf(await borrower.getAddress());
                 const lenderBalanceBefore = await mockERC20.balanceOf(await lender.getAddress());
@@ -1839,13 +1857,13 @@ describe("Installments", () => {
                 await blockchainTime.increaseTime(36000 / 4);
 
                 await mockERC20.connect(borrower).approve(repaymentController.address, ethers.utils.parseEther("52.5"));
-                await expect(
-                    repaymentController
-                        .connect(borrower)
-                        .repayPart(loanId, ethers.utils.parseEther("52.5")),
-                )
+                await expect(repaymentController.connect(borrower).repayPart(loanId, ethers.utils.parseEther("52.5")))
                     .to.emit(mockERC20, "Transfer")
-                    .withArgs(await borrower.getAddress(), repaymentController.address, ethers.utils.parseEther("52.5"));
+                    .withArgs(
+                        await borrower.getAddress(),
+                        repaymentController.address,
+                        ethers.utils.parseEther("52.5"),
+                    );
 
                 //increase time slightly, but still same installment period
                 await blockchainTime.increaseTime(1);
@@ -1864,379 +1882,365 @@ describe("Installments", () => {
     });
 
     describe("Defaults", () => {
-      it("Scenario: numInstallments: 2, durationSecs: 36000. Claim after first missed installment.", async () => {
-        const context = await loadFixture(fixture);
-        const { repaymentController, loanCore, mockERC20, vaultFactory, borrower, lender, blockchainTime } = context;
-        const { loanId } = await initializeInstallmentLoan(
-            context,
-            mockERC20.address,
-            BigNumber.from(36000), // durationSecs
-            hre.ethers.utils.parseEther("100"), // principal
-            hre.ethers.utils.parseEther("1000"), // interest
-            2, // numInstallments
-            1754884800 // deadline
-        );
-        const borrowerBalanceBefore = await vaultFactory.balanceOf(await borrower.getAddress());
-        const lenderBalanceBefore = await vaultFactory.balanceOf(await lender.getAddress());
-
-        //increase time to the second half of the loan duration
-        await blockchainTime.increaseTime((36000/2) + 100);
-
-        // have lender call claim on the collateral
-        await expect(repaymentController.connect(lender).claim(loanId)).to.emit(loanCore, "LoanClaimed").withArgs(loanId);
-
-        // check balances
-        const borrowerBalanceAfter = await vaultFactory.balanceOf(await borrower.getAddress());
-        const lenderBalanceAfter = await vaultFactory.balanceOf(await lender.getAddress());
-        expect(borrowerBalanceAfter.sub(borrowerBalanceBefore)).to.equal(0)
-        expect(lenderBalanceAfter.sub(lenderBalanceBefore)).to.equal(1)
-      });
-      it("Scenario: numInstallments: 2, durationSecs: 36000. Borrower calls claim after first missed installment, should revert.", async () => {
-        const context = await loadFixture(fixture);
-        const { repaymentController, loanCore, mockERC20, borrower, lender, blockchainTime } = context;
-        const { loanId } = await initializeInstallmentLoan(
-            context,
-            mockERC20.address,
-            BigNumber.from(36000), // durationSecs
-            hre.ethers.utils.parseEther("100"), // principal
-            hre.ethers.utils.parseEther("1000"), // interest
-            2, // numInstallments
-            1754884800 // deadline
-        );
-        const borrowerBalanceBefore = await mockERC20.balanceOf(await borrower.getAddress());
-        const lenderBalanceBefore = await mockERC20.balanceOf(await lender.getAddress());
-
-        //increase time to the second half of the loan duration
-        await blockchainTime.increaseTime((36000/2) + 100);
-
-        // have lender call claim on the collateral
-        await expect(repaymentController.connect(borrower).claim(loanId)).to.be.revertedWith("RC_OnlyLender");
-      });
-      it("Scenario: numInstallments: 2, durationSecs: 36000. Claim in first installment period should revert.", async () => {
-        const context = await loadFixture(fixture);
-        const { repaymentController, loanCore, mockERC20, vaultFactory, borrower, lender, blockchainTime } = context;
-        const { loanId } = await initializeInstallmentLoan(
-            context,
-            mockERC20.address,
-            BigNumber.from(36000), // durationSecs
-            hre.ethers.utils.parseEther("100"), // principal
-            hre.ethers.utils.parseEther("1000"), // interest
-            2, // numInstallments
-            1754884800 // deadline
-        );
-        const borrowerBalanceBefore = await vaultFactory.balanceOf(await borrower.getAddress());
-        const lenderBalanceBefore = await vaultFactory.balanceOf(await lender.getAddress());
-
-        //increase time to the second half of the loan duration
-        await blockchainTime.increaseTime(100);
-
-        // have lender call claim on the collateral
-        await expect(repaymentController.connect(lender).claim(loanId)).to.be.revertedWith("LC_LoanNotDefaulted")
-
-        // check balances
-        const borrowerBalanceAfter = await vaultFactory.balanceOf(await borrower.getAddress());
-        const lenderBalanceAfter = await vaultFactory.balanceOf(await lender.getAddress());
-        expect(borrowerBalanceAfter.sub(borrowerBalanceBefore)).to.equal(0)
-        expect(lenderBalanceAfter.sub(lenderBalanceBefore)).to.equal(0)
-      });
-      it("Scenario: numInstallments: 4, durationSecs: 36000. Claim after first missed installment, should revert.", async () => {
-        const context = await loadFixture(fixture);
-        const { repaymentController, loanCore, mockERC20, vaultFactory, borrower, lender, blockchainTime } = context;
-        const { loanId } = await initializeInstallmentLoan(
-            context,
-            mockERC20.address,
-            BigNumber.from(36000), // durationSecs
-            hre.ethers.utils.parseEther("100"), // principal
-            hre.ethers.utils.parseEther("1000"), // interest
-            4, // numInstallments
-            1754884800 // deadline
-        );
-        const borrowerBalanceBefore = await vaultFactory.balanceOf(await borrower.getAddress());
-        const lenderBalanceBefore = await vaultFactory.balanceOf(await lender.getAddress());
-
-        //increase time to the second half of the loan duration
-        await blockchainTime.increaseTime((36000/4) + 100);
-
-        // have lender call claim on the collateral
-        await expect(repaymentController.connect(lender).claim(loanId)).to.be.revertedWith("LC_LoanNotDefaulted");
-
-        // check balances
-        const borrowerBalanceAfter = await vaultFactory.balanceOf(await borrower.getAddress());
-        const lenderBalanceAfter = await vaultFactory.balanceOf(await lender.getAddress());
-        expect(borrowerBalanceAfter.sub(borrowerBalanceBefore)).to.equal(0)
-        expect(lenderBalanceAfter.sub(lenderBalanceBefore)).to.equal(0)
-      });
-      it("Scenario: numInstallments: 4, durationSecs: 36000. Claim after 40% the loan duration, should revert still second installment period.", async () => {
-        const context = await loadFixture(fixture);
-        const { repaymentController, loanCore, mockERC20, vaultFactory, borrower, lender, blockchainTime } = context;
-        const { loanId } = await initializeInstallmentLoan(
-            context,
-            mockERC20.address,
-            BigNumber.from(36000), // durationSecs
-            hre.ethers.utils.parseEther("100"), // principal
-            hre.ethers.utils.parseEther("1000"), // interest
-            4, // numInstallments
-            1754884800 // deadline
-        );
-        const borrowerBalanceBefore = await vaultFactory.balanceOf(await borrower.getAddress());
-        const lenderBalanceBefore = await vaultFactory.balanceOf(await lender.getAddress());
-
-        //increase time to the second half of the loan duration
-        await blockchainTime.increaseTime(36000*0.4);
-
-        // have lender call claim on the collateral
-        await expect(repaymentController.connect(lender).claim(loanId)).to.be.revertedWith("LC_LoanNotDefaulted");
-
-        // check balances
-        const borrowerBalanceAfter = await vaultFactory.balanceOf(await borrower.getAddress());
-        const lenderBalanceAfter = await vaultFactory.balanceOf(await lender.getAddress());
-        expect(borrowerBalanceAfter.sub(borrowerBalanceBefore)).to.equal(0)
-        expect(lenderBalanceAfter.sub(lenderBalanceBefore)).to.equal(0)
-      });
-      it("Scenario: numInstallments: 4, durationSecs: 36000. Borrower repays minimum. Lender tries to claim in same installment, should revert", async () => {
-        const context = await loadFixture(fixture);
-        const { repaymentController, loanCore, mockERC20, vaultFactory, borrower, lender, blockchainTime } = context;
-        const { loanId } = await initializeInstallmentLoan(
-            context,
-            mockERC20.address,
-            BigNumber.from(36000), // durationSecs
-            hre.ethers.utils.parseEther("100"), // principal
-            hre.ethers.utils.parseEther("1000"), // interest
-            4, // numInstallments
-            1754884800 // deadline
-        );
-        const borrowerBalanceBefore = await vaultFactory.balanceOf(await borrower.getAddress());
-        const lenderBalanceBefore = await vaultFactory.balanceOf(await lender.getAddress());
-
-        //increase time slightly
-        await blockchainTime.increaseTime(100);
-        // borrower repays minimum
-        await mockERC20
-            .connect(borrower)
-            .approve(repaymentController.address, ethers.utils.parseEther("2.5"));
-        await expect(repaymentController.connect(borrower).repayPartMinimum(loanId))
-            .to.emit(mockERC20, "Transfer")
-            .withArgs(
-                await borrower.getAddress(),
-                repaymentController.address,
-                ethers.utils.parseEther("2.5"),
+        it("Scenario: numInstallments: 2, durationSecs: 36000. Claim after first missed installment.", async () => {
+            const context = await loadFixture(fixture);
+            const { repaymentController, loanCore, mockERC20, vaultFactory, borrower, lender, blockchainTime } =
+                context;
+            const { loanId } = await initializeInstallmentLoan(
+                context,
+                mockERC20.address,
+                BigNumber.from(36000), // durationSecs
+                hre.ethers.utils.parseEther("100"), // principal
+                hre.ethers.utils.parseEther("1000"), // interest
+                2, // numInstallments
+                1754884800, // deadline
             );
+            const borrowerBalanceBefore = await vaultFactory.balanceOf(await borrower.getAddress());
+            const lenderBalanceBefore = await vaultFactory.balanceOf(await lender.getAddress());
 
-        await blockchainTime.increaseTime(1);
+            //increase time to the second half of the loan duration
+            await blockchainTime.increaseTime(36000 / 2 + 100);
 
-        // have lender call claim on the collateral
-        await expect(repaymentController.connect(lender).claim(loanId)).to.be.revertedWith("LC_LoanNotDefaulted");
+            // have lender call claim on the collateral
+            await expect(repaymentController.connect(lender).claim(loanId))
+                .to.emit(loanCore, "LoanClaimed")
+                .withArgs(loanId);
 
-        // check balances
-        const borrowerBalanceAfter = await vaultFactory.balanceOf(await borrower.getAddress());
-        const lenderBalanceAfter = await vaultFactory.balanceOf(await lender.getAddress());
-        expect(borrowerBalanceAfter.sub(borrowerBalanceBefore)).to.equal(0)
-        expect(lenderBalanceAfter.sub(lenderBalanceBefore)).to.equal(0)
-      });
-      it("Scenario: numInstallments: 4, durationSecs: 36000. Borrower repays minimum. Lender tries to claim in second installment, should revert", async () => {
-        const context = await loadFixture(fixture);
-        const { repaymentController, loanCore, mockERC20, vaultFactory, borrower, lender, blockchainTime } = context;
-        const { loanId } = await initializeInstallmentLoan(
-            context,
-            mockERC20.address,
-            BigNumber.from(36000), // durationSecs
-            hre.ethers.utils.parseEther("100"), // principal
-            hre.ethers.utils.parseEther("1000"), // interest
-            4, // numInstallments
-            1754884800 // deadline
-        );
-        const borrowerBalanceBefore = await vaultFactory.balanceOf(await borrower.getAddress());
-        const lenderBalanceBefore = await vaultFactory.balanceOf(await lender.getAddress());
-
-        //increase time slightly
-        await blockchainTime.increaseTime(100);
-        // borrower repays minimum
-        await mockERC20
-            .connect(borrower)
-            .approve(repaymentController.address, ethers.utils.parseEther("2.5"));
-        await expect(repaymentController.connect(borrower).repayPartMinimum(loanId))
-            .to.emit(mockERC20, "Transfer")
-            .withArgs(
-                await borrower.getAddress(),
-                repaymentController.address,
-                ethers.utils.parseEther("2.5"),
+            // check balances
+            const borrowerBalanceAfter = await vaultFactory.balanceOf(await borrower.getAddress());
+            const lenderBalanceAfter = await vaultFactory.balanceOf(await lender.getAddress());
+            expect(borrowerBalanceAfter.sub(borrowerBalanceBefore)).to.equal(0);
+            expect(lenderBalanceAfter.sub(lenderBalanceBefore)).to.equal(1);
+        });
+        it("Scenario: numInstallments: 2, durationSecs: 36000. Borrower calls claim after first missed installment, should revert.", async () => {
+            const context = await loadFixture(fixture);
+            const { repaymentController, loanCore, mockERC20, borrower, lender, blockchainTime } = context;
+            const { loanId } = await initializeInstallmentLoan(
+                context,
+                mockERC20.address,
+                BigNumber.from(36000), // durationSecs
+                hre.ethers.utils.parseEther("100"), // principal
+                hre.ethers.utils.parseEther("1000"), // interest
+                2, // numInstallments
+                1754884800, // deadline
             );
+            const borrowerBalanceBefore = await mockERC20.balanceOf(await borrower.getAddress());
+            const lenderBalanceBefore = await mockERC20.balanceOf(await lender.getAddress());
 
-        //increase time to second installment period and try to claim before repayment
-        await blockchainTime.increaseTime(36000/4);
-        // have lender call claim on the collateral
-        await expect(repaymentController.connect(lender).claim(loanId)).to.be.revertedWith("LC_LoanNotDefaulted");
+            //increase time to the second half of the loan duration
+            await blockchainTime.increaseTime(36000 / 2 + 100);
 
-        // check balances
-        const borrowerBalanceAfter = await vaultFactory.balanceOf(await borrower.getAddress());
-        const lenderBalanceAfter = await vaultFactory.balanceOf(await lender.getAddress());
-        expect(borrowerBalanceAfter.sub(borrowerBalanceBefore)).to.equal(0)
-        expect(lenderBalanceAfter.sub(lenderBalanceBefore)).to.equal(0)
-      });
-      it("Scenario: numInstallments: 4, durationSecs: 36000. Borrower repays minimum. Lender tries to claim various times in loan duration.", async () => {
-        const context = await loadFixture(fixture);
-        const { repaymentController, loanCore, mockERC20, vaultFactory, borrower, lender, blockchainTime } = context;
-        const { loanId } = await initializeInstallmentLoan(
-            context,
-            mockERC20.address,
-            BigNumber.from(36000), // durationSecs
-            hre.ethers.utils.parseEther("100"), // principal
-            hre.ethers.utils.parseEther("1000"), // interest
-            4, // numInstallments
-            1754884800 // deadline
-        );
-        const borrowerBalanceBefore = await vaultFactory.balanceOf(await borrower.getAddress());
-        const lenderBalanceBefore = await vaultFactory.balanceOf(await lender.getAddress());
-
-        //increase time slightly
-        await blockchainTime.increaseTime(1);
-        // borrower repays minimum
-        await mockERC20
-            .connect(borrower)
-            .approve(repaymentController.address, ethers.utils.parseEther("2.5"));
-        await expect(repaymentController.connect(borrower).repayPartMinimum(loanId))
-            .to.emit(mockERC20, "Transfer")
-            .withArgs(
-                await borrower.getAddress(),
-                repaymentController.address,
-                ethers.utils.parseEther("2.5"),
+            // have lender call claim on the collateral
+            await expect(repaymentController.connect(borrower).claim(loanId)).to.be.revertedWith("RC_OnlyLender");
+        });
+        it("Scenario: numInstallments: 2, durationSecs: 36000. Claim in first installment period should revert.", async () => {
+            const context = await loadFixture(fixture);
+            const { repaymentController, loanCore, mockERC20, vaultFactory, borrower, lender, blockchainTime } =
+                context;
+            const { loanId } = await initializeInstallmentLoan(
+                context,
+                mockERC20.address,
+                BigNumber.from(36000), // durationSecs
+                hre.ethers.utils.parseEther("100"), // principal
+                hre.ethers.utils.parseEther("1000"), // interest
+                2, // numInstallments
+                1754884800, // deadline
             );
+            const borrowerBalanceBefore = await vaultFactory.balanceOf(await borrower.getAddress());
+            const lenderBalanceBefore = await vaultFactory.balanceOf(await lender.getAddress());
 
-        //increase time 25% of duration (second installment period)
-        await blockchainTime.increaseTime(36000*0.25);
-        // have lender call claim on the collateral
-        await expect(repaymentController.connect(lender).claim(loanId)).to.be.revertedWith("LC_LoanNotDefaulted");
+            //increase time to the second half of the loan duration
+            await blockchainTime.increaseTime(100);
 
-        //increase time 15% of duration (still second installment period)
-        await blockchainTime.increaseTime(36000*0.15);
-        // have lender call claim on the collateral
-        await expect(repaymentController.connect(lender).claim(loanId)).to.be.revertedWith("LC_LoanNotDefaulted");
+            // have lender call claim on the collateral
+            await expect(repaymentController.connect(lender).claim(loanId)).to.be.revertedWith("LC_LoanNotDefaulted");
 
-        //increase time 10% of duration (third installment period)
-        await blockchainTime.increaseTime(36000*0.10);
-        // have lender call claim on the collateral
-        await expect(repaymentController.connect(lender).claim(loanId)).to.be.revertedWith("LC_LoanNotDefaulted");
-        // increase time 10% of duration (start of forth installment period)
-        await blockchainTime.increaseTime(36000*0.25);
-        // have lender call claim on the collateral
-        await expect(repaymentController.connect(lender).claim(loanId)).to.emit(loanCore, "LoanClaimed").withArgs(loanId);
-
-        // check balances
-        const borrowerBalanceAfter = await vaultFactory.balanceOf(await borrower.getAddress());
-        const lenderBalanceAfter = await vaultFactory.balanceOf(await lender.getAddress());
-        expect(borrowerBalanceAfter.sub(borrowerBalanceBefore)).to.equal(0)
-        expect(lenderBalanceAfter.sub(lenderBalanceBefore)).to.equal(1)
-      });
-      it("Scenario: numInstallments: 10, durationSecs: 36000. Borrower repays minimum. Lender tries to claim various times in loan duration.", async () => {
-        const context = await loadFixture(fixture);
-        const { repaymentController, loanCore, mockERC20, vaultFactory, borrower, lender, blockchainTime } = context;
-        const { loanId } = await initializeInstallmentLoan(
-            context,
-            mockERC20.address,
-            BigNumber.from(36000), // durationSecs
-            hre.ethers.utils.parseEther("100"), // principal
-            hre.ethers.utils.parseEther("1000"), // interest
-            10, // numInstallments
-            1754884800 // deadline
-        );
-        const borrowerBalanceBefore = await vaultFactory.balanceOf(await borrower.getAddress());
-        const lenderBalanceBefore = await vaultFactory.balanceOf(await lender.getAddress());
-
-        //increase time slightly
-        await blockchainTime.increaseTime(100);
-        // borrower repays minimum
-        await mockERC20
-            .connect(borrower)
-            .approve(repaymentController.address, ethers.utils.parseEther("1.0"));
-        await expect(repaymentController.connect(borrower).repayPartMinimum(loanId))
-            .to.emit(mockERC20, "Transfer")
-            .withArgs(
-                await borrower.getAddress(),
-                repaymentController.address,
-                ethers.utils.parseEther("1.0"),
+            // check balances
+            const borrowerBalanceAfter = await vaultFactory.balanceOf(await borrower.getAddress());
+            const lenderBalanceAfter = await vaultFactory.balanceOf(await lender.getAddress());
+            expect(borrowerBalanceAfter.sub(borrowerBalanceBefore)).to.equal(0);
+            expect(lenderBalanceAfter.sub(lenderBalanceBefore)).to.equal(0);
+        });
+        it("Scenario: numInstallments: 4, durationSecs: 36000. Claim after first missed installment, should revert.", async () => {
+            const context = await loadFixture(fixture);
+            const { repaymentController, loanCore, mockERC20, vaultFactory, borrower, lender, blockchainTime } =
+                context;
+            const { loanId } = await initializeInstallmentLoan(
+                context,
+                mockERC20.address,
+                BigNumber.from(36000), // durationSecs
+                hre.ethers.utils.parseEther("100"), // principal
+                hre.ethers.utils.parseEther("1000"), // interest
+                4, // numInstallments
+                1754884800, // deadline
             );
+            const borrowerBalanceBefore = await vaultFactory.balanceOf(await borrower.getAddress());
+            const lenderBalanceBefore = await vaultFactory.balanceOf(await lender.getAddress());
 
-        //increase time 25% of duration (second installment period)
-        await blockchainTime.increaseTime(3600);
-        // have lender call claim on the collateral
-        await expect(repaymentController.connect(lender).claim(loanId)).to.be.revertedWith("LC_LoanNotDefaulted");
-        //increase time 15% of duration (third installment period)
-        await blockchainTime.increaseTime(3600);
-        // have lender call claim on the collateral
-        await expect(repaymentController.connect(lender).claim(loanId)).to.be.revertedWith("LC_LoanNotDefaulted");
-        //increase time 10% of duration (forth installment period)
-        await blockchainTime.increaseTime(3600);
-        // have lender call claim on the collateral
-        await expect(repaymentController.connect(lender).claim(loanId)).to.be.revertedWith("LC_LoanNotDefaulted");
-        // increase time 10% of duration (fifth installment period)
-        await blockchainTime.increaseTime(3600);
-        // have lender call claim on the collateral
-        await expect(repaymentController.connect(lender).claim(loanId)).to.be.revertedWith("LC_LoanNotDefaulted");
-        // increase time 10% of duration (sixth installment period) ---> claimable
-        await blockchainTime.increaseTime(3600);
-        // have lender call claim on the collateral
-        await expect(repaymentController.connect(lender).claim(loanId)).to.emit(loanCore, "LoanClaimed");
+            //increase time to the second half of the loan duration
+            await blockchainTime.increaseTime(36000 / 4 + 100);
 
-        // check balances
-        const borrowerBalanceAfter = await vaultFactory.balanceOf(await borrower.getAddress());
-        const lenderBalanceAfter = await vaultFactory.balanceOf(await lender.getAddress());
-        expect(borrowerBalanceAfter.sub(borrowerBalanceBefore)).to.equal(0)
-        expect(lenderBalanceAfter.sub(lenderBalanceBefore)).to.equal(1)
-      });
-      it("Scenario: numInstallments: 24, durationSecs: 2y. Borrower repays minimum. Lender tries to claim various times in loan duration.", async () => {
-        const context = await loadFixture(fixture);
-        const { repaymentController, loanCore, mockERC20, vaultFactory, borrower, lender, blockchainTime } = context;
-        const { loanId } = await initializeInstallmentLoan(
-            context,
-            mockERC20.address,
-            BigNumber.from(31536000 * 2), // durationSecs
-            hre.ethers.utils.parseEther("100"), // principal
-            hre.ethers.utils.parseEther("1000"), // interest
-            24, // numInstallments
-            1754884800 // deadline
-        );
-        const borrowerBalanceBefore = await vaultFactory.balanceOf(await borrower.getAddress());
-        const lenderBalanceBefore = await vaultFactory.balanceOf(await lender.getAddress());
+            // have lender call claim on the collateral
+            await expect(repaymentController.connect(lender).claim(loanId)).to.be.revertedWith("LC_LoanNotDefaulted");
 
-        //increase time slightly
-        await blockchainTime.increaseTime(100);
-        // borrower repays minimum
-        await mockERC20
-            .connect(borrower)
-            .approve(repaymentController.address, ethers.utils.parseEther("0.417"));
-        await expect(repaymentController.connect(borrower).repayPartMinimum(loanId))
-            .to.emit(mockERC20, "Transfer");
+            // check balances
+            const borrowerBalanceAfter = await vaultFactory.balanceOf(await borrower.getAddress());
+            const lenderBalanceAfter = await vaultFactory.balanceOf(await lender.getAddress());
+            expect(borrowerBalanceAfter.sub(borrowerBalanceBefore)).to.equal(0);
+            expect(lenderBalanceAfter.sub(lenderBalanceBefore)).to.equal(0);
+        });
+        it("Scenario: numInstallments: 4, durationSecs: 36000. Claim after 40% the loan duration, should revert still second installment period.", async () => {
+            const context = await loadFixture(fixture);
+            const { repaymentController, loanCore, mockERC20, vaultFactory, borrower, lender, blockchainTime } =
+                context;
+            const { loanId } = await initializeInstallmentLoan(
+                context,
+                mockERC20.address,
+                BigNumber.from(36000), // durationSecs
+                hre.ethers.utils.parseEther("100"), // principal
+                hre.ethers.utils.parseEther("1000"), // interest
+                4, // numInstallments
+                1754884800, // deadline
+            );
+            const borrowerBalanceBefore = await vaultFactory.balanceOf(await borrower.getAddress());
+            const lenderBalanceBefore = await vaultFactory.balanceOf(await lender.getAddress());
 
-        //(second installment period)
-        await blockchainTime.increaseTime((2 * (31536000 * 2) / 24));
-        // have lender call claim on the collateral
-        await expect(repaymentController.connect(lender).claim(loanId)).to.be.revertedWith("LC_LoanNotDefaulted");
-        //(forth installment period)
-        await blockchainTime.increaseTime((2 * (31536000 * 2) / 24));
-        // have lender call claim on the collateral
-        await expect(repaymentController.connect(lender).claim(loanId)).to.be.revertedWith("LC_LoanNotDefaulted");
-        //(sixth installment period)
-        await blockchainTime.increaseTime((2 * (31536000 * 2) / 24));
-        // have lender call claim on the collateral
-        await expect(repaymentController.connect(lender).claim(loanId)).to.be.revertedWith("LC_LoanNotDefaulted");
-        // (eigth installment period)
-        await blockchainTime.increaseTime((2 * (31536000 * 2) / 24));
-        // have lender call claim on the collateral
-        await expect(repaymentController.connect(lender).claim(loanId)).to.be.revertedWith("LC_LoanNotDefaulted");
-        // (tenth installment period)
-        await blockchainTime.increaseTime((2 * (31536000 * 2) / 24));
-        // have lender call claim on the collateral
-        await expect(repaymentController.connect(lender).claim(loanId)).to.be.revertedWith("LC_LoanNotDefaulted");
-        // (eleventh installment period) ---> claimable
-        await blockchainTime.increaseTime((1 * (31536000 * 2) / 24));
-        // have lender call claim on the collateral
-        await expect(repaymentController.connect(lender).claim(loanId)).to.emit(loanCore, "LoanClaimed");
+            //increase time to the second half of the loan duration
+            await blockchainTime.increaseTime(36000 * 0.4);
 
-        // check balances
-        const borrowerBalanceAfter = await vaultFactory.balanceOf(await borrower.getAddress());
-        const lenderBalanceAfter = await vaultFactory.balanceOf(await lender.getAddress());
-        expect(borrowerBalanceAfter.sub(borrowerBalanceBefore)).to.equal(0)
-        expect(lenderBalanceAfter.sub(lenderBalanceBefore)).to.equal(1)
-      });
-   });
+            // have lender call claim on the collateral
+            await expect(repaymentController.connect(lender).claim(loanId)).to.be.revertedWith("LC_LoanNotDefaulted");
+
+            // check balances
+            const borrowerBalanceAfter = await vaultFactory.balanceOf(await borrower.getAddress());
+            const lenderBalanceAfter = await vaultFactory.balanceOf(await lender.getAddress());
+            expect(borrowerBalanceAfter.sub(borrowerBalanceBefore)).to.equal(0);
+            expect(lenderBalanceAfter.sub(lenderBalanceBefore)).to.equal(0);
+        });
+        it("Scenario: numInstallments: 4, durationSecs: 36000. Borrower repays minimum. Lender tries to claim in same installment, should revert", async () => {
+            const context = await loadFixture(fixture);
+            const { repaymentController, loanCore, mockERC20, vaultFactory, borrower, lender, blockchainTime } =
+                context;
+            const { loanId } = await initializeInstallmentLoan(
+                context,
+                mockERC20.address,
+                BigNumber.from(36000), // durationSecs
+                hre.ethers.utils.parseEther("100"), // principal
+                hre.ethers.utils.parseEther("1000"), // interest
+                4, // numInstallments
+                1754884800, // deadline
+            );
+            const borrowerBalanceBefore = await vaultFactory.balanceOf(await borrower.getAddress());
+            const lenderBalanceBefore = await vaultFactory.balanceOf(await lender.getAddress());
+
+            //increase time slightly
+            await blockchainTime.increaseTime(100);
+            // borrower repays minimum
+            await mockERC20.connect(borrower).approve(repaymentController.address, ethers.utils.parseEther("2.5"));
+            await expect(repaymentController.connect(borrower).repayPartMinimum(loanId))
+                .to.emit(mockERC20, "Transfer")
+                .withArgs(await borrower.getAddress(), repaymentController.address, ethers.utils.parseEther("2.5"));
+
+            await blockchainTime.increaseTime(1);
+
+            // have lender call claim on the collateral
+            await expect(repaymentController.connect(lender).claim(loanId)).to.be.revertedWith("LC_LoanNotDefaulted");
+
+            // check balances
+            const borrowerBalanceAfter = await vaultFactory.balanceOf(await borrower.getAddress());
+            const lenderBalanceAfter = await vaultFactory.balanceOf(await lender.getAddress());
+            expect(borrowerBalanceAfter.sub(borrowerBalanceBefore)).to.equal(0);
+            expect(lenderBalanceAfter.sub(lenderBalanceBefore)).to.equal(0);
+        });
+        it("Scenario: numInstallments: 4, durationSecs: 36000. Borrower repays minimum. Lender tries to claim in second installment, should revert", async () => {
+            const context = await loadFixture(fixture);
+            const { repaymentController, loanCore, mockERC20, vaultFactory, borrower, lender, blockchainTime } =
+                context;
+            const { loanId } = await initializeInstallmentLoan(
+                context,
+                mockERC20.address,
+                BigNumber.from(36000), // durationSecs
+                hre.ethers.utils.parseEther("100"), // principal
+                hre.ethers.utils.parseEther("1000"), // interest
+                4, // numInstallments
+                1754884800, // deadline
+            );
+            const borrowerBalanceBefore = await vaultFactory.balanceOf(await borrower.getAddress());
+            const lenderBalanceBefore = await vaultFactory.balanceOf(await lender.getAddress());
+
+            //increase time slightly
+            await blockchainTime.increaseTime(100);
+            // borrower repays minimum
+            await mockERC20.connect(borrower).approve(repaymentController.address, ethers.utils.parseEther("2.5"));
+            await expect(repaymentController.connect(borrower).repayPartMinimum(loanId))
+                .to.emit(mockERC20, "Transfer")
+                .withArgs(await borrower.getAddress(), repaymentController.address, ethers.utils.parseEther("2.5"));
+
+            //increase time to second installment period and try to claim before repayment
+            await blockchainTime.increaseTime(36000 / 4);
+            // have lender call claim on the collateral
+            await expect(repaymentController.connect(lender).claim(loanId)).to.be.revertedWith("LC_LoanNotDefaulted");
+
+            // check balances
+            const borrowerBalanceAfter = await vaultFactory.balanceOf(await borrower.getAddress());
+            const lenderBalanceAfter = await vaultFactory.balanceOf(await lender.getAddress());
+            expect(borrowerBalanceAfter.sub(borrowerBalanceBefore)).to.equal(0);
+            expect(lenderBalanceAfter.sub(lenderBalanceBefore)).to.equal(0);
+        });
+        it("Scenario: numInstallments: 4, durationSecs: 36000. Borrower repays minimum. Lender tries to claim various times in loan duration.", async () => {
+            const context = await loadFixture(fixture);
+            const { repaymentController, loanCore, mockERC20, vaultFactory, borrower, lender, blockchainTime } =
+                context;
+            const { loanId } = await initializeInstallmentLoan(
+                context,
+                mockERC20.address,
+                BigNumber.from(36000), // durationSecs
+                hre.ethers.utils.parseEther("100"), // principal
+                hre.ethers.utils.parseEther("1000"), // interest
+                4, // numInstallments
+                1754884800, // deadline
+            );
+            const borrowerBalanceBefore = await vaultFactory.balanceOf(await borrower.getAddress());
+            const lenderBalanceBefore = await vaultFactory.balanceOf(await lender.getAddress());
+
+            //increase time slightly
+            await blockchainTime.increaseTime(1);
+            // borrower repays minimum
+            await mockERC20.connect(borrower).approve(repaymentController.address, ethers.utils.parseEther("2.5"));
+            await expect(repaymentController.connect(borrower).repayPartMinimum(loanId))
+                .to.emit(mockERC20, "Transfer")
+                .withArgs(await borrower.getAddress(), repaymentController.address, ethers.utils.parseEther("2.5"));
+
+            //increase time 25% of duration (second installment period)
+            await blockchainTime.increaseTime(36000 * 0.25);
+            // have lender call claim on the collateral
+            await expect(repaymentController.connect(lender).claim(loanId)).to.be.revertedWith("LC_LoanNotDefaulted");
+
+            //increase time 15% of duration (still second installment period)
+            await blockchainTime.increaseTime(36000 * 0.15);
+            // have lender call claim on the collateral
+            await expect(repaymentController.connect(lender).claim(loanId)).to.be.revertedWith("LC_LoanNotDefaulted");
+
+            //increase time 10% of duration (third installment period)
+            await blockchainTime.increaseTime(36000 * 0.1);
+            // have lender call claim on the collateral
+            await expect(repaymentController.connect(lender).claim(loanId)).to.be.revertedWith("LC_LoanNotDefaulted");
+            // increase time 10% of duration (start of forth installment period)
+            await blockchainTime.increaseTime(36000 * 0.25);
+            // have lender call claim on the collateral
+            await expect(repaymentController.connect(lender).claim(loanId))
+                .to.emit(loanCore, "LoanClaimed")
+                .withArgs(loanId);
+
+            // check balances
+            const borrowerBalanceAfter = await vaultFactory.balanceOf(await borrower.getAddress());
+            const lenderBalanceAfter = await vaultFactory.balanceOf(await lender.getAddress());
+            expect(borrowerBalanceAfter.sub(borrowerBalanceBefore)).to.equal(0);
+            expect(lenderBalanceAfter.sub(lenderBalanceBefore)).to.equal(1);
+        });
+        it("Scenario: numInstallments: 10, durationSecs: 36000. Borrower repays minimum. Lender tries to claim various times in loan duration.", async () => {
+            const context = await loadFixture(fixture);
+            const { repaymentController, loanCore, mockERC20, vaultFactory, borrower, lender, blockchainTime } =
+                context;
+            const { loanId } = await initializeInstallmentLoan(
+                context,
+                mockERC20.address,
+                BigNumber.from(36000), // durationSecs
+                hre.ethers.utils.parseEther("100"), // principal
+                hre.ethers.utils.parseEther("1000"), // interest
+                10, // numInstallments
+                1754884800, // deadline
+            );
+            const borrowerBalanceBefore = await vaultFactory.balanceOf(await borrower.getAddress());
+            const lenderBalanceBefore = await vaultFactory.balanceOf(await lender.getAddress());
+
+            //increase time slightly
+            await blockchainTime.increaseTime(100);
+            // borrower repays minimum
+            await mockERC20.connect(borrower).approve(repaymentController.address, ethers.utils.parseEther("1.0"));
+            await expect(repaymentController.connect(borrower).repayPartMinimum(loanId))
+                .to.emit(mockERC20, "Transfer")
+                .withArgs(await borrower.getAddress(), repaymentController.address, ethers.utils.parseEther("1.0"));
+
+            //increase time 25% of duration (second installment period)
+            await blockchainTime.increaseTime(3600);
+            // have lender call claim on the collateral
+            await expect(repaymentController.connect(lender).claim(loanId)).to.be.revertedWith("LC_LoanNotDefaulted");
+            //increase time 15% of duration (third installment period)
+            await blockchainTime.increaseTime(3600);
+            // have lender call claim on the collateral
+            await expect(repaymentController.connect(lender).claim(loanId)).to.be.revertedWith("LC_LoanNotDefaulted");
+            //increase time 10% of duration (forth installment period)
+            await blockchainTime.increaseTime(3600);
+            // have lender call claim on the collateral
+            await expect(repaymentController.connect(lender).claim(loanId)).to.be.revertedWith("LC_LoanNotDefaulted");
+            // increase time 10% of duration (fifth installment period)
+            await blockchainTime.increaseTime(3600);
+            // have lender call claim on the collateral
+            await expect(repaymentController.connect(lender).claim(loanId)).to.be.revertedWith("LC_LoanNotDefaulted");
+            // increase time 10% of duration (sixth installment period) ---> claimable
+            await blockchainTime.increaseTime(3600);
+            // have lender call claim on the collateral
+            await expect(repaymentController.connect(lender).claim(loanId)).to.emit(loanCore, "LoanClaimed");
+
+            // check balances
+            const borrowerBalanceAfter = await vaultFactory.balanceOf(await borrower.getAddress());
+            const lenderBalanceAfter = await vaultFactory.balanceOf(await lender.getAddress());
+            expect(borrowerBalanceAfter.sub(borrowerBalanceBefore)).to.equal(0);
+            expect(lenderBalanceAfter.sub(lenderBalanceBefore)).to.equal(1);
+        });
+        it("Scenario: numInstallments: 24, durationSecs: 2y. Borrower repays minimum. Lender tries to claim various times in loan duration.", async () => {
+            const context = await loadFixture(fixture);
+            const { repaymentController, loanCore, mockERC20, vaultFactory, borrower, lender, blockchainTime } =
+                context;
+            const { loanId } = await initializeInstallmentLoan(
+                context,
+                mockERC20.address,
+                BigNumber.from(31536000 * 2), // durationSecs
+                hre.ethers.utils.parseEther("100"), // principal
+                hre.ethers.utils.parseEther("1000"), // interest
+                24, // numInstallments
+                1754884800, // deadline
+            );
+            const borrowerBalanceBefore = await vaultFactory.balanceOf(await borrower.getAddress());
+            const lenderBalanceBefore = await vaultFactory.balanceOf(await lender.getAddress());
+
+            //increase time slightly
+            await blockchainTime.increaseTime(100);
+            // borrower repays minimum
+            await mockERC20.connect(borrower).approve(repaymentController.address, ethers.utils.parseEther("0.417"));
+            await expect(repaymentController.connect(borrower).repayPartMinimum(loanId)).to.emit(mockERC20, "Transfer");
+
+            //(second installment period)
+            await blockchainTime.increaseTime((2 * (31536000 * 2)) / 24);
+            // have lender call claim on the collateral
+            await expect(repaymentController.connect(lender).claim(loanId)).to.be.revertedWith("LC_LoanNotDefaulted");
+            //(forth installment period)
+            await blockchainTime.increaseTime((2 * (31536000 * 2)) / 24);
+            // have lender call claim on the collateral
+            await expect(repaymentController.connect(lender).claim(loanId)).to.be.revertedWith("LC_LoanNotDefaulted");
+            //(sixth installment period)
+            await blockchainTime.increaseTime((2 * (31536000 * 2)) / 24);
+            // have lender call claim on the collateral
+            await expect(repaymentController.connect(lender).claim(loanId)).to.be.revertedWith("LC_LoanNotDefaulted");
+            // (eigth installment period)
+            await blockchainTime.increaseTime((2 * (31536000 * 2)) / 24);
+            // have lender call claim on the collateral
+            await expect(repaymentController.connect(lender).claim(loanId)).to.be.revertedWith("LC_LoanNotDefaulted");
+            // (tenth installment period)
+            await blockchainTime.increaseTime((2 * (31536000 * 2)) / 24);
+            // have lender call claim on the collateral
+            await expect(repaymentController.connect(lender).claim(loanId)).to.be.revertedWith("LC_LoanNotDefaulted");
+            // (eleventh installment period) ---> claimable
+            await blockchainTime.increaseTime((1 * (31536000 * 2)) / 24);
+            // have lender call claim on the collateral
+            await expect(repaymentController.connect(lender).claim(loanId)).to.emit(loanCore, "LoanClaimed");
+
+            // check balances
+            const borrowerBalanceAfter = await vaultFactory.balanceOf(await borrower.getAddress());
+            const lenderBalanceAfter = await vaultFactory.balanceOf(await lender.getAddress());
+            expect(borrowerBalanceAfter.sub(borrowerBalanceBefore)).to.equal(0);
+            expect(lenderBalanceAfter.sub(lenderBalanceBefore)).to.equal(1);
+        });
+    });
 });

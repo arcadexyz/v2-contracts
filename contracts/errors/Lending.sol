@@ -130,8 +130,10 @@ error OC_RolloverCurrencyMismatch(address oldCurrency, address newCurrency);
  * @param newCollateralId               The token ID of the new loan's collateral.
  */
 error OC_RolloverCollateralMismatch(
-    address oldCollateralAddress, uint256 oldCollateralId,
-    address newCollateralAddress, uint256 newCollateralId
+    address oldCollateralAddress,
+    uint256 oldCollateralId,
+    address newCollateralAddress,
+    uint256 newCollateralId
 );
 
 // ==================================== ITEMS VERIFIER ======================================

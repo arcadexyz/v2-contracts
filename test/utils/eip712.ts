@@ -44,7 +44,7 @@ const typedLoanTermsData: TypeData = {
             { name: "collateralId", type: "uint256" },
             { name: "payableCurrency", type: "address" },
             { name: "nonce", type: "uint160" },
-            { name: "side", type: "uint8" }
+            { name: "side", type: "uint8" },
         ],
     },
     primaryType: "LoanTerms" as const,
@@ -62,7 +62,7 @@ const typedLoanItemsData: TypeData = {
             { name: "itemsHash", type: "bytes32" },
             { name: "payableCurrency", type: "address" },
             { name: "nonce", type: "uint160" },
-            { name: "side", type: "uint8" }
+            { name: "side", type: "uint8" },
         ],
     },
     primaryType: "LoanTermsWithItems" as const,
@@ -100,9 +100,9 @@ export async function createLoanTermsSignature(
     signer: SignerWithAddress,
     version = "1",
     nonce: BigNumberish,
-    _side: 'b' | 'l'
+    _side: "b" | "l",
 ): Promise<ECDSASignature> {
-    const side = _side === 'b' ? 0 : 1;
+    const side = _side === "b" ? 0 : 1;
     const data = buildData(verifyingContract, name, version, { ...terms, nonce, side }, typedLoanTermsData);
     const signature = await signer._signTypedData(data.domain, data.types, data.message);
 
@@ -127,9 +127,9 @@ export async function createLoanItemsSignature(
     signer: SignerWithAddress,
     version = "1",
     nonce = "1",
-    _side: 'b' | 'l'
+    _side: "b" | "l",
 ): Promise<ECDSASignature> {
-    const side = _side === 'b' ? 0 : 1;
+    const side = _side === "b" ? 0 : 1;
 
     const message: ItemsPayload = {
         durationSecs: terms.durationSecs,
@@ -141,7 +141,7 @@ export async function createLoanItemsSignature(
         numInstallments: terms.numInstallments,
         nonce,
         side,
-        deadline: terms.deadline
+        deadline: terms.deadline,
     };
 
     const data = buildData(verifyingContract, name, version, message, typedLoanItemsData);

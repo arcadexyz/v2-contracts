@@ -20,16 +20,7 @@ import "./interfaces/ILoanCore.sol";
 import "./InstallmentsCalc.sol";
 import "./PromissoryNote.sol";
 import "./vault/OwnableERC721.sol";
-import {
-    LC_ZeroAddress,
-    LC_CollateralInUse,
-    LC_CollateralNotInUse,
-    LC_InvalidState,
-    LC_NotExpired,
-    LC_BalanceGTZero,
-    LC_NonceUsed,
-    LC_LoanNotDefaulted
-} from "./errors/Lending.sol";
+import { LC_ZeroAddress, LC_CollateralInUse, LC_CollateralNotInUse, LC_InvalidState, LC_NotExpired, LC_BalanceGTZero, LC_NonceUsed, LC_LoanNotDefaulted } from "./errors/Lending.sol";
 
 /**
  * @title LoanCore
@@ -96,7 +87,11 @@ contract LoanCore is
      *
      * @param _feeController      The address of the contract governing protocol fees.
      */
-    function initialize(IFeeController _feeController, IPromissoryNote _borrowerNote, IPromissoryNote _lenderNote) public initializer {
+    function initialize(
+        IFeeController _feeController,
+        IPromissoryNote _borrowerNote,
+        IPromissoryNote _lenderNote
+    ) public initializer {
         if (address(_feeController) == address(0)) revert LC_ZeroAddress();
         if (address(_borrowerNote) == address(0)) revert LC_ZeroAddress();
         if (address(_lenderNote) == address(0)) revert LC_ZeroAddress();
@@ -148,17 +143,10 @@ contract LoanCore is
         address lender,
         address borrower,
         LoanLibrary.LoanTerms calldata terms
-    )
-        external
-        override
-        whenNotPaused
-        onlyRole(ORIGINATOR_ROLE)
-        returns (uint256 loanId)
-    {
+    ) external override whenNotPaused onlyRole(ORIGINATOR_ROLE) returns (uint256 loanId) {
         // check collateral is not already used in a loan.
         bytes32 collateralKey = keccak256(abi.encode(terms.collateralAddress, terms.collateralId));
-        if (collateralInUse[collateralKey])
-            revert LC_CollateralInUse(terms.collateralAddress, terms.collateralId);
+        if (collateralInUse[collateralKey]) revert LC_CollateralInUse(terms.collateralAddress, terms.collateralId);
 
         // get current loanId and increment for next function call
         loanId = loanIdTracker.current();
@@ -182,16 +170,9 @@ contract LoanCore is
 
         IERC721Upgradeable(terms.collateralAddress).transferFrom(_msgSender(), address(this), terms.collateralId);
 
-        IERC20Upgradeable(terms.payableCurrency).safeTransferFrom(
-            _msgSender(),
-            address(this),
-            terms.principal
-        );
+        IERC20Upgradeable(terms.payableCurrency).safeTransferFrom(_msgSender(), address(this), terms.principal);
 
-        IERC20Upgradeable(terms.payableCurrency).safeTransfer(
-            borrower,
-            _getPrincipalLessFees(terms.principal)
-        );
+        IERC20Upgradeable(terms.payableCurrency).safeTransfer(borrower, _getPrincipalLessFees(terms.principal));
 
         emit LoanStarted(loanId, lender, borrower);
     }
@@ -245,7 +226,12 @@ contract LoanCore is
      * @param currentInstallmentPeriod            The current installment period if
      *                                            installment loan type, else 0.
      */
-    function claim(uint256 loanId, uint256 currentInstallmentPeriod) external override whenNotPaused onlyRole(REPAYER_ROLE) {
+    function claim(uint256 loanId, uint256 currentInstallmentPeriod)
+        external
+        override
+        whenNotPaused
+        onlyRole(REPAYER_ROLE)
+    {
         LoanLibrary.LoanData memory data = loans[loanId];
         // ensure valid initial loan state when starting loan
         if (data.state != LoanLibrary.LoanState.Active) revert LC_InvalidState(data.state);
@@ -257,11 +243,7 @@ contract LoanCore is
             uint256 dueDate = data.startDate + data.terms.durationSecs;
             if (dueDate > block.timestamp) revert LC_NotExpired(dueDate);
         } else {
-            _verifyDefaultedLoan(
-                data.terms.numInstallments,
-                data.numInstallmentsPaid,
-                currentInstallmentPeriod
-            );
+            _verifyDefaultedLoan(data.terms.numInstallments, data.numInstallmentsPaid, currentInstallmentPeriod);
         }
 
         address lender = lenderNote.ownerOf(loanId);
@@ -305,13 +287,7 @@ contract LoanCore is
         uint256 _amountToOldLender,
         uint256 _amountToLender,
         uint256 _amountToBorrower
-    )
-        external
-        override
-        whenNotPaused
-        onlyRole(ORIGINATOR_ROLE)
-        returns (uint256 newLoanId)
-    {
+    ) external override whenNotPaused onlyRole(ORIGINATOR_ROLE) returns (uint256 newLoanId) {
         // Repay loan
         LoanLibrary.LoanData storage data = loans[oldLoanId];
         data.state = LoanLibrary.LoanState.Repaid;
@@ -425,11 +401,18 @@ contract LoanCore is
 
         // If repaid, send collateral to borrower
         if (data.state == LoanLibrary.LoanState.Repaid) {
-            IERC721Upgradeable(data.terms.collateralAddress).transferFrom(address(this), borrower, data.terms.collateralId);
+            IERC721Upgradeable(data.terms.collateralAddress).transferFrom(
+                address(this),
+                borrower,
+                data.terms.collateralId
+            );
 
             if (_paymentToPrincipal > _balanceToPay) {
                 // Borrower overpaid, so send refund
-                IERC20Upgradeable(data.terms.payableCurrency).safeTransfer(borrower, _paymentToPrincipal - _balanceToPay);
+                IERC20Upgradeable(data.terms.payableCurrency).safeTransfer(
+                    borrower,
+                    _paymentToPrincipal - _balanceToPay
+                );
             }
 
             emit LoanRepaid(_loanId);
@@ -529,7 +512,7 @@ contract LoanCore is
      * @param _newController        The new fee controller contract.
      */
     function setFeeController(IFeeController _newController) external onlyRole(FEE_CLAIMER_ROLE) {
-        if(address(_newController) == address(0)) revert LC_ZeroAddress();
+        if (address(_newController) == address(0)) revert LC_ZeroAddress();
 
         feeController = _newController;
 
@@ -578,7 +561,7 @@ contract LoanCore is
      * @return principalLessFees    The amount after fees.
      */
     function _getPrincipalLessFees(uint256 principal) internal view returns (uint256) {
-        return principal - principal * feeController.getOriginationFee() / BASIS_POINTS_DENOMINATOR;
+        return principal - (principal * feeController.getOriginationFee()) / BASIS_POINTS_DENOMINATOR;
     }
 
     /**
@@ -612,20 +595,25 @@ contract LoanCore is
      * @param numInstallmentsPaid              Installment period of the last installment payment.
      * @param currentInstallmentPeriod         Current installment period call made in.
      */
-    function _verifyDefaultedLoan(uint256 numInstallments, uint256 numInstallmentsPaid, uint256 currentInstallmentPeriod) internal pure {
+    function _verifyDefaultedLoan(
+        uint256 numInstallments,
+        uint256 numInstallmentsPaid,
+        uint256 currentInstallmentPeriod
+    ) internal pure {
         // make sure if called in the same installment period as payment was made,
         // does not get to currentInstallmentsMissed calculation. needs to be first.
-        if(numInstallmentsPaid == currentInstallmentPeriod) revert LC_LoanNotDefaulted();
+        if (numInstallmentsPaid == currentInstallmentPeriod) revert LC_LoanNotDefaulted();
 
         // get installments missed necessary for loan default (*1000)
-        uint256 installmentsMissedForDefault = ((numInstallments * PERCENT_MISSED_FOR_LENDER_CLAIM) * 1000) / BASIS_POINTS_DENOMINATOR;
+        uint256 installmentsMissedForDefault = ((numInstallments * PERCENT_MISSED_FOR_LENDER_CLAIM) * 1000) /
+            BASIS_POINTS_DENOMINATOR;
         // get current installments missed (*1000)
         // one added to numInstallmentsPaid for a grace period on the current installment.
         uint256 currentInstallmentsMissed = ((currentInstallmentPeriod) * 1000) - ((numInstallmentsPaid + 1) * 1000);
 
         // check if the number of missed payments is greater than
         // 40% the total number of installment periods
-        if(currentInstallmentsMissed < installmentsMissedForDefault) revert LC_LoanNotDefaulted();
+        if (currentInstallmentsMissed < installmentsMissedForDefault) revert LC_LoanNotDefaulted();
     }
 
     /*
@@ -636,7 +624,11 @@ contract LoanCore is
      * @param borrower              The address of the recipient of the borrower note.
      * @param lender                The address of the recpient of the lender note.
      */
-    function _mintLoanNotes(uint256 loanId, address borrower, address lender) internal {
+    function _mintLoanNotes(
+        uint256 loanId,
+        address borrower,
+        address lender
+    ) internal {
         borrowerNote.mint(borrower, loanId);
         lenderNote.mint(lender, loanId);
     }

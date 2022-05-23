@@ -11,7 +11,7 @@ import {
     AssetVault,
     CallWhitelist,
     VaultFactory,
-    FeeController
+    FeeController,
 } from "../typechain";
 import { BlockchainTime } from "./utils/time";
 import { BigNumber, BigNumberish } from "ethers";
@@ -74,7 +74,8 @@ const fixture = async (): Promise<TestContext> => {
 
     const VaultFactory = await ethers.getContractFactory("VaultFactory");
     const vaultFactory = <VaultFactory>(
-        await upgrades.deployProxy(VaultFactory, [vaultTemplate.address, whitelist.address], { kind: 'uups' }));
+        await upgrades.deployProxy(VaultFactory, [vaultTemplate.address, whitelist.address], { kind: "uups" })
+    );
 
     const feeController = <FeeController>await deploy("FeeController", admin, []);
 
@@ -83,7 +84,9 @@ const fixture = async (): Promise<TestContext> => {
 
     const LoanCore = await hre.ethers.getContractFactory("LoanCore");
     const loanCore = <LoanCore>(
-        await upgrades.deployProxy(LoanCore, [feeController.address, borrowerNote.address, lenderNote.address], { kind: 'uups' })
+        await upgrades.deployProxy(LoanCore, [feeController.address, borrowerNote.address, lenderNote.address], {
+            kind: "uups",
+        })
     );
 
     // Grant correct permissions for promissory note
@@ -95,7 +98,7 @@ const fixture = async (): Promise<TestContext> => {
 
     const OriginationController = await hre.ethers.getContractFactory("OriginationController");
     const originationController = <OriginationController>(
-        await upgrades.deployProxy(OriginationController, [loanCore.address], { kind: 'uups' })
+        await upgrades.deployProxy(OriginationController, [loanCore.address], { kind: "uups" })
     );
     await originationController.deployed();
 
@@ -125,7 +128,7 @@ const fixture = async (): Promise<TestContext> => {
         lender,
         admin,
         currentTimestamp,
-        blockchainTime
+        blockchainTime,
     };
 };
 
@@ -194,7 +197,7 @@ const initializeLoan = async (
         borrower,
         "2",
         1,
-        "b"
+        "b",
     );
 
     await approve(mockERC20, lender, originationController.address, loanTerms.principal);
@@ -401,7 +404,6 @@ describe("RepaymentController", () => {
         await mint(mockERC20, borrower, ethers.utils.parseEther("1"));
         await mockERC20.connect(borrower).approve(repaymentController.address, ethers.utils.parseEther("1"));
         await expect(repaymentController.connect(borrower).repay(loanId)).to.be.revertedWith("LC_InvalidState");
-
     });
 });
 
@@ -409,8 +411,8 @@ describe("RepaymentController revert branches", () => {
     it("Get full interest with invaild rate, should revert.", async () => {
         const context = await loadFixture(fixture);
         const { repaymentController } = context;
-        await expect(repaymentController.getFullInterestAmount(ethers.utils.parseEther("100"), ethers.utils.parseEther("0.9")))
-         .to.be.revertedWith("FIAC_InterestRate");
+        await expect(
+            repaymentController.getFullInterestAmount(ethers.utils.parseEther("100"), ethers.utils.parseEther("0.9")),
+        ).to.be.revertedWith("FIAC_InterestRate");
     });
-
 });

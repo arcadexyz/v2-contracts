@@ -6,9 +6,7 @@ import { LoanCore, VaultFactory } from "../../typechain";
 import { SignatureItem, ItemsPredicate } from "./types";
 import { LoanTerms } from "./types";
 
-
 export const initializeBundle = async (vaultFactory: VaultFactory, user: SignerWithAddress): Promise<BigNumber> => {
-
     const tx = await vaultFactory.connect(user).initializeBundle(await user.getAddress());
     const receipt = await tx.wait();
 
@@ -44,7 +42,7 @@ export const startLoan = async (
     originator: SignerWithAddress,
     lender: string,
     borrower: string,
-    terms: LoanTerms
+    terms: LoanTerms,
 ): Promise<BigNumber> => {
     const tx = await loanCore.connect(originator).startLoan(lender, borrower, terms);
     const receipt = await tx.wait();
@@ -58,4 +56,4 @@ export const startLoan = async (
     const loanId = loanStartedEvent?.args?.[0];
 
     return loanId;
-}
+};
