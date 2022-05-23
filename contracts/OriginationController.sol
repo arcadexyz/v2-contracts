@@ -631,7 +631,7 @@ contract OriginationController is
 
         // interest rate must be greater than or equal to 0.01%
         // and less than 10,000% (1e8 basis points)
-        if (terms.interestRate < 1e18 || terms.interestRate > 1e26) revert OC_InterestRate(terms.interestRate);
+        if (terms.interestRate < 1e18 || terms.interestRate > 1e24) revert OC_InterestRate(terms.interestRate);
 
         // number of installments must be between 2 and 1000.
         if (terms.numInstallments == 1 || terms.numInstallments > 1_000)
@@ -834,15 +834,15 @@ contract OriginationController is
             repayAmount = oldLoanData.balance + interestDue + lateFees;
         }
 
-        uint256 fee = newTerms.principal * rolloverFee / BASIS_POINTS_DENOMINATOR;
-        uint256 borrowerWillGet = newTerms.principal - fee;
+        amounts.fee = newTerms.principal * rolloverFee / BASIS_POINTS_DENOMINATOR;
+        uint256 borrowerWillGet = newTerms.principal - amounts.fee;
 
         // Settle amounts
         if (repayAmount > borrowerWillGet) {
             amounts.needFromBorrower = repayAmount - borrowerWillGet;
-        } else if (borrowerWillGet > repayAmount) {
+        } else {
             amounts.leftoverPrincipal = newTerms.principal - repayAmount;
-            amounts.amountToBorrower = amounts.leftoverPrincipal - fee;
+            amounts.amountToBorrower = amounts.leftoverPrincipal - amounts.fee;
         }
 
         // Collect funds
@@ -852,7 +852,7 @@ contract OriginationController is
         } else {
             amounts.amountToOldLender = 0;
 
-            if (amounts.needFromBorrower > 0) {
+            if (amounts.needFromBorrower > 0 && repayAmount > newTerms.principal) {
                 amounts.amountToLender = repayAmount - newTerms.principal;
             }
         }

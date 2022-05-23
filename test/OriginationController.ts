@@ -1548,6 +1548,13 @@ describe("OriginationController", () => {
             ctx = await loadFixture(fixture);
         });
 
+        it("reverts if trying to approve oneself", async () => {
+            const { originationController, other: borrower } = ctx;
+
+            await expect(originationController.connect(borrower).approve(borrower.address, true))
+                .to.be.revertedWith("OC_SelfApprove")
+        });
+
         it("allows the borrower to approve another signer", async () => {
             const { originationController, mockERC20, vaultFactory, user: lender, other: borrower, signers } = ctx;
             const [newSigner] = signers;

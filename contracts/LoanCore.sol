@@ -211,8 +211,6 @@ contract LoanCore is
         if (data.state != LoanLibrary.LoanState.Active) revert LC_InvalidState(data.state);
 
         uint256 returnAmount = getFullInterestAmount(data.terms.principal, data.terms.interestRate);
-        // ensure balance to be paid is greater than zero
-        if (returnAmount == 0) revert LC_BalanceGTZero(returnAmount);
 
         // transfer from msg.sender to this contract
         IERC20Upgradeable(data.terms.payableCurrency).safeTransferFrom(_msgSender(), address(this), returnAmount);
@@ -314,14 +312,8 @@ contract LoanCore is
         onlyRole(ORIGINATOR_ROLE)
         returns (uint256 newLoanId)
     {
-        bytes32 collateralKey = keccak256(abi.encode(terms.collateralAddress, terms.collateralId));
-        if (!collateralInUse[collateralKey]) revert LC_CollateralNotInUse();
-
         // Repay loan
-
         LoanLibrary.LoanData storage data = loans[oldLoanId];
-        // ensure valid initial loan state when starting loan
-        if (data.state != LoanLibrary.LoanState.Active) revert LC_InvalidState(data.state);
         data.state = LoanLibrary.LoanState.Repaid;
 
         address oldLender = lenderNote.ownerOf(oldLoanId);
@@ -362,10 +354,7 @@ contract LoanCore is
         // Distribute notes and principal
         _mintLoanNotes(newLoanId, borrower, lender);
 
-        if (_settledAmount > 0) {
-            IERC20Upgradeable(payableCurrency).safeTransferFrom(_msgSender(), address(this), _settledAmount);
-        }
-
+        IERC20Upgradeable(payableCurrency).safeTransferFrom(_msgSender(), address(this), _settledAmount);
         _transferIfNonzero(payableCurrency, oldLender, _amountToOldLender);
         _transferIfNonzero(payableCurrency, lender, _amountToLender);
         _transferIfNonzero(payableCurrency, borrower, _amountToBorrower);
