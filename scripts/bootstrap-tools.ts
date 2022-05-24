@@ -1,4 +1,4 @@
-import hre, { ethers, upgrades } from "hardhat";
+import hre, { ethers } from "hardhat";
 import { LoanTerms } from "../test/utils/types";
 import { createLoanTermsSignature } from "../test/utils/eip712";
 import { deploy } from "../test/utils/contracts";
@@ -8,22 +8,12 @@ import {
     MockERC20,
     MockERC721Metadata,
     VaultFactory,
-    CallWhitelist,
     AssetVault,
-    OriginationController,
-    RepaymentController,
-    PromissoryNote,
-    LoanCore,
-    FeeController
 } from "../typechain";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
 import { BigNumber } from "ethers";
-import { ORIGINATOR_ROLE as DEFAULT_ORIGINATOR_ROLE } from "./constants";
 
 type Signer = SignerWithAddress;
-const MINTER_ROLE = "0x9f2df0fed2c77648de5860a4cc508cd0818c85b8b8a1ab4ceeef8d981c8956a6";
-const REPAYER_ROLE = "0x9c60024347074fd9de2c1e36003080d22dbc76a41ef87444d21e361bcb39118e";
-const ORIGINATOR_ROLE = DEFAULT_ORIGINATOR_ROLE
 
 export const SECTION_SEPARATOR = "\n" + "=".repeat(80) + "\n";
 export const SUBSECTION_SEPARATOR = "-".repeat(10);
@@ -55,8 +45,6 @@ export async function mintNFTs(
     art: MockERC721Metadata,
     beats: MockERC1155Metadata,
 ): Promise<void> {
-    await deployNFTs()
-
     let j = 1;
 
     for (let i = 0; i < numPunks; i++) {
@@ -124,14 +112,6 @@ export async function mintAndDistribute(
         console.log("PUSD balance:", await getBalance(usd, signerAddr));
     }
 }
- async function bootstrapProcess() {
-    const data = await deployNFTs()
-    const signers: SignerWithAddress[] = await hre.ethers.getSigners();
-    await mintAndDistribute(signers, data.weth, data.pawnToken, data.usd, data.punks, data.art, data.beats)
-    await vaultAssetsAndMakeLoans(data.punks, data.usd, data.beats, data.weth, data.art, data.pawnToken)
-    return data
-}
-bootstrapProcess()
 
 interface DeployedNFT {
     punks: MockERC721Metadata;
@@ -177,28 +157,12 @@ export async function deployNFTs(): Promise<DeployedNFT> {
 
     return { punks, art, beats, weth, pawnToken, usd };
 }
-interface DeployedContracts {
-    factory: VaultFactory;
-    vaultTemplate: AssetVault;
-    originationController: OriginationController;
-    repaymentController: RepaymentController;
-    feeController: FeeController;
-    loanCore: LoanCore;
-    borrowerNote: PromissoryNote;
-    lenderNote: PromissoryNote;
-    admin: SignerWithAddress;
-    user: Signer;
-    lender: Signer;
-    borrower: Signer;
-    other: Signer;
-    signers: Signer[];
 
-}
-    const createVault = async (factory: VaultFactory, user: Signer): Promise<AssetVault> => {
+    let vault: AssetVault | undefined;
+    const createVault = async (factory: VaultFactory, user: Signer): Promise<AssetVault> =>     {
     const tx = await factory.connect(user).initializeBundle(await user.getAddress());
     const receipt = await tx.wait();
 
-    let vault: AssetVault | undefined;
     if (receipt && receipt.events) {
         for (const event of receipt.events) {
             if (event.args && event.args.vault) {
@@ -215,6 +179,11 @@ interface DeployedContracts {
     };
 
     export async function vaultAssetsAndMakeLoans(
+    signers: SignerWithAddress[],
+    factory: VaultFactory,
+    originationController: Contract,
+    borrowerNote: Contract,
+    repaymentController: Contract,
     punks: MockERC721Metadata,
     usd: MockERC20,
     beats: MockERC1155Metadata,
@@ -223,67 +192,18 @@ interface DeployedContracts {
     pawnToken: MockERC20,
     ): Promise<void> {
 
-    // // // Deploy Contracts
-    const signers: SignerWithAddress[] = await hre.ethers.getSigners();
-    const [admin] = signers;
-    const whitelist = <CallWhitelist>await deploy("CallWhitelist", signers[0], []);
-    const vaultTemplate = <AssetVault>await deploy("AssetVault", signers[0], []);
-    const VaultFactory = await hre.ethers.getContractFactory("VaultFactory");
-    const factory = <VaultFactory>(
-        await upgrades.deployProxy(VaultFactory, [vaultTemplate.address, whitelist.address], { kind: "uups" })
-    );
-    console.log("factory deployed to:", factory.address);
-
-    const feeController = <FeeController>await deploy("FeeController", admin, []);
-    const borrowerNote = <PromissoryNote>await deploy("PromissoryNote", admin, ["Arcade.xyz BorrowerNote", "aBN"]);
-    const lenderNote = <PromissoryNote>await deploy("PromissoryNote", admin, ["Arcade.xyz LenderNote", "aLN"]);
-    console.log("borrowerNote deployed to:", borrowerNote.address);
-
-    const LoanCore = await hre.ethers.getContractFactory("LoanCore");
-    const loanCore = <LoanCore>(
-        await upgrades.deployProxy(LoanCore, [feeController.address, borrowerNote.address, lenderNote.address], { kind: 'uups' })
-    );
-    console.log("loanCore deployed to:", loanCore.address);
-
-    // Grant correct permissions for promissory note
-    // Giving to user to call PromissoryNote functions directly
-    for (const note of [borrowerNote, lenderNote]) {
-        await note.connect(admin).initialize(loanCore.address);
-    }
-
-    const OriginationController = await hre.ethers.getContractFactory("OriginationController");
-    const originationController = <OriginationController>(
-        await upgrades.deployProxy(OriginationController, [loanCore.address], { kind: 'uups' })
-    );
-    await originationController.deployed();
-    console.log("originationController deployed to:", originationController.address);
-
-    const updateOriginationControllerPermissions = await loanCore.grantRole(
-        ORIGINATOR_ROLE,
-        originationController.address,
-    );
-    await updateOriginationControllerPermissions.wait();
-
-    const repaymentController = <RepaymentController>(
-    await deploy("RepaymentController", admin, [loanCore.address, borrowerNote.address, lenderNote.address])
-    );
-    await repaymentController.deployed();
-
-    const updateRepaymentControllerPermissions = await loanCore.grantRole(REPAYER_ROLE, repaymentController.address);
-    await updateRepaymentControllerPermissions.wait();
-    console.log("repaymentController deployed to:", repaymentController.address);
-
-
     // Connect the first signer with the
     const signer1 = signers[1];
     const signer1Address = await signers[1].getAddress()
     // Create vault 1
     const av1A = await createVault(factory, signer1); // this is the Vault Id
-    // Deposit 1 punk and 1000 usd to vault 1:
+    // Deposit 1 punk and 1000 usd to user's first vault:
     // First get signer1 punks to deposit into vault 1
     const av1Punk1Id = await punks.tokenOfOwnerByIndex(signer1Address, 0);
+
     await punks.connect(signer1).approve(av1A.address, av1Punk1Id);
     await punks.connect(signer1).transferFrom(signer1Address, av1A.address, av1Punk1Id.toNumber());
+
     // Next get signer1 1000 usd to vault 1
     await usd.connect(signer1).approve(av1A.address, ethers.utils.parseUnits("1000", 6));
     await usd.connect(signer1).transfer(av1A.address, ethers.utils.parseUnits("1000", 6));
@@ -292,10 +212,10 @@ interface DeployedContracts {
     // Deposit 1 punk and 2 beats edition 0 for bundle 2
     // Create vault 2
     const av1B = await createVault(factory, signer1);
-    const av2Punk2Id = await await punks.tokenOfOwnerByIndex(signer1Address, 1)
+    const av2Punk2Id = await punks.tokenOfOwnerByIndex(signer1Address, 1)
+
     await punks.connect(signer1).approve(av1B.address, av2Punk2Id.toNumber());
     await punks.connect(signer1).transferFrom(signer1Address, av1B.address, av2Punk2Id.toNumber());
-
     await beats.connect(signer1).setApprovalForAll(av1B.address, true);
     await beats.connect(signer1).safeBatchTransferFrom(signer1Address, av1B.address, [0, 1], [2, 1], "0x00"); //
     console.log(`(Vault 1B) Signer ${signer1.address} created a vault with 1 PawnFiPunk and 2 PawnBeats Edition 0`);
@@ -304,9 +224,11 @@ interface DeployedContracts {
     // Connect the third signer
     const signer3 = signers[3];
     const signer3Address = await signers[3].getAddress()
+
     // Create vault 3A
     const av3A = await createVault(factory, signer3);
-    // Deposit 2 punks and 1 weth for bundle 3
+
+    // Deposit 2 punks and 1 weth for vault 3A
     const av3Punk1Id = await punks.tokenOfOwnerByIndex(signer3Address, 0);
     const av3Punk2Id = await punks.tokenOfOwnerByIndex(signer3Address, 1);
 
@@ -319,40 +241,38 @@ interface DeployedContracts {
     await weth.connect(signer3).transfer(av3A.address, ethers.utils.parseUnits("1"));
     console.log(`(Vault 3A) Signer ${signer3.address} created a vault with 2 PawnFiPunks and 1 WETH`);
 
-    // Deposit 1 punk for bundle 2
+    // Deposit 1 punk for user's second vault
     // Create vault 3B
     const av3B = await createVault(factory, signer3);
     const av3Punk3Id = await punks.tokenOfOwnerByIndex(signer3Address, 2);
 
     await punks.connect(signer3).approve(av3B.address, av3Punk3Id);
+    await punks.connect(signer3).transferFrom(signer3Address, av3B.address, av3Punk3Id.toNumber());
     console.log(`(Vault 3B) Signer ${signer3.address} created a vault with 1 PawnFiPunk`);
 
     // Deposit 1 art, 4 beats edition 0, and 2000 usd for bundle 3
     // Create vault 3C
     const av3C = await createVault(factory, signer3);
-    const av3Art1Id = await art.tokenOfOwnerByIndex(signer3.address, 0);
+    const av3Art1Id = await art.tokenOfOwnerByIndex(signer3Address, 0);
 
     await art.connect(signer3).approve(av3C.address, av3Art1Id);
     await art.connect(signer3).transferFrom(signer3Address, av3C.address, av3Art1Id.toNumber());
-
     await beats.connect(signer3).setApprovalForAll(av3C.address, true);
-    await beats.connect(signer3).safeBatchTransferFrom(signer3Address, av3C.address, [0, 1], [1, 0], "0x00");
-
+    await beats.connect(signer3).safeBatchTransferFrom(signer3Address, av3C.address, [0], [4], "0x00");
     await usd.connect(signer3).approve(av3C.address, ethers.utils.parseUnits("2000", 6));
     await usd.connect(signer3).transfer(av3C.address, ethers.utils.parseUnits("2000", 6));
     console.log(`(Vault 3C) Signer ${signer3.address} created a vault with 1 PawnArt, 4 PawnBeats Edition 0, and 2000 PUSD`,);
-
     // Connect the fourth signer
     const signer4 = signers[4];
     const signer4Address = await signers[4].getAddress();
 
     // Create vault 4A
     const av4A = await createVault(factory, signer4);
-
     // Deposit 3 arts and 1000 pawn for bundle 1
     const av4Art1Id = await art.tokenOfOwnerByIndex(signer4.address, 0);
     const av4Art2Id = await art.tokenOfOwnerByIndex(signer4.address, 1);
     const av4Art3Id = await art.tokenOfOwnerByIndex(signer4.address, 2);
+
 
     await art.connect(signer4).approve(av4A.address, av4Art1Id);
     await art.connect(signer4).approve(av4A.address, av4Art2Id);
@@ -488,7 +408,7 @@ interface DeployedContracts {
         `(Loan 3) Signer ${signer3.address} borrowed 1000 PUSD at 8% interest from ${signer2.address} against Vault 3A`,
     );
 
-    // // 3 will open a second loan from 2
+    // 3 will open a second loan from 2
     const loan4Terms: LoanTerms = {
         durationSecs: relSecondsFromMs(oneMonthMs),
         principal: ethers.utils.parseUnits("1000", 6),
@@ -511,7 +431,7 @@ interface DeployedContracts {
 
     await usd.connect(signer2).approve(originationController.address, ethers.utils.parseUnits("1000", 6));
     await factory.connect(signer3).approve(originationController.address, av3B.address);
-console.log("571", )
+
     // Borrower signed, so lender will initialize
     await originationController
         .connect(signer2)

@@ -10,13 +10,14 @@ export async function main(): Promise<void> {
     // Bootstrap five accounts only.
     // Skip the first account, since the
     // first signer will be the deployer.
-    const [, ...signers] = (await ethers.getSigners()).slice(0, 6);
+    const [, ...signers] = (await ethers.getSigners()).slice(1, 7);
+
 
     console.log(SECTION_SEPARATOR);
     console.log("Deploying resources...\n");
 
     // Deploy the smart contracts
-    const { assetVault, originationController, repaymentController, borrowerNote, loanCore } = await deploy();
+    const { vaultFactory, originationController, borrowerNote, repaymentController } = await deploy();
 
 
     // Mint some NFTs
@@ -32,12 +33,17 @@ export async function main(): Promise<void> {
     console.log(SECTION_SEPARATOR);
     console.log("Vaulting assets...\n");
     await vaultAssetsAndMakeLoans(
+        signers,
+        vaultFactory,
+        originationController,
+        borrowerNote,
+        repaymentController,
         punks,
         usd,
         beats,
         weth,
         art,
-        pawnToken
+        pawnToken,
     );
 
     // End state:
