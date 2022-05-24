@@ -1,6 +1,7 @@
 import hre, { ethers, upgrades } from "hardhat";
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
-import { ORIGINATOR_ROLE as DEFAULT_ORIGINATOR_ROLE, REPAYER_ROLE as DEFAULT_REPAYER_ROLE } from "./constants";
+import { ORIGINATOR_ROLE as DEFAULT_ORIGINATOR_ROLE, REPAYER_ROLE as DEFAULT_REPAYER_ROLE, ADMIN_ROLE as DEFAULT_ADMIN_ROLE } from "./constants";
 
 import {
     AssetVault,
@@ -22,16 +23,21 @@ export interface DeployedResources {
     originationController: OriginationController;
     whitelist: CallWhitelist;
     vaultFactory: VaultFactory;
+    admin: SignerWithAddress;
 }
-
+let MINTING_ROLE;
 export async function main(
     ORIGINATOR_ROLE = DEFAULT_ORIGINATOR_ROLE,
     REPAYER_ROLE = DEFAULT_REPAYER_ROLE,
+
 ): Promise<DeployedResources> {
     // Hardhat always runs the compile task when running scripts through it.
     // If this runs in a standalone fashion you may want to call compile manually
     // to make sure everything is compiled
     // await run("compile");
+    const signers: SignerWithAddress[] = await hre.ethers.getSigners();
+    const [admin] = signers;
+
     const CallWhiteListFactory = await ethers.getContractFactory("CallWhitelist");
     const whitelist = <CallWhitelist>await CallWhiteListFactory.deploy();
 
@@ -60,6 +66,12 @@ export async function main(
     const loanCore = <LoanCore>await upgrades.deployProxy(LoanCoreFactory, [feeController.address, borrowerNote.address, lenderNote.address], { kind: "uups" });
     await loanCore.deployed();
     console.log("LoanCore deployed to:", loanCore.address);
+
+    // Grant correct permissions for promissory note
+    // Giving to user to call PromissoryNote functions directly
+    for (const note of [borrowerNote, lenderNote]) {
+        await note.connect(admin).initialize(loanCore.address);
+    }
 
     const RepaymentControllerFactory = await ethers.getContractFactory("RepaymentController");
     const repaymentController = <RepaymentController>(
@@ -103,7 +115,8 @@ export async function main(
         repaymentController,
         originationController,
         whitelist,
-        vaultFactory
+        vaultFactory,
+        admin
     };
 }
 
