@@ -166,7 +166,8 @@ export const SUBSECTION_SEPARATOR = "-".repeat(10);
         loan1Terms,
         signer1,
         "2",
-        BigNumber.from(1)
+        BigNumber.from(1),
+        "b"
     );
 
     await weth.connect(signer2).approve(originationController.address, ethers.utils.parseEther("10"));
@@ -199,7 +200,8 @@ export const SUBSECTION_SEPARATOR = "-".repeat(10);
         loan2Terms,
         signer1,
         "2",
-        BigNumber.from(2)
+        BigNumber.from(2),
+        "b"
     );
 
     await pawnToken.connect(signer3).approve(originationController.address, ethers.utils.parseEther("10000"));
@@ -232,7 +234,8 @@ export const SUBSECTION_SEPARATOR = "-".repeat(10);
         loan3Terms,
         signer3,
         "2",
-        BigNumber.from(1)
+        BigNumber.from(1),
+        "b"
     );
 
     await usd.connect(signer2).approve(originationController.address, ethers.utils.parseUnits("1000", 6));
@@ -265,7 +268,8 @@ export const SUBSECTION_SEPARATOR = "-".repeat(10);
         loan4Terms,
         signer3,
         "2",
-        BigNumber.from(2)
+        BigNumber.from(2),
+        "b"
     );
 
     await usd.connect(signer2).approve(originationController.address, ethers.utils.parseUnits("1000", 6));
@@ -298,7 +302,8 @@ export const SUBSECTION_SEPARATOR = "-".repeat(10);
         loan5Terms,
         signer3,
         "2",
-        BigNumber.from(3)
+        BigNumber.from(3),
+        "b"
     );
 
     await weth.connect(signer4).approve(originationController.address, ethers.utils.parseEther("20"));
@@ -331,7 +336,8 @@ export const SUBSECTION_SEPARATOR = "-".repeat(10);
         loan6Terms,
         signer4,
         "2",
-        BigNumber.from(1)
+        BigNumber.from(1),
+        "b"
     );
 
     await pawnToken.connect(signer2).approve(originationController.address, ethers.utils.parseEther("300.33"));
