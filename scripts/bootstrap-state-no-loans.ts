@@ -2,8 +2,10 @@
 
 import { ethers } from "hardhat";
 
-import { main as deploy } from "./deploy";
-import { deployNFTs, mintAndDistribute, SECTION_SEPARATOR } from "./bootstrap-tools";
+import { main as deploy } from "./deploy/deploy";
+import { deployNFTs } from "./utils/deploy-assets";
+import { mintAndDistribute } from "./utils/mint-distribute-assets";
+import { SECTION_SEPARATOR } from "./utils/bootstrap-tools";
 
 export async function main(): Promise<void> {
     // Bootstrap five accounts only.
@@ -17,11 +19,6 @@ export async function main(): Promise<void> {
     // Deploy the smart contracts
     const { loanCore } = await deploy();
     console.log(SECTION_SEPARATOR);
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////
-    //DELETE THE FOLLOWING LINES
-    // const { mockAddressProvider } = await flashRolloverDeploy(loanCore.address);
-    // const lendingPool = await mockAddressProvider.getLendingPool();
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     // Mint some NFTs
     console.log(SECTION_SEPARATOR);

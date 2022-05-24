@@ -1,9 +1,9 @@
 import { Contract } from "ethers";
 import { ethers } from "hardhat";
 
-import { main as deployMain, DeployedResources } from "./deploy";
+import { main as deployMain, DeployedResources } from "./deploy/deploy";
 
-import { ORIGINATOR_ROLE as DEFAULT_ORIGINATOR_ROLE, REPAYER_ROLE as DEFAULT_REPAYER_ROLE } from "./constants";
+import { ORIGINATOR_ROLE as DEFAULT_ORIGINATOR_ROLE, REPAYER_ROLE as DEFAULT_REPAYER_ROLE } from "./utils/constants";
 export interface DeployedResourcesWithPunks extends DeployedResources {
     punkRouter: Contract;
 }
@@ -23,7 +23,8 @@ export async function main(
         repaymentController,
         originationController,
         whitelist,
-        vaultFactory
+        vaultFactory,
+        admin
     } = await deployMain(ORIGINATOR_ROLE, REPAYER_ROLE);
 
     const PunkRouter = await ethers.getContractFactory("PunkRouter");
@@ -42,7 +43,8 @@ export async function main(
         originationController,
         punkRouter,
         whitelist,
-        vaultFactory
+        vaultFactory,
+        admin
     };
 }
 

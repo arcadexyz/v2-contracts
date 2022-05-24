@@ -1,182 +1,21 @@
-import hre, { ethers } from "hardhat";
-import { LoanTerms } from "../test/utils/types";
-import { createLoanTermsSignature } from "../test/utils/eip712";
-import { deploy } from "../test/utils/contracts";
-import { Contract } from "ethers";
+import { ethers } from "hardhat";
+import { Contract, BigNumber } from "ethers";
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
+
+import { LoanTerms } from "../../test/utils/types";
+import { createLoanTermsSignature } from "../../test/utils/eip712";
+
 import {
     MockERC1155Metadata,
     MockERC20,
     MockERC721Metadata,
-    VaultFactory,
-    AssetVault,
-} from "../typechain";
-import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
-import { BigNumber } from "ethers";
+    VaultFactory
+} from "../../typechain";
+import { createVault } from "./vault";
 
-type Signer = SignerWithAddress;
 
 export const SECTION_SEPARATOR = "\n" + "=".repeat(80) + "\n";
 export const SUBSECTION_SEPARATOR = "-".repeat(10);
-
-export async function getBalance(asset: Contract, addr: string): Promise<string> {
-    return (await asset.balanceOf(addr)).toString();
-}
-
-async function getBalanceERC1155(asset: Contract, id: number, addr: string): Promise<string> {
-    return (await asset.balanceOf(addr, id)).toString();
-}
-
-export async function mintTokens(
-    target: any,
-    [wethAmount, pawnAmount, usdAmount]: [number, number, number],
-    weth: MockERC20,
-    pawnToken: MockERC20,
-    usd: MockERC20,
-): Promise<void> {
-    await weth.mint(target, ethers.utils.parseEther(wethAmount.toString()));
-    await pawnToken.mint(target, ethers.utils.parseEther(pawnAmount.toString()));
-    await usd.mint(target, ethers.utils.parseUnits(usdAmount.toString(), 6));
-}
-
-export async function mintNFTs(
-    target: string,
-    [numPunks, numArts, numBeats0, numBeats1]: [number, number, number, number],
-    punks: MockERC721Metadata,
-    art: MockERC721Metadata,
-    beats: MockERC1155Metadata,
-): Promise<void> {
-    let j = 1;
-
-    for (let i = 0; i < numPunks; i++) {
-        await punks["mint(address,string)"](
-            target,
-            `https://s3.amazonaws.com/images.pawn.fi/test-nft-metadata/PawnFiPunks/nft-${j++}.json`,
-        );
-    }
-
-    for (let i = 0; i < numArts; i++) {
-        await art["mint(address,string)"](
-            target,
-            `https://s3.amazonaws.com/images.pawn.fi/test-nft-metadata/PawnArtIo/nft-${j++}.json`,
-        );
-    }
-
-    const uris = [
-        `https://s3.amazonaws.com/images.pawn.fi/test-nft-metadata/PawnBeats/nft-${j++}.json`,
-        `https://s3.amazonaws.com/images.pawn.fi/test-nft-metadata/PawnBeats/nft-${j++}.json`,
-    ];
-
-    await beats.mintBatch(target, [0, 1], [numBeats0, numBeats1], uris, "0x00");
-}
-
-export async function mintAndDistribute(
-    signers: SignerWithAddress[],
-    weth: MockERC20,
-    pawnToken: MockERC20,
-    usd: MockERC20,
-    punks: MockERC721Metadata,
-    art: MockERC721Metadata,
-    beats: MockERC1155Metadata,
-): Promise<void> {
-    // Give a bunch of everything to signer[0]
-    await mintTokens(signers[0].address, [1000, 500000, 2000000], weth, pawnToken, usd);
-    await mintNFTs(signers[0].address, [20, 20, 20, 20], punks, art, beats);
-
-    // Give a mix to signers[1] through signers[5]
-    await mintTokens(signers[1].address, [0, 2000, 10000], weth, pawnToken, usd);
-    await mintNFTs(signers[1].address, [5, 0, 2, 1], punks, art, beats);
-
-    await mintTokens(signers[2].address, [450, 350.5, 5000], weth, pawnToken, usd);
-    await mintNFTs(signers[2].address, [0, 0, 1, 0], punks, art, beats);
-
-    await mintTokens(signers[3].address, [2, 50000, 7777], weth, pawnToken, usd);
-    await mintNFTs(signers[3].address, [10, 3, 7, 0], punks, art, beats);
-
-    await mintTokens(signers[4].address, [50, 2222.2, 12.1], weth, pawnToken, usd);
-    await mintNFTs(signers[4].address, [1, 12, 1, 6], punks, art, beats);
-
-    console.log("Initial balances:");
-    for (const i in signers) {
-        const signer = signers[i];
-        const { address: signerAddr } = signer;
-
-        console.log(SUBSECTION_SEPARATOR);
-        console.log(`Signer ${i}: ${signerAddr}`);
-        console.log("PawnPunks balance:", await getBalance(punks, signerAddr));
-        console.log("PawnArt balance:", await getBalance(art, signerAddr));
-        console.log("PawnBeats Edition 0 balance:", await getBalanceERC1155(beats, 0, signerAddr));
-        console.log("PawnBeats Edition 1 balance:", await getBalanceERC1155(beats, 1, signerAddr));
-        console.log("ETH balance:", (await signer.getBalance()).toString());
-        console.log("WETH balance:", await getBalance(weth, signerAddr));
-        console.log("PAWN balance:", await getBalance(pawnToken, signerAddr));
-        console.log("PUSD balance:", await getBalance(usd, signerAddr));
-    }
-}
-
-interface DeployedNFT {
-    punks: MockERC721Metadata;
-    art: MockERC721Metadata;
-    beats: MockERC1155Metadata;
-    weth: MockERC20;
-    pawnToken: MockERC20;
-    usd: MockERC20;
-}
-
-export async function deployNFTs(): Promise<DeployedNFT> {
-    console.log("Deploying NFTs...\n");
-    const erc721Factory = await ethers.getContractFactory("MockERC721Metadata");
-    const erc1155Factory = await ethers.getContractFactory("MockERC1155Metadata");
-
-
-    const punks = <MockERC721Metadata>await erc721Factory.deploy("PawnFiPunks", "PFPUNKS");
-    console.log("(ERC721) PawnFiPunks deployed to:", punks.address);
-
-
-    const art = <MockERC721Metadata>await erc721Factory.deploy("PawnArt.io", "PWART");
-    console.log("(ERC721) PawnArt.io deployed to:", art.address);
-
-
-    const beats = <MockERC1155Metadata>await erc1155Factory.deploy();
-    console.log("(ERC1155) PawnBeats deployed to:", beats.address);
-
-    // Deploy some ERC20s
-    console.log(SECTION_SEPARATOR);
-    console.log("Deploying Tokens...\n");
-    const erc20Factory = await ethers.getContractFactory("ERC20PresetMinterPauser");
-    const erc20WithDecimalsFactory = await ethers.getContractFactory("MockERC20WithDecimals");
-
-    const weth = <MockERC20>await erc20Factory.deploy("Wrapped Ether", "WETH");
-    console.log("(ERC20) WETH deployed to:", weth.address);
-
-
-    const pawnToken = <MockERC20>await erc20Factory.deploy("PawnToken", "PAWN");
-    console.log("(ERC20) PAWN deployed to:", pawnToken.address);
-
-    const usd = <MockERC20>await erc20WithDecimalsFactory.deploy("USD Stablecoin", "PUSD", 6);
-    console.log("(ERC20) PUSD deployed to:", usd.address);
-
-    return { punks, art, beats, weth, pawnToken, usd };
-}
-
-    let vault: AssetVault | undefined;
-    const createVault = async (factory: VaultFactory, user: Signer): Promise<AssetVault> =>     {
-    const tx = await factory.connect(user).initializeBundle(await user.getAddress());
-    const receipt = await tx.wait();
-
-    if (receipt && receipt.events) {
-        for (const event of receipt.events) {
-            if (event.args && event.args.vault) {
-                vault = <AssetVault>await hre.ethers.getContractAt("AssetVault", event.args.vault);
-            }
-        }
-    } else {
-        throw new Error("Unable to create new vault");
-    }
-    if (!vault) {
-        throw new Error("Unable to create new vault");
-    }
-    return vault;
-    };
 
     export async function vaultAssetsAndMakeLoans(
     signers: SignerWithAddress[],
