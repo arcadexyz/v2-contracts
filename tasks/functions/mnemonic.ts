@@ -1,6 +1,7 @@
 import fs from 'fs';
 
-export const mnemonicPath = './generated/mnemonic.txt';
+export const mnemonicPath = 'generated/mnemonic.txt';
+
 export const getMnemonic = (): string => {
   try {
     return fs.readFileSync(mnemonicPath).toString().trim();

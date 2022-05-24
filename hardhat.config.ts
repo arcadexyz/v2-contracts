@@ -7,9 +7,11 @@ import "@nomiclabs/hardhat-ethers";
 import "@openzeppelin/hardhat-upgrades";
 import "hardhat-contract-sizer";
 
+import "./tasks/hardhat-accounts";
 import "./tasks/account";
 import "./tasks/clean";
 import "./tasks/functions/generate";
+import "hardhat-deploy";
 
 import { resolve } from "path";
 
@@ -61,12 +63,11 @@ function createTestnetConfig(network: keyof typeof chainIds): NetworkUserConfig 
 // create local network config
 function createHardhatConfig(): HardhatNetworkUserConfig {
     const config = {
-        // accounts: {
-        //   mnemonic, // when mnemonic is omitted, HH account 1 is used as deployer
-        // },
+         accounts: {
+            mnemonic,
+        },
         allowUnlimitedContractSize: true,
         chainId: chainIds.hardhat,
-        url: 'http://localhost:8545',
         gasMultiplier: 10,
         contractSizer: {
             alphaSort: true,
@@ -104,7 +105,10 @@ function createMainnetConfig(): NetworkUserConfig {
 const optimizerEnabled = process.env.DISABLE_OPTIMIZER ? false : true;
 
 const config: HardhatUserConfig = {
-    defaultNetwork: "hardhat",
+    defaultNetwork: process.env.HARDHAT_TARGET_NETWORK,
+    namedAccounts: {
+        deployer: 0,
+    },
     gasReporter: {
         currency: "USD",
         enabled: process.env.REPORT_GAS ? true : false,
@@ -115,16 +119,23 @@ const config: HardhatUserConfig = {
     },
     networks: {
         mainnet: createMainnetConfig(),
-        localhost: createHardhatConfig(),
+        hardhat: createHardhatConfig(),
         goerli: createTestnetConfig("goerli"),
         kovan: createTestnetConfig("kovan"),
         rinkeby: createTestnetConfig("rinkeby"),
         ropsten: createTestnetConfig("ropsten"),
+        localhost: {
+            chainId: chainIds.hardhat,
+            gasMultiplier: 10,
+        },
     },
     paths: {
         artifacts: "./artifacts",
         cache: "./cache",
         sources: "./contracts",
+        deployments: './deployments',
+        deploy: './deploy',
+        imports: 'imports',
         tests: "./test",
     },
     solidity: {

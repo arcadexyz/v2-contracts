@@ -5,7 +5,7 @@ import { hdkey } from 'ethereumjs-wallet';
 import { ethers, Wallet } from 'ethers';
 import { keccak256, randomBytes } from 'ethers/lib/utils';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
-import { THardhatRuntimeEnvironmentExtended } from '../helpers/types/THardhatRuntimeEnvironmentExtended';
+import { THardhatRuntimeEnvironmentExtended } from '../../helpers/types/THardhatRuntimeEnvironmentExtended';
 import { debugLog } from './debug';
 
 export const getAccountData = async (mnemonic: string): Promise<{ address: string; wallet: Wallet }> => {

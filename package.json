@@ -8,7 +8,7 @@
         "@commitlint/config-conventional": "^9.1.2",
         "@ethersproject/abstract-signer": "^5.0.6",
         "@ethersproject/bignumber": "^5.0.8",
-        "@nomiclabs/hardhat-ethers": "^2.0.1",
+        "@nomiclabs/hardhat-ethers": "npm:hardhat-deploy-ethers",
         "@nomiclabs/hardhat-etherscan": "^2.1.7",
         "@nomiclabs/hardhat-waffle": "^2.0.1",
         "@openzeppelin/contracts": "^4.0.0",
@@ -76,6 +76,8 @@
         "commit": "git-cz",
         "compile": "hardhat compile",
         "coverage": "hardhat coverage --solcoverjs ./.solcover.js --temp artifacts --testfiles \"./test/**/*.ts\"",
+        "deploy": "hardhat deploy",
+        "deploy:new": "hardhat deploy --reset",
         "gendocs": "solidity-docgen -i ./contracts --solc-module solc-0.8",
         "lint": "yarn run lint:sol && yarn run lint:ts && yarn run prettier:list-different",
         "lint:fix": "yarn run prettier && yarn run lint:sol:fix && yarn run lint:ts:fix",
@@ -102,6 +104,7 @@
         "ethereumjs-wallet": "^1.0.2",
         "fs": "^0.0.1-security",
         "hardhat-deploy": "^0.11.10",
+        "hardhat-deploy-ethers": "^0.3.0-beta.13",
         "qrcode-terminal": "^0.12.0"
     }
 }

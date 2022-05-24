@@ -1,4 +1,6 @@
 import 'hardhat';
+import 'hardhat-deploy/types';
+import 'types/THardhatRuntimeEnvironmentExtended'
 import '@typechain/hardhat';
 import '@nomiclabs/hardhat-waffle';
 import '@nomiclabs/hardhat-ethers';
