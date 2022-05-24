@@ -1,7 +1,7 @@
 import hre, { ethers, upgrades } from "hardhat";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
-import { ORIGINATOR_ROLE as DEFAULT_ORIGINATOR_ROLE, REPAYER_ROLE as DEFAULT_REPAYER_ROLE, ADMIN_ROLE as DEFAULT_ADMIN_ROLE } from "./constants";
+import { ORIGINATOR_ROLE as DEFAULT_ORIGINATOR_ROLE, REPAYER_ROLE as DEFAULT_REPAYER_ROLE } from "../utils/constants";
 
 import {
     AssetVault,
@@ -12,7 +12,7 @@ import {
     OriginationController,
     CallWhitelist,
     VaultFactory,
-} from "../typechain";
+} from "../../typechain";
 export interface DeployedResources {
     assetVault: AssetVault;
     feeController: FeeController;
@@ -25,7 +25,7 @@ export interface DeployedResources {
     vaultFactory: VaultFactory;
     admin: SignerWithAddress;
 }
-let MINTING_ROLE;
+
 export async function main(
     ORIGINATOR_ROLE = DEFAULT_ORIGINATOR_ROLE,
     REPAYER_ROLE = DEFAULT_REPAYER_ROLE,

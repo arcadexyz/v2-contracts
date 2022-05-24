@@ -9,19 +9,18 @@ import {
     OriginationController,
 } from "../typechain";
 
-import { ORIGINATOR_ROLE as DEFAULT_ORIGINATOR_ROLE, REPAYER_ROLE as DEFAULT_REPAYER_ROLE } from "./constants";
-
-import { SECTION_SEPARATOR } from "./bootstrap-tools";
+import { ORIGINATOR_ROLE as DEFAULT_ORIGINATOR_ROLE, REPAYER_ROLE as DEFAULT_REPAYER_ROLE } from "./utils/constants";
+import { SECTION_SEPARATOR } from "./utils/bootstrap-tools";
 
 /**
  *  October 2021: LoanCore Redeploy
- *  This deploy addresses the issue of AssetWrapper re-use.
  *  The following contracts need to be re-deployed for any LoanCore change:
  *      - LoanCore
- *      - BorrowerNote (implicit)
- *      - LenderNote (implicit)
- *      - OriginationController (LoanCore address is immutable)
- *      - RepaymentController (LoanCore address is immutable)
+ *      - OriginationController (LoanCore is a state variable)
+ *      - PromissoryNote:
+ *          BorrowerNote (implicit)
+ *          LenderNote (implicit)
+ *      - RepaymentController (LoanCore is a state variable)
  *
  */
 
@@ -33,12 +32,13 @@ export interface DeployedResources {
     lenderNote: PromissoryNote;
     repaymentController: RepaymentController;
     originationController: OriginationController;
+
 }
 
 export async function main(
     ORIGINATOR_ROLE = DEFAULT_ORIGINATOR_ROLE,
     REPAYER_ROLE = DEFAULT_REPAYER_ROLE,
-    ASSET_VAULT_ADDRESS = "0x1F563CDd688ad47b75E474FDe74E87C643d129b7",
+    ASSET_VAULT_ADDRESS = "0x42dE174663dc5F339AEe2d58744A622F88DA8c09",
     FEE_CONTROLLER_ADDRESS = "0xfc2b8D5C60c8E8BbF8d6dc685F03193472e39587",
 ): Promise<DeployedResources> {
     console.log(SECTION_SEPARATOR);
@@ -55,7 +55,6 @@ export async function main(
     // Attach to existing contracts
     const AssetVaultFactory = await ethers.getContractFactory("AssetVault");
     const assetVault = <AssetVault>await AssetVaultFactory.attach(ASSET_VAULT_ADDRESS);
-
 
     const FeeControllerFactory = await ethers.getContractFactory("FeeController");
     const feeController = <FeeController>await FeeControllerFactory.attach(FEE_CONTROLLER_ADDRESS);
@@ -108,7 +107,7 @@ export async function main(
         borrowerNote,
         lenderNote,
         repaymentController,
-        originationController,
+        originationController
     };
 }
 
