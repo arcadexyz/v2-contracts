@@ -32,20 +32,19 @@ const chainIds = {
     ropsten: 3,
 };
 
-// Ensure that we have all the environment variables we need.
+// get mnumonic
 let mnemonic: string;
 mnemonic = getMnemonic();
-
-
-const forkMainnet = process.env.FORK_MAINNET === "true";
-
+// fork mainnet?
+const forkMainnet = process.env.FORK_MAINNET;
+// api key?
 let alchemyApiKey: string | undefined;
 if (forkMainnet && !process.env.ALCHEMY_API_KEY) {
     throw new Error("Please set process.env.ALCHEMY_API_KEY");
 } else {
     alchemyApiKey = process.env.ALCHEMY_API_KEY;
 }
-
+// create testnet network
 function createTestnetConfig(network: keyof typeof chainIds): NetworkUserConfig {
     const url = `https://eth-${network}.alchemyapi.io/v2/${alchemyApiKey}`;
     return {
@@ -53,20 +52,22 @@ function createTestnetConfig(network: keyof typeof chainIds): NetworkUserConfig 
             count: 10,
             initialIndex: 0,
             mnemonic,
-            path: "m/44'/60'/0'/0",
+            path: "m/44'/60'/0'/0", // HD derivation path
         },
         chainId: chainIds[network],
         url,
     };
 }
-
+// create local network config
 function createHardhatConfig(): HardhatNetworkUserConfig {
     const config = {
-        accounts: {
-            mnemonic,
-        },
+        // accounts: {
+        //   mnemonic, // when mnemonic is omitted, HH account 1 is used as deployer
+        // },
         allowUnlimitedContractSize: true,
         chainId: chainIds.hardhat,
+        url: 'http://localhost:8545',
+        gasMultiplier: 10,
         contractSizer: {
             alphaSort: true,
             disambiguatePaths: false,
@@ -80,13 +81,14 @@ function createHardhatConfig(): HardhatNetworkUserConfig {
         return Object.assign(config, {
             forking: {
                 url: `https://eth-mainnet.alchemyapi.io/v2/${alchemyApiKey}`,
+                //blockNumber: 14390000
             },
         });
     }
 
     return config;
 }
-
+// create mainnet network config
 function createMainnetConfig(): NetworkUserConfig {
     return {
         accounts: {
@@ -94,6 +96,8 @@ function createMainnetConfig(): NetworkUserConfig {
         },
         chainId: chainIds.mainnet,
         url: `https://eth-mainnet.alchemyapi.io/v2/${alchemyApiKey}`,
+        gas: 21000, // gas limit for a tx, 21000 wei is the minimum for tx to enter mempool
+        gasPrice: 60000000000, // current gas price, 60 gwei
     };
 }
 
@@ -111,18 +115,11 @@ const config: HardhatUserConfig = {
     },
     networks: {
         mainnet: createMainnetConfig(),
-        hardhat: createHardhatConfig(),
+        localhost: createHardhatConfig(),
         goerli: createTestnetConfig("goerli"),
         kovan: createTestnetConfig("kovan"),
         rinkeby: createTestnetConfig("rinkeby"),
         ropsten: createTestnetConfig("ropsten"),
-        localhost: {
-            accounts: {
-                mnemonic,
-            },
-            chainId: chainIds.hardhat,
-            gasMultiplier: 10,
-        },
     },
     paths: {
         artifacts: "./artifacts",
