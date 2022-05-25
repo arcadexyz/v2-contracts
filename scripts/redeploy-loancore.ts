@@ -1,4 +1,5 @@
 import { ethers, upgrades } from "hardhat";
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
 import {
     AssetVault,
@@ -18,8 +19,8 @@ import { SECTION_SEPARATOR } from "./utils/bootstrap-tools";
  *      - LoanCore
  *      - OriginationController (LoanCore is a state variable)
  *      - PromissoryNote:
- *          BorrowerNote (implicit)
- *          LenderNote (implicit)
+ *          BorrowerNote
+ *          LenderNote
  *      - RepaymentController (LoanCore is a state variable)
  *
  */
@@ -32,6 +33,7 @@ export interface DeployedResources {
     lenderNote: PromissoryNote;
     repaymentController: RepaymentController;
     originationController: OriginationController;
+    admin: SignerWithAddress;
 
 }
 
@@ -43,6 +45,7 @@ export async function main(
 ): Promise<DeployedResources> {
     console.log(SECTION_SEPARATOR);
     const signers = await ethers.getSigners();
+    const [admin] = signers;
     console.log("Deployer address: ", signers[0].address);
     console.log("Deployer balance: ", (await signers[0].getBalance()).toString());
     console.log(SECTION_SEPARATOR);
@@ -76,6 +79,12 @@ export async function main(
     console.log("BorrowerNote deployed to:", borrowerNote.address);
     console.log("LenderNote deployed to:", lenderNote.address);
 
+    // Grant correct permissions for promissory note
+    // Giving to user to call PromissoryNote functions directly
+    for (const note of [borrowerNote, lenderNote]) {
+        await note.connect(admin).initialize(loanCore.address);
+    }
+
     const RepaymentControllerFactory = await ethers.getContractFactory("RepaymentController");
     const repaymentController = <RepaymentController>(
         await RepaymentControllerFactory.deploy(loanCore.address, borrowerNote.address, lenderNote.address)
@@ -107,7 +116,8 @@ export async function main(
         borrowerNote,
         lenderNote,
         repaymentController,
-        originationController
+        originationController,
+        admin
     };
 }
 

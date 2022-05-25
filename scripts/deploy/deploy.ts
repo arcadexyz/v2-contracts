@@ -1,5 +1,4 @@
 import hre, { ethers, upgrades } from "hardhat";
-import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
 import { ORIGINATOR_ROLE as DEFAULT_ORIGINATOR_ROLE, REPAYER_ROLE as DEFAULT_REPAYER_ROLE } from "../utils/constants";
 
@@ -23,7 +22,6 @@ export interface DeployedResources {
     originationController: OriginationController;
     whitelist: CallWhitelist;
     vaultFactory: VaultFactory;
-    admin: SignerWithAddress;
 }
 
 export async function main(
@@ -35,18 +33,29 @@ export async function main(
     // If this runs in a standalone fashion you may want to call compile manually
     // to make sure everything is compiled
     // await run("compile");
-    const signers: SignerWithAddress[] = await hre.ethers.getSigners();
-    const [admin] = signers;
+    // const signers: SignerWithAddress[] = await hre.ethers.getSigners();
+    // const [admin] = signers;
 
     const CallWhiteListFactory = await ethers.getContractFactory("CallWhitelist");
     const whitelist = <CallWhitelist>await CallWhiteListFactory.deploy();
 
-    // We get the contract to deploy
     const AssetVaultFactory = await ethers.getContractFactory("AssetVault");
     const assetVault = <AssetVault>await AssetVaultFactory.deploy();
     await assetVault.deployed();
 
     console.log("AssetVault deployed to:", assetVault.address);
+
+    const VaultFactoryFactory = await ethers.getContractFactory("VaultFactory");
+    const vaultFactory = <VaultFactory>await upgrades.deployProxy(
+        VaultFactoryFactory,
+        [assetVault.address, whitelist.address],
+        {
+            kind: "uups",
+            initializer: "initialize(address, address)",
+        },
+    );
+
+    console.log("VaultFactory deployed to:", vaultFactory.address);
 
     const FeeControllerFactory = await ethers.getContractFactory("FeeController");
     const feeController = <FeeController>await FeeControllerFactory.deploy();
@@ -67,11 +76,11 @@ export async function main(
     await loanCore.deployed();
     console.log("LoanCore deployed to:", loanCore.address);
 
-    // Grant correct permissions for promissory note
-    // Giving to user to call PromissoryNote functions directly
-    for (const note of [borrowerNote, lenderNote]) {
-        await note.connect(admin).initialize(loanCore.address);
-    }
+    // // Grant correct permissions for promissory note
+    // // Giving to user to call PromissoryNote functions directly
+    // for (const note of [borrowerNote, lenderNote]) {
+    //     await note.connect(admin).initialize(loanCore.address);
+    // }
 
     const RepaymentControllerFactory = await ethers.getContractFactory("RepaymentController");
     const repaymentController = <RepaymentController>(
@@ -95,17 +104,6 @@ export async function main(
     await updateOriginationControllerPermissions.wait();
     console.log("OriginationController deployed to:", originationController.address);
 
-    const VaultFactoryFactory = await ethers.getContractFactory("VaultFactory");
-    const vaultFactory = <VaultFactory>await upgrades.deployProxy(
-        VaultFactoryFactory,
-        [assetVault.address, whitelist.address],
-        {
-            kind: "uups",
-            initializer: "initialize(address, address)",
-        },
-    );
-    console.log("VaultFactory deployed to:", vaultFactory.address);
-
     return {
         assetVault,
         feeController,
@@ -115,8 +113,7 @@ export async function main(
         repaymentController,
         originationController,
         whitelist,
-        vaultFactory,
-        admin
+        vaultFactory
     };
 }
 
