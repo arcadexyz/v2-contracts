@@ -72,6 +72,8 @@
         "access": "public"
     },
     "scripts": {
+        "account": "hardhat account",
+        "chain": "hardhat node --network localhost",
         "clean": "hardhat clean",
         "commit": "git-cz",
         "compile": "hardhat compile",
@@ -79,6 +81,7 @@
         "deploy": "hardhat deploy",
         "deploy:new": "hardhat deploy --reset",
         "gendocs": "solidity-docgen -i ./contracts --solc-module solc-0.8",
+        "generate": "hardhat generate",
         "lint": "yarn run lint:sol && yarn run lint:ts && yarn run prettier:list-different",
         "lint:fix": "yarn run prettier && yarn run lint:sol:fix && yarn run lint:ts:fix",
         "lint:sol": "solhint --config ./.solhint.json --max-warnings 0 \"contracts/**/*.sol\"",
@@ -105,6 +108,7 @@
         "fs": "^0.0.1-security",
         "hardhat-deploy": "^0.11.10",
         "hardhat-deploy-ethers": "^0.3.0-beta.13",
+        "hardhat-preprocessor": "^0.1.4",
         "qrcode-terminal": "^0.12.0"
     }
 }

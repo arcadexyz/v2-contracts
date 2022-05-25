@@ -8,14 +8,18 @@ const func: DeployFunction = async function (hre: THardhatRuntimeEnvironmentExte
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
+  /// ===== CallWhitelist =====
+  const whitelist = await deploy('CallWhitelist', {
+    from: deployer,
+    log: true,
+  });
+
   /// ===== VaultTemplate =====
   const vaultTemplate = await deploy('AssetVault', {
     from: deployer,
     log: true,
   });
   console.log("Using vaultTemplate deployed at: ", vaultTemplate.address)
-
-  const whitelist = await ethers.getContract("CallWhitelist", deployer);
 
 /// ===== VaultFactory =====
   const VaultFactoryFactory = await ethers.getContractFactory("VaultFactory");

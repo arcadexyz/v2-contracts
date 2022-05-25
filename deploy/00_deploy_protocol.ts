@@ -11,11 +11,6 @@ const func: DeployFunction = async function (hre: THardhatRuntimeEnvironmentExte
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  /// ===== CallWhitelist =====
-  await deploy('CallWhitelist', {
-    from: deployer,
-    log: true,
-  });
   /// ===== FeeController =====
   const feeController = await deploy('FeeController', {
     from: deployer,
@@ -36,6 +31,7 @@ const func: DeployFunction = async function (hre: THardhatRuntimeEnvironmentExte
     contract: "PromissoryNote",
     log: true,
   });
+  
   /// ===== LoanCore =====
   // deploy loan core via proxy pattern
   const LoanCoreFactory = await ethers.getContractFactory("LoanCore");
@@ -56,7 +52,7 @@ const func: DeployFunction = async function (hre: THardhatRuntimeEnvironmentExte
 
   // verify initialized
   //const res = await originationController.loanCore();
-  //console.log(res)
+  //console.log(res);
 
   /// ===== RepaymentController =====
   const repaymentController = await deploy('RepaymentController', {

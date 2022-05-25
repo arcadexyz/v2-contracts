@@ -13,8 +13,8 @@ task('account', 'Get balance informations for the deployment account.', async (_
   console.log(`‍🔶 Deployer Account is ${address} ‍🔶 `);
   // print balances on every network except localhost
   for (const n in config.networks) {
-    // omit localhost from the balances, to include, a local hardhat node must be running
-    if(n != "localhost") {
+    // omit localhost/ hardhat from the balances. To include, a local hardhat node must be running
+    if(n != "localhost" && n != "hardhat") {
       try {
         const { url } = config.networks[n] as HttpNetworkUserConfig;
         const provider = new hre.ethers.providers.JsonRpcProvider(url);
