@@ -10,12 +10,11 @@ const func: DeployFunction = async function (hre: THardhatRuntimeEnvironmentExte
   const { deployer } = await getNamedAccounts();
 
   /// ===== PunkRouter =====
-  const punkRouter = await deploy('PunkRouter', {
+  await deploy('PunkRouter', {
     from: deployer,
     log: true,
     args: [WRAPPED_PUNKS, CRYPTO_PUNKS]
   });
-  console.log("Using punkRouter deployed at: ", punkRouter.address)
 };
 
 export default func;

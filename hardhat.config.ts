@@ -18,10 +18,13 @@ import { resolve } from "path";
 import { config as dotenvConfig } from "dotenv";
 import { HardhatUserConfig } from "hardhat/config";
 import { NetworkUserConfig, HardhatNetworkUserConfig } from "hardhat/types";
+import { removeConsoleLog } from 'hardhat-preprocessor';
 
 import { getMnemonic } from './tasks/functions/mnemonic';
 
 dotenvConfig({ path: resolve(__dirname, "./.env") });
+// TARGET NETWIORK
+console.log('HARDHAT_TARGET_NETWORK: ', process.env.HARDHAT_TARGET_NETWORK);
 
 const chainIds = {
     ganache: 1337,
@@ -63,7 +66,8 @@ function createTestnetConfig(network: keyof typeof chainIds): NetworkUserConfig 
 // create local network config
 function createHardhatConfig(): HardhatNetworkUserConfig {
     const config = {
-         accounts: {
+        defaultNetwork: "hardhat",
+        accounts: {
             mnemonic,
         },
         allowUnlimitedContractSize: true,
@@ -105,6 +109,10 @@ function createMainnetConfig(): NetworkUserConfig {
 const optimizerEnabled = process.env.DISABLE_OPTIMIZER ? false : true;
 
 const config: HardhatUserConfig = {
+    //https://github.com/wighawag/hardhat-deploy/issues/63
+    preprocess: {
+      eachLine: removeConsoleLog((hre) => hre.network.name !== 'hardhat' && hre.network.name !== 'localhost'),
+    },
     defaultNetwork: process.env.HARDHAT_TARGET_NETWORK,
     namedAccounts: {
         deployer: 0,
@@ -125,7 +133,8 @@ const config: HardhatUserConfig = {
         rinkeby: createTestnetConfig("rinkeby"),
         ropsten: createTestnetConfig("ropsten"),
         localhost: {
-            chainId: chainIds.hardhat,
+            chainId: chainIds.localhost,
+            url: 'http://localhost:8545',
             gasMultiplier: 10,
         },
     },
