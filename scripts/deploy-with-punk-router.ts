@@ -23,8 +23,7 @@ export async function main(
         repaymentController,
         originationController,
         whitelist,
-        vaultFactory,
-        admin
+        vaultFactory
     } = await deployMain(ORIGINATOR_ROLE, REPAYER_ROLE);
 
     const PunkRouter = await ethers.getContractFactory("PunkRouter");
@@ -43,8 +42,7 @@ export async function main(
         originationController,
         punkRouter,
         whitelist,
-        vaultFactory,
-        admin
+        vaultFactory
     };
 }
 

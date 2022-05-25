@@ -30,7 +30,7 @@ export async function main(): Promise<void> {
     console.log("Distributing assets...\n");
     await mintAndDistribute(signers, weth, pawnToken, usd, punks, art, beats);
 
-    // Wrap some assets
+    // Vault some assets
     console.log(SECTION_SEPARATOR);
     console.log("Vaulting assets...\n");
     await vaultAssetsAndMakeLoans(

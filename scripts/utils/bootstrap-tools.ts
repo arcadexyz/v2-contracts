@@ -4,6 +4,7 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-wit
 
 import { LoanTerms } from "../../test/utils/types";
 import { createLoanTermsSignature } from "../../test/utils/eip712";
+import { main as setupRoles } from "../setup-roles";
 
 import {
     MockERC1155Metadata,
@@ -17,7 +18,7 @@ import { createVault } from "./vault";
 export const SECTION_SEPARATOR = "\n" + "=".repeat(80) + "\n";
 export const SUBSECTION_SEPARATOR = "-".repeat(10);
 
-    export async function vaultAssetsAndMakeLoans(
+export async function vaultAssetsAndMakeLoans(
     signers: SignerWithAddress[],
     factory: VaultFactory,
     originationController: Contract,
@@ -30,6 +31,9 @@ export const SUBSECTION_SEPARATOR = "-".repeat(10);
     art: MockERC721Metadata,
     pawnToken: MockERC20,
     ): Promise<void> {
+
+    // setup the role privileges
+    await setupRoles();
 
     // Connect the first signer with the
     const signer1 = signers[1];
