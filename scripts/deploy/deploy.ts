@@ -11,6 +11,7 @@ import {
     OriginationController,
     CallWhitelist,
     VaultFactory,
+    PunkRouter,
 } from "../../typechain";
 export interface DeployedResources {
     assetVault: AssetVault;
@@ -22,11 +23,14 @@ export interface DeployedResources {
     originationController: OriginationController;
     whitelist: CallWhitelist;
     vaultFactory: VaultFactory;
+    punkRouter: PunkRouter;
 }
 
 export async function main(
     ORIGINATOR_ROLE = DEFAULT_ORIGINATOR_ROLE,
     REPAYER_ROLE = DEFAULT_REPAYER_ROLE,
+    WRAPPED_PUNKS = "0xb7F7F6C52F2e2fdb1963Eab30438024864c313F6",
+    CRYPTO_PUNKS = "0xb47e3cd837ddf8e4c57f05d70ab865de6e193bbb",
 
 ): Promise<DeployedResources> {
     // Hardhat always runs the compile task when running scripts through it.
@@ -78,6 +82,7 @@ export async function main(
     const LoanCoreFactory = await ethers.getContractFactory("LoanCore");
     const loanCore = <LoanCore>await upgrades.deployProxy(LoanCoreFactory, [feeController.address, borrowerNote.address, lenderNote.address], { kind: "uups" });
     await loanCore.deployed();
+
     console.log("LoanCore deployed to:", loanCore.address);
 
     const RepaymentControllerFactory = await ethers.getContractFactory("RepaymentController");
@@ -88,6 +93,7 @@ export async function main(
 
     const updateRepaymentControllerPermissions = await loanCore.grantRole(REPAYER_ROLE, repaymentController.address);
     await updateRepaymentControllerPermissions.wait();
+
     console.log("RepaymentController deployed to:", repaymentController.address);
 
     const OriginationControllerFactory = await ethers.getContractFactory("OriginationController");
@@ -100,7 +106,14 @@ export async function main(
         originationController.address,
     );
     await updateOriginationControllerPermissions.wait();
+
     console.log("OriginationController deployed to:", originationController.address);
+
+    const PunkRouterFactory = await ethers.getContractFactory("PunkRouter");
+    const punkRouter = <PunkRouter>await PunkRouterFactory.deploy(WRAPPED_PUNKS, CRYPTO_PUNKS);
+    await punkRouter.deployed();
+
+    console.log("PunkRouter deployed to:", punkRouter.address);
 
     return {
         assetVault,
@@ -111,7 +124,8 @@ export async function main(
         repaymentController,
         originationController,
         whitelist,
-        vaultFactory
+        vaultFactory,
+        punkRouter
     };
 }
 

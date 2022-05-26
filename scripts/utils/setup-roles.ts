@@ -1,7 +1,7 @@
 import { ethers } from "hardhat";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
-import { ORIGINATOR_ROLE as DEFAULT_ORIGINATOR_ROLE, ADMIN_ROLE as DEFAULT_ADMIN_ROLE, FEE_CLAIMER_ROLE as DEFAULT_FEE_CLAIMER_ROLE, REPAYER_ROLE as DEFAULT_REPAYER_ROLE } from "./utils/constants";
+import { ORIGINATOR_ROLE as DEFAULT_ORIGINATOR_ROLE, ADMIN_ROLE as DEFAULT_ADMIN_ROLE, FEE_CLAIMER_ROLE as DEFAULT_FEE_CLAIMER_ROLE, REPAYER_ROLE as DEFAULT_REPAYER_ROLE } from "./constants";
 
 
 export async function main (
@@ -47,11 +47,7 @@ export async function main (
         await note.connect(await admin).initialize(loanCore.address);
     }
 
-    // grant the borrower: FEE_CLAIMER_ROLE
-    const updateBorrowerPermissions = await loanCore.connect(admin).grantRole(FEE_CLAIMER_ROLE, admin.address)
-    await updateBorrowerPermissions.wait();
-
-    // set LoanCore admin and fee claimer
+    // grant LoanCore admin fee claimer permissions
     const updateLoanCoreFeeClaimer = await loanCore.connect(admin).grantRole(FEE_CLAIMER_ROLE, ADMIN_ADDRESS);
     await updateLoanCoreFeeClaimer.wait();
 
