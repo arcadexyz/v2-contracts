@@ -3,6 +3,7 @@
 import { ethers } from "hardhat";
 
 import { main as deploy } from "./deploy/deploy";
+import { main as deployPunkRouter } from "./deploy-with-punk-router";
 import { SECTION_SEPARATOR, vaultAssetsAndMakeLoans } from "./utils/bootstrap-tools";
 import { mintAndDistribute } from "./utils/mint-distribute-assets";
 import { deployNFTs } from "./utils/deploy-assets";
@@ -19,6 +20,7 @@ export async function main(): Promise<void> {
 
     // Deploy the smart contracts
     const { vaultFactory, originationController, borrowerNote, repaymentController } = await deploy();
+    await deployPunkRouter();
 
 
     // Mint some NFTs
