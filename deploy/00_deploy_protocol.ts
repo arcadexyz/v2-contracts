@@ -11,6 +11,7 @@ const func: DeployFunction = async function (hre: THardhatRuntimeEnvironmentExte
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
+
   /// ===== FeeController =====
   const feeController = await deploy('FeeController', {
     from: deployer,
@@ -31,7 +32,7 @@ const func: DeployFunction = async function (hre: THardhatRuntimeEnvironmentExte
     contract: "PromissoryNote",
     log: true,
   });
-  
+
   /// ===== LoanCore =====
   // deploy loan core via proxy pattern
   const LoanCoreFactory = await ethers.getContractFactory("LoanCore");

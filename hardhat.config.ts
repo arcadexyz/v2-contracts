@@ -23,7 +23,7 @@ import { removeConsoleLog } from 'hardhat-preprocessor';
 import { getMnemonic } from './tasks/functions/mnemonic';
 
 dotenvConfig({ path: resolve(__dirname, "./.env") });
-// TARGET NETWIORK
+// TARGET NETWORK
 console.log('HARDHAT_TARGET_NETWORK: ', process.env.HARDHAT_TARGET_NETWORK);
 
 const chainIds = {
@@ -40,6 +40,9 @@ const chainIds = {
 // get mnumonic
 let mnemonic: string;
 mnemonic = getMnemonic();
+if (!mnemonic) {
+    console.log("***SET PK IN ENVIRONMENT VARIABLES***");
+}
 // fork mainnet?
 const forkMainnet = process.env.FORK_MAINNET;
 // api key?
@@ -61,18 +64,17 @@ function createTestnetConfig(network: keyof typeof chainIds): NetworkUserConfig 
         },
         chainId: chainIds[network],
         url,
+        gas: 500000
     };
 }
 // create local network config
 function createHardhatConfig(): HardhatNetworkUserConfig {
     const config = {
-        defaultNetwork: "hardhat",
         accounts: {
             mnemonic,
         },
         allowUnlimitedContractSize: true,
         chainId: chainIds.hardhat,
-        gasMultiplier: 10,
         contractSizer: {
             alphaSort: true,
             disambiguatePaths: false,
@@ -106,7 +108,7 @@ function createMainnetConfig(): NetworkUserConfig {
     };
 }
 
-const optimizerEnabled = process.env.DISABLE_OPTIMIZER ? false : true;
+//const optimizerEnabled = process.env.DISABLE_OPTIMIZER ? false : true;
 
 const config: HardhatUserConfig = {
     //https://github.com/wighawag/hardhat-deploy/issues/63
@@ -142,10 +144,10 @@ const config: HardhatUserConfig = {
         artifacts: "./artifacts",
         cache: "./cache",
         sources: "./contracts",
+        tests: "./test",
         deployments: './deployments',
         deploy: './deploy',
         imports: 'imports',
-        tests: "./test",
     },
     solidity: {
         compilers: [
@@ -160,7 +162,7 @@ const config: HardhatUserConfig = {
                     // You should disable the optimizer when debugging
                     // https://hardhat.org/hardhat-network/#solidity-optimizer-support
                     optimizer: {
-                        enabled: optimizerEnabled,
+                        enabled: true,
                         runs: 200,
                     },
                 },
