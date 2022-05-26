@@ -39,6 +39,8 @@ export async function main(
     const CallWhiteListFactory = await ethers.getContractFactory("CallWhitelist");
     const whitelist = <CallWhitelist>await CallWhiteListFactory.deploy();
 
+    console.log("CallWhiteList deployed to:", whitelist.address);
+
     const AssetVaultFactory = await ethers.getContractFactory("AssetVault");
     const assetVault = <AssetVault>await AssetVaultFactory.deploy();
     await assetVault.deployed();
@@ -65,9 +67,11 @@ export async function main(
 
     const PromissoryNoteFactory = await ethers.getContractFactory("PromissoryNote");
     const borrowerNote = <PromissoryNote>await PromissoryNoteFactory.deploy("Arcade.xyz BorrowerNote", "aBN");
-    await borrowerNote.deployed()
+    await borrowerNote.deployed();
+
     const lenderNote = <PromissoryNote>await PromissoryNoteFactory.deploy("Arcade.xyz LenderNote", "aLN");
-    await lenderNote.deployed()
+    await lenderNote.deployed();
+
     console.log("BorrowerNote deployed to:", borrowerNote.address);
     console.log("LenderNote deployed to:", lenderNote.address);
 
@@ -75,12 +79,6 @@ export async function main(
     const loanCore = <LoanCore>await upgrades.deployProxy(LoanCoreFactory, [feeController.address, borrowerNote.address, lenderNote.address], { kind: "uups" });
     await loanCore.deployed();
     console.log("LoanCore deployed to:", loanCore.address);
-
-    // // Grant correct permissions for promissory note
-    // // Giving to user to call PromissoryNote functions directly
-    // for (const note of [borrowerNote, lenderNote]) {
-    //     await note.connect(admin).initialize(loanCore.address);
-    // }
 
     const RepaymentControllerFactory = await ethers.getContractFactory("RepaymentController");
     const repaymentController = <RepaymentController>(

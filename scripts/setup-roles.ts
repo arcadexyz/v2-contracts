@@ -1,7 +1,8 @@
 import { ethers } from "hardhat";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
-import { ORIGINATOR_ROLE as DEFAULT_ORIGINATOR_ROLE, ADMIN_ROLE as DEFAULT_ADMIN_ROLE, FEE_CLAIMER_ROLE as DEFAULT_FEE_CLAIMER_ROLE } from "./utils/constants";
+import { ORIGINATOR_ROLE as DEFAULT_ORIGINATOR_ROLE, ADMIN_ROLE as DEFAULT_ADMIN_ROLE, FEE_CLAIMER_ROLE as DEFAULT_FEE_CLAIMER_ROLE, REPAYER_ROLE as DEFAULT_REPAYER_ROLE } from "./utils/constants";
+
 
 export async function main (
     VAULT_FACTORY_ADDRESS = "0x3A54241cB7801BDea625565AAcb0e873e79C0649",
@@ -11,41 +12,47 @@ export async function main (
     LOAN_CORE_ADDRESS = "0xd624D1879429A606f54F48B08b56126c3Fe70049",
     ADMIN_ADDRESS = "0x9b419fd36837558D8A3197a28a5e580AcE44f64F",
     FEE_CONTROLLER_ADDRESS = "0xE4a1917Ebe8fd2CAFD79799C82aDAa7E81AC6D47",
+    REPAYMENT_CONTROLLER_ADDRESS = "0x23ce21bE3ebd1c86325100460D58d14a1D143E8d",
+    CALL_WHITELIST_ADDRESS = "0x8a12BB999100846B9E56aba4906762353C416952",
+    PUNK_ROUTER_ADDRESS= "0x76391cd8e269f2e8fDcf893E7F5E5781B2Fe2514",
     ADMIN_ROLE = DEFAULT_ADMIN_ROLE,
     FEE_CLAIMER_ROLE = DEFAULT_FEE_CLAIMER_ROLE,
     ORIGINATOR_ROLE = DEFAULT_ORIGINATOR_ROLE,
+    REPAYER_ROLE = DEFAULT_REPAYER_ROLE
 ): Promise<void> {
     const signers: SignerWithAddress[] = await ethers.getSigners();
-    const [admin, borrower] = signers;
+    const [admin] = signers;
     const deployer = admin;
 
     if (!LOAN_CORE_ADDRESS) {
         throw new Error("Must specify LOAN_CORE_ADDRESS in environment!");
     }
+
     if (!admin.address) {
         throw new Error("Must specify ADMIN_ADDRESS in environment!");
     }
+
     if (FEE_CONTROLLER_ADDRESS) {
-        console.log(`Fee controller address: ${FEE_CONTROLLER_ADDRESS}`);
+        console.log("Fee controller address:", FEE_CONTROLLER_ADDRESS);
     }
 
-    const loanCore = await ethers.getContractAt("LoanCore", `${LOAN_CORE_ADDRESS}`);
-    const lenderNote = await ethers.getContractAt("PromissoryNote", `${LENDER_NOTE_ADDRESS}`);
-    const borrowerNote = await ethers.getContractAt("PromissoryNote", `${BORROWER_NOTE_ADDRESS}`);
-    const vaultFactory = await ethers.getContractAt("VaultFactory", `${VAULT_FACTORY_ADDRESS}`);
+    const loanCore = await ethers.getContractAt("LoanCore", LOAN_CORE_ADDRESS);
+    const vaultFactory = await ethers.getContractAt("VaultFactory", VAULT_FACTORY_ADDRESS);
+    const lenderNote = await ethers.getContractAt("PromissoryNote", LENDER_NOTE_ADDRESS);
+    const borrowerNote = await ethers.getContractAt("PromissoryNote", BORROWER_NOTE_ADDRESS);
 
-    //Grant correct permissions for promissory note
-    //Giving to user to call PromissoryNote functions directly
+    // grant correct permissions for promissory note
+    // giving to user to call PromissoryNote functions directly
     for (const note of [borrowerNote, lenderNote]) {
         await note.connect(await admin).initialize(loanCore.address);
     }
 
     // grant the borrower: FEE_CLAIMER_ROLE
-    const updateBorrowerPermissions = await loanCore.connect(admin).grantRole(FEE_CLAIMER_ROLE, borrower.address)
+    const updateBorrowerPermissions = await loanCore.connect(admin).grantRole(FEE_CLAIMER_ROLE, admin.address)
     await updateBorrowerPermissions.wait();
 
     // set LoanCore admin and fee claimer
-    const updateLoanCoreFeeClaimer = await loanCore.connect(borrower).grantRole(FEE_CLAIMER_ROLE, ADMIN_ADDRESS);
+    const updateLoanCoreFeeClaimer = await loanCore.connect(admin).grantRole(FEE_CLAIMER_ROLE, ADMIN_ADDRESS);
     await updateLoanCoreFeeClaimer.wait();
 
     // grant LoanCore the admin role to enable authorizeUpgrade onlyRole(DEFAULT_ADMIN_ROLE)
@@ -57,21 +64,42 @@ export async function main (
     await updateVaultFactoryAdmin.wait();
 
     // grant originationContoller the owner role to enable authorizeUpgrade onlyOwner
-    const updateOriginationControllerAdmin = await loanCore.grantRole(ORIGINATOR_ROLE, `${ORIGINATION_CONTROLLER_ADDRESS}`);
+    const updateOriginationControllerAdmin = await loanCore.grantRole(ORIGINATOR_ROLE, ORIGINATION_CONTROLLER_ADDRESS);
     await updateOriginationControllerAdmin.wait();
+
+    // grant repaymentContoller the REPAYER_ROLE
+    const updateRepaymentControllerAdmin = await loanCore.grantRole(REPAYER_ROLE, REPAYMENT_CONTROLLER_ADDRESS);
+    await updateRepaymentControllerAdmin.wait();
 
     // renounce ownership from deployer
     const renounceAdmin = await loanCore.renounceRole(ADMIN_ROLE, await deployer.getAddress());
     await renounceAdmin.wait();
-    // renounce ability to claim fees
-    const renounceFeeClaimer = await loanCore.renounceRole(FEE_CLAIMER_ROLE, await deployer.getAddress());
-    await renounceFeeClaimer.wait();
+
+    const renounceOriginationControllerAdmin = await loanCore.renounceRole(ORIGINATOR_ROLE, await deployer.getAddress());
+    await renounceOriginationControllerAdmin.wait();
+
+    const renounceVaultFactoryAdmin = await vaultFactory.renounceRole(ADMIN_ROLE, await deployer.getAddress());
+    await renounceVaultFactoryAdmin.wait();
 
     if (FEE_CONTROLLER_ADDRESS) {
         // set FeeController admin
         const feeController = await ethers.getContractAt("FeeController", FEE_CONTROLLER_ADDRESS);
         const updateFeeControllerAdmin = await feeController.transferOwnership(admin.address);
         await updateFeeControllerAdmin.wait();
+    }
+
+    if (CALL_WHITELIST_ADDRESS) {
+    // set CallWhiteList admin
+    const whitelist = await ethers.getContractAt("CallWhitelist", CALL_WHITELIST_ADDRESS);
+    const updateWhitelistAdmin = await whitelist.transferOwnership(admin.address);
+    await updateWhitelistAdmin.wait();
+    }
+
+    if (PUNK_ROUTER_ADDRESS) {
+    // set PunkRouter admin
+    const punkRouter = await ethers.getContractAt("PunkRouter", PUNK_ROUTER_ADDRESS);
+    const updatepunkRouterAdmin = await punkRouter.transferOwnership(admin.address);
+    await updatepunkRouterAdmin.wait();
     }
 
     console.log("Transferred all ownership.\n");
