@@ -21,7 +21,7 @@ export async function main (
     REPAYER_ROLE = DEFAULT_REPAYER_ROLE
 ): Promise<void> {
     const signers: SignerWithAddress[] = await ethers.getSigners();
-    const [admin] = signers;
+    const [admin, adminMultiSig] = signers;
     const deployer = admin;
 
     if (!LOAN_CORE_ADDRESS) {
@@ -52,49 +52,49 @@ export async function main (
     await updateLoanCoreFeeClaimer.wait();
 
     // grant LoanCore the admin role to enable authorizeUpgrade onlyRole(DEFAULT_ADMIN_ROLE)
-    const updateLoanCoreAdmin = await loanCore.grantRole(ADMIN_ROLE, ADMIN_ADDRESS);
+    const updateLoanCoreAdmin = await loanCore.connect(admin).grantRole(ADMIN_ROLE, ADMIN_ADDRESS);
     await updateLoanCoreAdmin.wait();
 
     // grant VaultFactory the admin role to enable authorizeUpgrade onlyRole(DEFAULT_ADMIN_ROLE)
-    const updateVaultFactoryAdmin = await vaultFactory.grantRole(ADMIN_ROLE, ADMIN_ADDRESS);
+    const updateVaultFactoryAdmin = await vaultFactory.connect(admin).grantRole(ADMIN_ROLE, ADMIN_ADDRESS);
     await updateVaultFactoryAdmin.wait();
 
     // grant originationContoller the owner role to enable authorizeUpgrade onlyOwner
-    const updateOriginationControllerAdmin = await loanCore.grantRole(ORIGINATOR_ROLE, ORIGINATION_CONTROLLER_ADDRESS);
+    const updateOriginationControllerAdmin = await loanCore.connect(admin).grantRole(ORIGINATOR_ROLE, ORIGINATION_CONTROLLER_ADDRESS);
     await updateOriginationControllerAdmin.wait();
 
     // grant repaymentContoller the REPAYER_ROLE
-    const updateRepaymentControllerAdmin = await loanCore.grantRole(REPAYER_ROLE, REPAYMENT_CONTROLLER_ADDRESS);
+    const updateRepaymentControllerAdmin = await loanCore.connect(admin).grantRole(REPAYER_ROLE, REPAYMENT_CONTROLLER_ADDRESS);
     await updateRepaymentControllerAdmin.wait();
 
     // renounce ownership from deployer
-    const renounceAdmin = await loanCore.renounceRole(ADMIN_ROLE, await deployer.getAddress());
+    const renounceAdmin = await loanCore.connect(admin).renounceRole(ADMIN_ROLE, await deployer.getAddress());
     await renounceAdmin.wait();
 
-    const renounceOriginationControllerAdmin = await loanCore.renounceRole(ORIGINATOR_ROLE, await deployer.getAddress());
+    const renounceOriginationControllerAdmin = await loanCore.connect(admin).renounceRole(ORIGINATOR_ROLE, await deployer.getAddress());
     await renounceOriginationControllerAdmin.wait();
 
-    const renounceVaultFactoryAdmin = await vaultFactory.renounceRole(ADMIN_ROLE, await deployer.getAddress());
+    const renounceVaultFactoryAdmin = await vaultFactory.connect(admin).renounceRole(ADMIN_ROLE, await deployer.getAddress());
     await renounceVaultFactoryAdmin.wait();
 
     if (FEE_CONTROLLER_ADDRESS) {
         // set FeeController admin
         const feeController = await ethers.getContractAt("FeeController", FEE_CONTROLLER_ADDRESS);
-        const updateFeeControllerAdmin = await feeController.transferOwnership(admin.address);
+        const updateFeeControllerAdmin = await feeController.transferOwnership(adminMultiSig.address);
         await updateFeeControllerAdmin.wait();
     }
 
     if (CALL_WHITELIST_ADDRESS) {
     // set CallWhiteList admin
     const whitelist = await ethers.getContractAt("CallWhitelist", CALL_WHITELIST_ADDRESS);
-    const updateWhitelistAdmin = await whitelist.transferOwnership(admin.address);
+    const updateWhitelistAdmin = await whitelist.transferOwnership(adminMultiSig.address);
     await updateWhitelistAdmin.wait();
     }
 
     if (PUNK_ROUTER_ADDRESS) {
     // set PunkRouter admin
     const punkRouter = await ethers.getContractAt("PunkRouter", PUNK_ROUTER_ADDRESS);
-    const updatepunkRouterAdmin = await punkRouter.transferOwnership(admin.address);
+    const updatepunkRouterAdmin = await punkRouter.transferOwnership(adminMultiSig.address);
     await updatepunkRouterAdmin.wait();
     }
 
