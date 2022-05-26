@@ -4,7 +4,7 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-wit
 
 import { LoanTerms } from "../../test/utils/types";
 import { createLoanTermsSignature } from "../../test/utils/eip712";
-import { main as setupRoles } from "../setup-roles";
+import { main as setupRoles } from "./setup-roles";
 
 import {
     MockERC1155Metadata,
