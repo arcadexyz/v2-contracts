@@ -1,8 +1,14 @@
 import { ethers } from "hardhat";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
-import { ORIGINATOR_ROLE as DEFAULT_ORIGINATOR_ROLE, ADMIN_ROLE as DEFAULT_ADMIN_ROLE, FEE_CLAIMER_ROLE as DEFAULT_FEE_CLAIMER_ROLE, REPAYER_ROLE as DEFAULT_REPAYER_ROLE } from "./constants";
+import { SECTION_SEPARATOR, SUBSECTION_SEPARATOR } from "./bootstrap-tools";
 
+import {
+    ORIGINATOR_ROLE as DEFAULT_ORIGINATOR_ROLE,
+    ADMIN_ROLE as DEFAULT_ADMIN_ROLE,
+    FEE_CLAIMER_ROLE as DEFAULT_FEE_CLAIMER_ROLE,
+    REPAYER_ROLE as DEFAULT_REPAYER_ROLE
+} from "./constants";
 
 export async function main (
     VAULT_FACTORY_ADDRESS = "0x3A54241cB7801BDea625565AAcb0e873e79C0649",
@@ -36,6 +42,8 @@ export async function main (
         console.log("Fee controller address:", FEE_CONTROLLER_ADDRESS);
     }
 
+    console.log(SECTION_SEPARATOR);
+
     const loanCore = await ethers.getContractAt("LoanCore", LOAN_CORE_ADDRESS);
     const vaultFactory = await ethers.getContractAt("VaultFactory", VAULT_FACTORY_ADDRESS);
     const lenderNote = await ethers.getContractAt("PromissoryNote", LENDER_NOTE_ADDRESS);
@@ -44,38 +52,56 @@ export async function main (
     // grant correct permissions for promissory note
     // giving to user to call PromissoryNote functions directly
     for (const note of [borrowerNote, lenderNote]) {
-        await note.connect(await admin).initialize(loanCore.address);
+        await note.connect(admin).initialize(loanCore.address);
     }
 
     // grant LoanCore admin fee claimer permissions
     const updateLoanCoreFeeClaimer = await loanCore.connect(admin).grantRole(FEE_CLAIMER_ROLE, ADMIN_ADDRESS);
     await updateLoanCoreFeeClaimer.wait();
 
+    console.log(`loanCore has granted fee claimer role: ${FEE_CLAIMER_ROLE} to address: ${ADMIN_ADDRESS}`);
+
     // grant LoanCore the admin role to enable authorizeUpgrade onlyRole(DEFAULT_ADMIN_ROLE)
     const updateLoanCoreAdmin = await loanCore.connect(admin).grantRole(ADMIN_ROLE, ADMIN_ADDRESS);
     await updateLoanCoreAdmin.wait();
+
+    console.log(`loanCore has granted admin role: ${ADMIN_ROLE} to address: ${ADMIN_ADDRESS}`);
 
     // grant VaultFactory the admin role to enable authorizeUpgrade onlyRole(DEFAULT_ADMIN_ROLE)
     const updateVaultFactoryAdmin = await vaultFactory.connect(admin).grantRole(ADMIN_ROLE, ADMIN_ADDRESS);
     await updateVaultFactoryAdmin.wait();
 
+    console.log(`vaultFactory has granted admin role: ${ADMIN_ROLE} to address: ${ADMIN_ADDRESS}`);
+
     // grant originationContoller the owner role to enable authorizeUpgrade onlyOwner
     const updateOriginationControllerAdmin = await loanCore.connect(admin).grantRole(ORIGINATOR_ROLE, ORIGINATION_CONTROLLER_ADDRESS);
     await updateOriginationControllerAdmin.wait();
+
+    console.log(`originationController has granted originator role: ${ORIGINATOR_ROLE} to address: ${ORIGINATION_CONTROLLER_ADDRESS}`);
 
     // grant repaymentContoller the REPAYER_ROLE
     const updateRepaymentControllerAdmin = await loanCore.connect(admin).grantRole(REPAYER_ROLE, REPAYMENT_CONTROLLER_ADDRESS);
     await updateRepaymentControllerAdmin.wait();
 
+    console.log(`loanCore has granted repayer role: ${REPAYER_ROLE} to address: ${REPAYMENT_CONTROLLER_ADDRESS}`);
+    console.log(SECTION_SEPARATOR);
+
     // renounce ownership from deployer
     const renounceAdmin = await loanCore.connect(admin).renounceRole(ADMIN_ROLE, await deployer.getAddress());
     await renounceAdmin.wait();
 
+    console.log(`loanCore has renounced admin role.`);
+
     const renounceOriginationControllerAdmin = await loanCore.connect(admin).renounceRole(ORIGINATOR_ROLE, await deployer.getAddress());
     await renounceOriginationControllerAdmin.wait();
 
+    console.log(`originationController has renounced originator role.`);
+
     const renounceVaultFactoryAdmin = await vaultFactory.connect(admin).renounceRole(ADMIN_ROLE, await deployer.getAddress());
     await renounceVaultFactoryAdmin.wait();
+
+    console.log(`vaultFactory has renounced admin role.`);
+    console.log(SECTION_SEPARATOR);
 
     if (FEE_CONTROLLER_ADDRESS) {
         // set FeeController admin
@@ -84,12 +110,16 @@ export async function main (
         await updateFeeControllerAdmin.wait();
     }
 
+    console.log(`feeController has transferred ownership to address: ${adminMultiSig.address}`);
+
     if (CALL_WHITELIST_ADDRESS) {
     // set CallWhiteList admin
     const whitelist = await ethers.getContractAt("CallWhitelist", CALL_WHITELIST_ADDRESS);
     const updateWhitelistAdmin = await whitelist.transferOwnership(adminMultiSig.address);
     await updateWhitelistAdmin.wait();
     }
+
+    console.log(`whitelist has transferred ownership to address: ${adminMultiSig.address}`);
 
     if (PUNK_ROUTER_ADDRESS) {
     // set PunkRouter admin
@@ -98,6 +128,8 @@ export async function main (
     await updatepunkRouterAdmin.wait();
     }
 
+    console.log(`punkRouter has transferred ownership to address: ${adminMultiSig.address}`);
+    console.log(SECTION_SEPARATOR);
     console.log("Transferred all ownership.\n");
 }
 
