@@ -18,7 +18,17 @@ export async function main(): Promise<void> {
     console.log("Deploying resources...\n");
 
     // Deploy the smart contracts
-    const { vaultFactory, originationController, borrowerNote, repaymentController, punkRouter } = await deploy();
+    const {
+        vaultFactory,
+        originationController,
+        borrowerNote,
+        repaymentController,
+        punkRouter,
+        lenderNote,
+        loanCore,
+        feeController,
+        whitelist
+    } = await deploy();
 
     // Mint some NFTs
     console.log(SECTION_SEPARATOR);
@@ -38,6 +48,11 @@ export async function main(): Promise<void> {
         originationController,
         borrowerNote,
         repaymentController,
+        lenderNote,
+        loanCore,
+        feeController,
+        whitelist,
+        punkRouter,
         punks,
         usd,
         beats,
