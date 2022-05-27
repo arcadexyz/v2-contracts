@@ -32,6 +32,8 @@ export async function vaultAssetsAndMakeLoans(
     pawnToken: MockERC20,
     ): Promise<void> {
 
+    console.log(SECTION_SEPARATOR);
+    console.log("But setting up roles first...\n");
     // setup the role privileges
     await setupRoles();
 
