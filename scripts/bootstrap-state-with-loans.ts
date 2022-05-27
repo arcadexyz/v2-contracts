@@ -2,23 +2,33 @@
 
 import { ethers } from "hardhat";
 
-import { main as deploy } from "./deploy";
-import { main as flashRolloverDeploy } from "./deploy-flash-rollover";
-import { deployNFTs, mintAndDistribute, SECTION_SEPARATOR, wrapAssetsAndMakeLoans } from "./bootstrap-tools";
+import { main as deploy } from "./deploy/deploy";
+import { SECTION_SEPARATOR, vaultAssetsAndMakeLoans } from "./utils/bootstrap-tools";
+import { mintAndDistribute } from "./utils/mint-distribute-assets";
+import { deployNFTs } from "./utils/deploy-assets";
 
 export async function main(): Promise<void> {
     // Bootstrap five accounts only.
     // Skip the first account, since the
     // first signer will be the deployer.
-    const [, ...signers] = (await ethers.getSigners()).slice(0, 6);
+    const [, ...signers] = (await ethers.getSigners()).slice(1, 7);
+
 
     console.log(SECTION_SEPARATOR);
     console.log("Deploying resources...\n");
 
     // Deploy the smart contracts
-    const { assetVault, originationController, repaymentController, borrowerNote, loanCore } = await deploy();
-    const { mockAddressProvider } = await flashRolloverDeploy(loanCore.address);
-    const lendingPool = await mockAddressProvider.getLendingPool();
+    const {
+        vaultFactory,
+        originationController,
+        borrowerNote,
+        repaymentController,
+        punkRouter,
+        lenderNote,
+        loanCore,
+        feeController,
+        whitelist
+    } = await deploy();
 
     // Mint some NFTs
     console.log(SECTION_SEPARATOR);
@@ -27,17 +37,22 @@ export async function main(): Promise<void> {
     // Distribute NFTs and ERC20s
     console.log(SECTION_SEPARATOR);
     console.log("Distributing assets...\n");
-    await mintAndDistribute(signers, weth, pawnToken, usd, punks, art, beats, lendingPool);
+    await mintAndDistribute(signers, weth, pawnToken, usd, punks, art, beats);
 
-    // Wrap some assets
+    // Vault some assets
     console.log(SECTION_SEPARATOR);
-    console.log("Wrapping assets...\n");
-    await wrapAssetsAndMakeLoans(
+    console.log("Vaulting assets...\n");
+    await vaultAssetsAndMakeLoans(
         signers,
-        assetVault,
+        vaultFactory,
         originationController,
         borrowerNote,
         repaymentController,
+        lenderNote,
+        loanCore,
+        feeController,
+        whitelist,
+        punkRouter,
         punks,
         usd,
         beats,

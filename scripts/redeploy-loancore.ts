@@ -1,4 +1,5 @@
-import { ethers } from "hardhat";
+import { ethers, upgrades } from "hardhat";
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
 import {
     AssetVault,
@@ -9,40 +10,42 @@ import {
     OriginationController,
 } from "../typechain";
 
-import { ORIGINATOR_ROLE as DEFAULT_ORIGINATOR_ROLE, REPAYER_ROLE as DEFAULT_REPAYER_ROLE } from "./constants";
-
-import { SECTION_SEPARATOR } from "./bootstrap-tools";
+import { ORIGINATOR_ROLE as DEFAULT_ORIGINATOR_ROLE, REPAYER_ROLE as DEFAULT_REPAYER_ROLE } from "./utils/constants";
+import { SECTION_SEPARATOR } from "./utils/bootstrap-tools";
 
 /**
  *  October 2021: LoanCore Redeploy
- *  This deploy addresses the issue of AssetWrapper re-use.
  *  The following contracts need to be re-deployed for any LoanCore change:
  *      - LoanCore
- *      - BorrowerNote (implicit)
- *      - LenderNote (implicit)
- *      - OriginationController (LoanCore address is immutable)
- *      - RepaymentController (LoanCore address is immutable)
+ *      - OriginationController (LoanCore is a state variable)
+ *      - PromissoryNote:
+ *          BorrowerNote
+ *          LenderNote
+ *      - RepaymentController (LoanCore is a state variable)
  *
  */
 
 export interface DeployedResources {
-    assetWrapper: AssetVault;
+    assetVault: AssetVault;
     feeController: FeeController;
     loanCore: LoanCore;
     borrowerNote: PromissoryNote;
     lenderNote: PromissoryNote;
     repaymentController: RepaymentController;
     originationController: OriginationController;
+    admin: SignerWithAddress;
+
 }
 
 export async function main(
     ORIGINATOR_ROLE = DEFAULT_ORIGINATOR_ROLE,
     REPAYER_ROLE = DEFAULT_REPAYER_ROLE,
-    ASSET_WRAPPER_ADDRESS = "0x1F563CDd688ad47b75E474FDe74E87C643d129b7",
+    ASSET_VAULT_ADDRESS = "0x42dE174663dc5F339AEe2d58744A622F88DA8c09",
     FEE_CONTROLLER_ADDRESS = "0xfc2b8D5C60c8E8BbF8d6dc685F03193472e39587",
 ): Promise<DeployedResources> {
     console.log(SECTION_SEPARATOR);
     const signers = await ethers.getSigners();
+    const [admin] = signers;
     console.log("Deployer address: ", signers[0].address);
     console.log("Deployer balance: ", (await signers[0].getBalance()).toString());
     console.log(SECTION_SEPARATOR);
@@ -53,30 +56,38 @@ export async function main(
     // await run("compile");
 
     // Attach to existing contracts
-    const AssetWrapperFactory = await ethers.getContractFactory("AssetWrapper");
-    const assetWrapper = <AssetVault>await AssetWrapperFactory.attach(ASSET_WRAPPER_ADDRESS);
+    const AssetVaultFactory = await ethers.getContractFactory("AssetVault");
+    const assetVault = <AssetVault>await AssetVaultFactory.attach(ASSET_VAULT_ADDRESS);
 
     const FeeControllerFactory = await ethers.getContractFactory("FeeController");
     const feeController = <FeeController>await FeeControllerFactory.attach(FEE_CONTROLLER_ADDRESS);
 
     // Start deploying new contracts
+    const PromissoryNoteFactory = await ethers.getContractFactory("PromissoryNote");
+    const borrowerNote = <PromissoryNote>await PromissoryNoteFactory.deploy("Arcade.xyz BorrowerNote", "aBN");
+    await borrowerNote.deployed()
+    const lenderNote = <PromissoryNote>await PromissoryNoteFactory.deploy("Arcade.xyz LenderNote", "aLN");
+    await lenderNote.deployed()
+    console.log("BorrowerNote deployed to:", borrowerNote.address);
+    console.log("LenderNote deployed to:", lenderNote.address);
+
     const LoanCoreFactory = await ethers.getContractFactory("LoanCore");
-    const loanCore = <LoanCore>await LoanCoreFactory.deploy(ASSET_WRAPPER_ADDRESS, FEE_CONTROLLER_ADDRESS);
+    const loanCore = <LoanCore>await upgrades.deployProxy(LoanCoreFactory, [FEE_CONTROLLER_ADDRESS, borrowerNote.address, lenderNote.address], { kind: "uups" });
     await loanCore.deployed();
 
-    const promissoryNoteFactory = await ethers.getContractFactory("PromissoryNote");
-    const borrowerNoteAddr = await loanCore.borrowerNote();
-    const borrowerNote = <PromissoryNote>await promissoryNoteFactory.attach(borrowerNoteAddr);
-    const lenderNoteAddr = await loanCore.lenderNote();
-    const lenderNote = <PromissoryNote>await promissoryNoteFactory.attach(lenderNoteAddr);
-
     console.log("LoanCore deployed to:", loanCore.address);
-    console.log("BorrowerNote deployed to:", borrowerNoteAddr);
-    console.log("LenderNote deployed to:", lenderNoteAddr);
+    console.log("BorrowerNote deployed to:", borrowerNote.address);
+    console.log("LenderNote deployed to:", lenderNote.address);
+
+    // Grant correct permissions for promissory note
+    // Giving to user to call PromissoryNote functions directly
+    for (const note of [borrowerNote, lenderNote]) {
+        await note.connect(admin).initialize(loanCore.address);
+    }
 
     const RepaymentControllerFactory = await ethers.getContractFactory("RepaymentController");
     const repaymentController = <RepaymentController>(
-        await RepaymentControllerFactory.deploy(loanCore.address, borrowerNoteAddr, lenderNoteAddr)
+        await RepaymentControllerFactory.deploy(loanCore.address, borrowerNote.address, lenderNote.address)
     );
     await repaymentController.deployed();
     const updateRepaymentControllerPermissions = await loanCore.grantRole(REPAYER_ROLE, repaymentController.address);
@@ -86,9 +97,10 @@ export async function main(
 
     const OriginationControllerFactory = await ethers.getContractFactory("OriginationController");
     const originationController = <OriginationController>(
-        await OriginationControllerFactory.deploy(loanCore.address, ASSET_WRAPPER_ADDRESS)
+        await upgrades.deployProxy(OriginationControllerFactory, [loanCore.address], { kind: "uups" })
     );
     await originationController.deployed();
+
     const updateOriginationControllerPermissions = await loanCore.grantRole(
         ORIGINATOR_ROLE,
         originationController.address,
@@ -98,13 +110,14 @@ export async function main(
     console.log("OriginationController deployed to:", originationController.address);
 
     return {
-        assetWrapper,
+        assetVault,
         feeController,
         loanCore,
         borrowerNote,
         lenderNote,
         repaymentController,
         originationController,
+        admin
     };
 }
 
