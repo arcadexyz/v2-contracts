@@ -1,4 +1,7 @@
-import hre, { ethers, upgrades } from "hardhat";
+import { ethers, upgrades } from "hardhat";
+
+import { main as writeJson } from "../utils/verify/writeJson";
+import { SECTION_SEPARATOR, SUBSECTION_SEPARATOR } from "../utils/bootstrap-tools";
 
 import { ORIGINATOR_ROLE as DEFAULT_ORIGINATOR_ROLE, REPAYER_ROLE as DEFAULT_REPAYER_ROLE } from "../utils/constants";
 
@@ -13,6 +16,25 @@ import {
     VaultFactory,
     PunkRouter,
 } from "../../typechain";
+
+export interface deploymentData {
+    [contractName: string]: contractData | PromissoryNoteTypeBn | PromissoryNoteTypeLn,
+}
+export interface contractData {
+    contractAddress: string,
+    constructorArgs: any[]
+}
+
+export interface PromissoryNoteTypeBn {
+    contractAddress: string,
+    constructorArgs: any[]
+}
+
+export interface PromissoryNoteTypeLn {
+    contractAddress: string,
+    constructorArgs: any[]
+}
+
 export interface DeployedResources {
     assetVault: AssetVault;
     feeController: FeeController;
@@ -31,7 +53,6 @@ export async function main(
     REPAYER_ROLE = DEFAULT_REPAYER_ROLE,
     WRAPPED_PUNKS = "0xb7F7F6C52F2e2fdb1963Eab30438024864c313F6",
     CRYPTO_PUNKS = "0xb47e3cd837ddf8e4c57f05d70ab865de6e193bbb",
-
 ): Promise<DeployedResources> {
     // Hardhat always runs the compile task when running scripts through it.
     // If this runs in a standalone fashion you may want to call compile manually
@@ -39,17 +60,36 @@ export async function main(
     // await run("compile");
     // const signers: SignerWithAddress[] = await hre.ethers.getSigners();
     // const [admin] = signers;
+    let contractInfo: deploymentData = {}
+
+    console.log(SECTION_SEPARATOR);
 
     const CallWhiteListFactory = await ethers.getContractFactory("CallWhitelist");
     const whitelist = <CallWhitelist>await CallWhiteListFactory.deploy();
 
     console.log("CallWhiteList deployed to:", whitelist.address);
 
+    contractInfo["CallWhitelist"] = {
+        "contractAddress": whitelist.address,
+
+        "constructorArgs": []
+    };
+
+    console.log(SUBSECTION_SEPARATOR);
+
     const AssetVaultFactory = await ethers.getContractFactory("AssetVault");
     const assetVault = <AssetVault>await AssetVaultFactory.deploy();
     await assetVault.deployed();
 
     console.log("AssetVault deployed to:", assetVault.address);
+
+    contractInfo["AssetVault"] = {
+        "contractAddress" : assetVault.address,
+
+        "constructorArgs": []
+    };
+
+    console.log(SUBSECTION_SEPARATOR);
 
     const VaultFactoryFactory = await ethers.getContractFactory("VaultFactory");
     const vaultFactory = <VaultFactory>await upgrades.deployProxy(
@@ -63,21 +103,60 @@ export async function main(
 
     console.log("VaultFactory deployed to:", vaultFactory.address);
 
+    contractInfo["VaultFactory"] = {
+        "contractAddress" : vaultFactory.address,
+
+        "constructorArgs": []
+    };
+
+    console.log(SUBSECTION_SEPARATOR);
+
     const FeeControllerFactory = await ethers.getContractFactory("FeeController");
     const feeController = <FeeController>await FeeControllerFactory.deploy();
     await feeController.deployed();
 
     console.log("FeeController deployed to: ", feeController.address);
 
+    contractInfo["FeeController"] = {
+        "contractAddress" :feeController.address,
+
+        "constructorArgs": []
+    };
+
+    console.log(SUBSECTION_SEPARATOR);
+
     const PromissoryNoteFactory = await ethers.getContractFactory("PromissoryNote");
     const borrowerNote = <PromissoryNote>await PromissoryNoteFactory.deploy("Arcade.xyz BorrowerNote", "aBN");
     await borrowerNote.deployed();
 
+    console.log("BorrowerNote deployed to:", borrowerNote.address);
+
     const lenderNote = <PromissoryNote>await PromissoryNoteFactory.deploy("Arcade.xyz LenderNote", "aLN");
     await lenderNote.deployed();
 
-    console.log("BorrowerNote deployed to:", borrowerNote.address);
     console.log("LenderNote deployed to:", lenderNote.address);
+
+    let promissoryNoteDataBn: PromissoryNoteTypeBn = {
+
+            "contractAddress": borrowerNote.address,
+
+            "constructorArgs": ["Arcade.xyz BorrowerNote", "aBN"]
+
+    };
+
+    contractInfo["BorrowerNote"] = promissoryNoteDataBn
+
+    let promissoryNoteDataLn: PromissoryNoteTypeLn = {
+
+        "contractAddress": lenderNote.address,
+
+        "constructorArgs": ["Arcade.xyz LenderNote", "aLN"]
+
+    };
+
+    contractInfo["LenderNote"] = promissoryNoteDataLn
+
+    console.log(SUBSECTION_SEPARATOR);
 
     const LoanCoreFactory = await ethers.getContractFactory("LoanCore");
     const loanCore = <LoanCore>await upgrades.deployProxy(LoanCoreFactory, [feeController.address, borrowerNote.address, lenderNote.address], { kind: "uups" });
@@ -85,35 +164,69 @@ export async function main(
 
     console.log("LoanCore deployed to:", loanCore.address);
 
+    contractInfo["LoanCore"] = {
+        "contractAddress" :loanCore.address,
+
+        "constructorArgs": []
+    };
+
+    console.log(SUBSECTION_SEPARATOR);
+
     const RepaymentControllerFactory = await ethers.getContractFactory("RepaymentController");
     const repaymentController = <RepaymentController>(
          await RepaymentControllerFactory.deploy(loanCore.address, borrowerNote.address, lenderNote.address)
     );
     await repaymentController.deployed();
 
+    console.log("RepaymentController deployed to:", repaymentController.address);
+
+    contractInfo["RepaymentController"] = {
+        "contractAddress" :repaymentController.address,
+
+        "constructorArgs": []
+    };
+
     const updateRepaymentControllerPermissions = await loanCore.grantRole(REPAYER_ROLE, repaymentController.address);
     await updateRepaymentControllerPermissions.wait();
 
-    console.log("RepaymentController deployed to:", repaymentController.address);
+    console.log(SUBSECTION_SEPARATOR);
 
     const OriginationControllerFactory = await ethers.getContractFactory("OriginationController");
     const originationController = <OriginationController>(
         await upgrades.deployProxy(OriginationControllerFactory, [loanCore.address], { kind: "uups" })
     );
     await originationController.deployed();
+
+    console.log("OriginationController deployed to:", originationController.address)
+
+    contractInfo["OriginationController"] = {
+        "contractAddress" :originationController.address,
+
+        "constructorArgs": []
+    };
+
     const updateOriginationControllerPermissions = await loanCore.grantRole(
         ORIGINATOR_ROLE,
         originationController.address,
     );
     await updateOriginationControllerPermissions.wait();
 
-    console.log("OriginationController deployed to:", originationController.address);
+    console.log(SUBSECTION_SEPARATOR);
 
     const PunkRouterFactory = await ethers.getContractFactory("PunkRouter");
     const punkRouter = <PunkRouter>await PunkRouterFactory.deploy(WRAPPED_PUNKS, CRYPTO_PUNKS);
     await punkRouter.deployed();
 
     console.log("PunkRouter deployed to:", punkRouter.address);
+
+    contractInfo["PunkRouter"] = {
+        "contractAddress" :punkRouter.address,
+
+        "constructorArgs": [WRAPPED_PUNKS, CRYPTO_PUNKS]
+    };
+
+    writeJson(contractInfo)
+    console.log(SECTION_SEPARATOR);
 
     return {
         assetVault,
@@ -139,3 +252,5 @@ if (require.main === module) {
             process.exit(1);
         });
 }
+
+

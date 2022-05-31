@@ -11,6 +11,12 @@ lib/
 node_modules/
 typechain/
 
+# OpenZeppelin
+.openzeppelin/unknown-*.json
+
+#deployments
+.deployments/hardhat
+
 # files
 *.env
 *.log
@@ -26,5 +32,4 @@ gas_report.log
 .env
 cargs.js
 
-# OpenZeppelin
-.openzeppelin/unknown-*.json
+
