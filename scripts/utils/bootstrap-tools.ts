@@ -49,7 +49,8 @@ export async function vaultAssetsAndMakeLoans(
         lenderNote, loanCore,
         feeController,
         whitelist,
-        punkRouter);
+        punkRouter
+    );
 
     // Connect the first signer with the
     const signer1 = signers[1];
