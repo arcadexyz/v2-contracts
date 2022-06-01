@@ -16,6 +16,7 @@ import { config as dotenvConfig } from "dotenv";
 import { HardhatUserConfig } from "hardhat/config";
 import { NetworkUserConfig, HardhatNetworkUserConfig } from "hardhat/types";
 
+
 dotenvConfig({ path: resolve(__dirname, "./.env") });
 
 const chainIds = {
@@ -46,6 +47,7 @@ if (forkMainnet && !process.env.ALCHEMY_API_KEY) {
     alchemyApiKey = process.env.ALCHEMY_API_KEY;
 }
 
+// create testnet network
 function createTestnetConfig(network: keyof typeof chainIds): NetworkUserConfig {
     const url = `https://eth-${network}.alchemyapi.io/v2/${alchemyApiKey}`;
     return {
@@ -53,13 +55,15 @@ function createTestnetConfig(network: keyof typeof chainIds): NetworkUserConfig 
             count: 10,
             initialIndex: 0,
             mnemonic,
-            path: "m/44'/60'/0'/0",
+            path: "m/44'/60'/0'/0", // HD derivation path
         },
         chainId: chainIds[network],
         url,
+        gas: 500000
     };
 }
 
+// create local network config
 function createHardhatConfig(): HardhatNetworkUserConfig {
     const config = {
         accounts: {
@@ -151,6 +155,9 @@ const config: HardhatUserConfig = {
             {
                 version: "0.4.12",
             },
+            {
+                version: "0.8.2",
+            },
         ],
     },
     typechain: {
@@ -158,7 +165,7 @@ const config: HardhatUserConfig = {
         target: "ethers-v5",
     },
     etherscan: {
-        apiKey: process.env.ETHERSCAN_API_KEY,
+        apiKey: process.env.ETHERSCAN_API_KEY
     }
 };
 
