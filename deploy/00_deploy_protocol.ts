@@ -1,7 +1,7 @@
 import { DeployFunction } from 'hardhat-deploy/types';
 import { THardhatRuntimeEnvironmentExtended } from '../helpers/types/THardhatRuntimeEnvironmentExtended';
 import { ethers, upgrades } from 'hardhat';
-import { LoanCore, OriginationController } from "../typechain";
+import { LoanCore, LoanCoreV2Mock, OriginationController } from "../typechain";
 
 const ORIGINATOR_ROLE = "0x59abfac6520ec36a6556b2a4dd949cc40007459bcd5cd2507f1e5cc77b6bc97e";
 const REPAYER_ROLE = "0x9c60024347074fd9de2c1e36003080d22dbc76a41ef87444d21e361bcb39118e";
@@ -34,29 +34,45 @@ const func: DeployFunction = async function (hre: THardhatRuntimeEnvironmentExte
   });
 
   /// ===== LoanCore =====
-  // deploy loan core via proxy pattern
-  const LoanCoreFactory = await ethers.getContractFactory("LoanCore");
-  const loanCore = <LoanCore>await upgrades.deployProxy(LoanCoreFactory, [feeController.address, borrowerNote.address, lenderNote.address], { kind: "uups" });
-  await loanCore.deployed();
-  console.log("deployed LoanCore to: ", loanCore.address)
-
-  // verify initialized
-  // const res = await loanCore.borrowerNote();
-  // console.log(res)
-
+  const loanCore = await deploy('LoanCore_via_UUPS', {
+    contract: 'LoanCore',
+    from: deployer,
+    args: [],
+    log: true,
+    proxy: {
+      owner: deployer,
+      proxyContract: 'ERC1967Proxy',
+      proxyArgs: ['{implementation}', '{data}'],
+      execute: {
+        init: {
+          methodName: "initialize",
+          args: [deployer, feeController.address, borrowerNote.address, lenderNote.address],
+        },
+      },
+    }
+  });
 
   /// ===== OriginationController =====
-  const OriginationControllerFactory = await ethers.getContractFactory("OriginationController");
-  const originationController = <OriginationController>await upgrades.deployProxy(OriginationControllerFactory, [loanCore.address], { kind: "uups" });
-  await originationController.deployed();
-  console.log("deployed Origination Controller to: ", originationController.address)
-
-  // verify initialized
-  //const res = await originationController.loanCore();
-  //console.log(res);
+  await deploy('OriginationController_via_UUPS', {
+    contract: 'OriginationController',
+    from: deployer,
+    args: [],
+    log: true,
+    proxy: {
+      owner: deployer,
+      proxyContract: 'ERC1967Proxy',
+      proxyArgs: ['{implementation}', '{data}'],
+      execute: {
+        init: {
+          methodName: "initialize",
+          args: [deployer, loanCore.address],
+        },
+      },
+    }
+  });
 
   /// ===== RepaymentController =====
-  const repaymentController = await deploy('RepaymentController', {
+  await deploy('RepaymentController', {
     from: deployer,
     args: [loanCore.address, borrowerNote.address, lenderNote.address],
     log: true,
@@ -64,14 +80,15 @@ const func: DeployFunction = async function (hre: THardhatRuntimeEnvironmentExte
 
 
   /// ===== GrantRoles =====
-  const updateRepaymentControllerPermissions = await loanCore.grantRole(REPAYER_ROLE, repaymentController.address);
-  await updateRepaymentControllerPermissions.wait();
-
-  const updateOriginationControllerPermissions = await loanCore.grantRole(
-          ORIGINATOR_ROLE,
-          originationController.address,
-      );
-  await updateOriginationControllerPermissions.wait();
+//   const updateRepaymentControllerPermissions = await loanCore.grantRole(REPAYER_ROLE, repaymentController.address);
+//   await updateRepaymentControllerPermissions.wait();
+//
+//   const updateOriginationControllerPermissions = await loanCore.grantRole(
+//           ORIGINATOR_ROLE,
+//           originationController.address,
+//       );
+//   await updateOriginationControllerPermissions.wait();
+//
 
 };
 

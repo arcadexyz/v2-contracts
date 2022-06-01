@@ -2,15 +2,15 @@
 
 pragma solidity ^0.8.11;
 
-import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/cryptography/draft-EIP712Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol";
+import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
+import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import "@openzeppelin/contracts/utils/Counters.sol";
 
-import "./interfaces/IERC721PermitUpgradeable.sol";
+import "./interfaces/IERC721Permit.sol";
 
 import { ERC721P_DeadlineExpired, ERC721P_NotTokenOwner, ERC721P_InvalidSignature } from "./errors/LendingUtils.sol";
 
@@ -31,13 +31,13 @@ import { ERC721P_DeadlineExpired, ERC721P_NotTokenOwner, ERC721P_InvalidSignatur
  * _Available since v3.4._
  */
 abstract contract ERC721PermitUpgradeable is
-    ERC721Upgradeable,
-    IERC721PermitUpgradeable,
-    AccessControlUpgradeable,
-    EIP712Upgradeable,
+    ERC721,
+    IERC721Permit,
+    AccessControl,
+    EIP712,
     UUPSUpgradeable
 {
-    using CountersUpgradeable for CountersUpgradeable.Counter;
+    using Counters for Counters.Counter;
 
     // ============================================ STATE ==============================================
 
@@ -46,7 +46,7 @@ abstract contract ERC721PermitUpgradeable is
         keccak256("Permit(address owner,address spender,uint256 tokenId,uint256 nonce,uint256 deadline)");
 
     /// @dev Nonce for permit signatures.
-    mapping(address => CountersUpgradeable.Counter) private _nonces;
+    mapping(address => Counters.Counter) private _nonces;
 
     // ========================================== INITIALIZER ===========================================
 
@@ -54,13 +54,8 @@ abstract contract ERC721PermitUpgradeable is
      * @dev Initializes the {EIP712} domain separator using the `name` parameter, and setting `version` to `"1"`.
      *
      * It's a good idea to use the same `name` that is defined as the ERC721 token name.
-     *
-     * @param name                  The name of the signing domain.
      */
-    function __ERC721PermitUpgradeable_init(string memory name) internal {
-        __EIP712_init(name, "1");
-        __AccessControl_init();
-        __UUPSUpgradeable_init();
+    function __ERC721PermitUpgradeable_init() internal {
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
     }
 
@@ -113,7 +108,7 @@ abstract contract ERC721PermitUpgradeable is
         bytes32 s
     ) public virtual override {
         if (block.timestamp > deadline) revert ERC721P_DeadlineExpired(deadline);
-        if (owner != ERC721Upgradeable.ownerOf(tokenId)) revert ERC721P_NotTokenOwner(owner);
+        if (owner != ERC721.ownerOf(tokenId)) revert ERC721P_NotTokenOwner(owner);
 
         bytes32 structHash = keccak256(
             abi.encode(_PERMIT_TYPEHASH, owner, spender, tokenId, _useNonce(owner), deadline)
@@ -121,7 +116,7 @@ abstract contract ERC721PermitUpgradeable is
 
         bytes32 hash = _hashTypedDataV4(structHash);
 
-        address signer = ECDSAUpgradeable.recover(hash, v, r, s);
+        address signer = ECDSA.recover(hash, v, r, s);
         if (signer != owner) revert ERC721P_InvalidSignature(signer);
 
         _approve(spender, tokenId);
@@ -160,7 +155,7 @@ abstract contract ERC721PermitUpgradeable is
      * @return current              The current nonce, before incrementation.
      */
     function _useNonce(address owner) internal virtual returns (uint256 current) {
-        CountersUpgradeable.Counter storage nonce = _nonces[owner];
+        Counters.Counter storage nonce = _nonces[owner];
         current = nonce.current();
         nonce.increment();
     }
@@ -172,7 +167,7 @@ abstract contract ERC721PermitUpgradeable is
         public
         view
         virtual
-        override(AccessControlUpgradeable, ERC721Upgradeable, IERC165Upgradeable)
+        override(AccessControl, ERC721, IERC165)
         returns (bool)
     {
         return super.supportsInterface(interfaceId);

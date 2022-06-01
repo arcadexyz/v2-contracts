@@ -2,14 +2,14 @@
 
 pragma solidity ^0.8.11;
 
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol";
+import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/utils/Counters.sol";
 
 import "./interfaces/ICallDelegator.sol";
 import "./interfaces/IPromissoryNote.sol";
@@ -20,7 +20,11 @@ import "./interfaces/ILoanCore.sol";
 import "./InstallmentsCalc.sol";
 import "./PromissoryNote.sol";
 import "./vault/OwnableERC721.sol";
+
+import "hardhat-deploy/solc_0.8/proxy/Proxied.sol";
+
 import { LC_ZeroAddress, LC_CollateralInUse, LC_CollateralNotInUse, LC_InvalidState, LC_NotExpired, LC_BalanceGTZero, LC_NonceUsed, LC_LoanNotDefaulted } from "./errors/Lending.sol";
+
 
 /**
  * @title LoanCore
@@ -38,13 +42,14 @@ contract LoanCore is
     ILoanCore,
     Initializable,
     InstallmentsCalc,
-    AccessControlUpgradeable,
-    PausableUpgradeable,
+    AccessControl,
+    Pausable,
     ICallDelegator,
-    UUPSUpgradeable
+    UUPSUpgradeable,
+    Proxied
 {
-    using CountersUpgradeable for CountersUpgradeable.Counter;
-    using SafeERC20Upgradeable for IERC20Upgradeable;
+    using Counters for Counters.Counter;
+    using SafeERC20 for IERC20;
 
     // ============================================ STATE ==============================================
 
@@ -63,7 +68,7 @@ contract LoanCore is
 
     // =================== Loan State =====================
 
-    CountersUpgradeable.Counter private loanIdTracker;
+    Counters.Counter private loanIdTracker;
     mapping(uint256 => LoanLibrary.LoanData) private loans;
     // key is hash of (collateralAddress, collateralId)
     mapping(bytes32 => bool) private collateralInUse;
@@ -88,17 +93,21 @@ contract LoanCore is
      * @param _feeController      The address of the contract governing protocol fees.
      */
     function initialize(
+        address owner,
         IFeeController _feeController,
         IPromissoryNote _borrowerNote,
         IPromissoryNote _lenderNote
-    ) public initializer {
+    ) public initializer proxied {
         if (address(_feeController) == address(0)) revert LC_ZeroAddress();
         if (address(_borrowerNote) == address(0)) revert LC_ZeroAddress();
         if (address(_lenderNote) == address(0)) revert LC_ZeroAddress();
 
         // only those with FEE_CLAIMER_ROLE can update or grant FEE_CLAIMER_ROLE
-        __AccessControl_init();
-        __UUPSUpgradeable_init_unchained();
+
+        // solhint-disable-next-line security/no-inline-assembly
+        assembly {
+            sstore(0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103, owner)
+        }
 
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
         _setupRole(FEE_CLAIMER_ROLE, _msgSender());
@@ -168,11 +177,11 @@ contract LoanCore is
         // Distribute notes and principal
         _mintLoanNotes(loanId, borrower, lender);
 
-        IERC721Upgradeable(terms.collateralAddress).transferFrom(_msgSender(), address(this), terms.collateralId);
+        IERC721(terms.collateralAddress).transferFrom(_msgSender(), address(this), terms.collateralId);
 
-        IERC20Upgradeable(terms.payableCurrency).safeTransferFrom(_msgSender(), address(this), terms.principal);
+        IERC20(terms.payableCurrency).safeTransferFrom(_msgSender(), address(this), terms.principal);
 
-        IERC20Upgradeable(terms.payableCurrency).safeTransfer(borrower, _getPrincipalLessFees(terms.principal));
+        IERC20(terms.payableCurrency).safeTransfer(borrower, _getPrincipalLessFees(terms.principal));
 
         emit LoanStarted(loanId, lender, borrower);
     }
@@ -194,7 +203,7 @@ contract LoanCore is
         uint256 returnAmount = getFullInterestAmount(data.terms.principal, data.terms.interestRate);
 
         // transfer from msg.sender to this contract
-        IERC20Upgradeable(data.terms.payableCurrency).safeTransferFrom(_msgSender(), address(this), returnAmount);
+        IERC20(data.terms.payableCurrency).safeTransferFrom(_msgSender(), address(this), returnAmount);
 
         // get promissory notes from two parties involved
         address lender = lenderNote.ownerOf(loanId);
@@ -210,8 +219,8 @@ contract LoanCore is
         // asset and collateral redistribution
         // Not using safeTransfer to prevent lenders from blocking
         // loan receipt and forcing a default
-        IERC20Upgradeable(data.terms.payableCurrency).transfer(lender, returnAmount);
-        IERC721Upgradeable(data.terms.collateralAddress).transferFrom(address(this), borrower, data.terms.collateralId);
+        IERC20(data.terms.payableCurrency).transfer(lender, returnAmount);
+        IERC721(data.terms.collateralAddress).transferFrom(address(this), borrower, data.terms.collateralId);
 
         emit LoanRepaid(loanId);
     }
@@ -255,7 +264,7 @@ contract LoanCore is
         _burnLoanNotes(loanId);
 
         // collateral redistribution
-        IERC721Upgradeable(data.terms.collateralAddress).transferFrom(address(this), lender, data.terms.collateralId);
+        IERC721(data.terms.collateralAddress).transferFrom(address(this), lender, data.terms.collateralId);
 
         emit LoanClaimed(loanId);
     }
@@ -293,7 +302,7 @@ contract LoanCore is
         data.state = LoanLibrary.LoanState.Repaid;
 
         address oldLender = lenderNote.ownerOf(oldLoanId);
-        IERC20Upgradeable payableCurrency = IERC20Upgradeable(data.terms.payableCurrency);
+        IERC20 payableCurrency = IERC20(data.terms.payableCurrency);
 
         if (data.terms.numInstallments > 0) {
             (uint256 interestDue, uint256 lateFees, uint256 numMissedPayments) = _calcAmountsDue(
@@ -330,7 +339,7 @@ contract LoanCore is
         // Distribute notes and principal
         _mintLoanNotes(newLoanId, borrower, lender);
 
-        IERC20Upgradeable(payableCurrency).safeTransferFrom(_msgSender(), address(this), _settledAmount);
+        IERC20(payableCurrency).safeTransferFrom(_msgSender(), address(this), _settledAmount);
         _transferIfNonzero(payableCurrency, oldLender, _amountToOldLender);
         _transferIfNonzero(payableCurrency, lender, _amountToLender);
         _transferIfNonzero(payableCurrency, borrower, _amountToBorrower);
@@ -368,7 +377,7 @@ contract LoanCore is
 
         // calculate total sent by borrower and transferFrom repayment controller to this address
         uint256 paymentTotal = _paymentToPrincipal + _paymentToLateFees + _paymentToInterest;
-        IERC20Upgradeable(data.terms.payableCurrency).safeTransferFrom(_msgSender(), address(this), paymentTotal);
+        IERC20(data.terms.payableCurrency).safeTransferFrom(_msgSender(), address(this), paymentTotal);
 
         // get the lender and borrower
         address lender = lenderNote.ownerOf(_loanId);
@@ -397,11 +406,11 @@ contract LoanCore is
         // Send payment to lender.
         // Not using safeTransfer to prevent lenders from blocking
         // loan receipt and forcing a default
-        IERC20Upgradeable(data.terms.payableCurrency).transfer(lender, boundedPaymentTotal);
+        IERC20(data.terms.payableCurrency).transfer(lender, boundedPaymentTotal);
 
         // If repaid, send collateral to borrower
         if (data.state == LoanLibrary.LoanState.Repaid) {
-            IERC721Upgradeable(data.terms.collateralAddress).transferFrom(
+            IERC721(data.terms.collateralAddress).transferFrom(
                 address(this),
                 borrower,
                 data.terms.collateralId
@@ -409,7 +418,7 @@ contract LoanCore is
 
             if (_paymentToPrincipal > _balanceToPay) {
                 // Borrower overpaid, so send refund
-                IERC20Upgradeable(data.terms.payableCurrency).safeTransfer(
+                IERC20(data.terms.payableCurrency).safeTransfer(
                     borrower,
                     _paymentToPrincipal - _balanceToPay
                 );
@@ -525,7 +534,7 @@ contract LoanCore is
      *
      * @param token                 The contract address of the token to claim fees for.
      */
-    function claimFees(IERC20Upgradeable token) external onlyRole(FEE_CLAIMER_ROLE) {
+    function claimFees(IERC20 token) external onlyRole(FEE_CLAIMER_ROLE) {
         // any token balances remaining on this contract are fees owned by the protocol
         uint256 amount = token.balanceOf(address(this));
         token.safeTransfer(_msgSender(), amount);
@@ -652,7 +661,7 @@ contract LoanCore is
      * @param amount                The amount of tokens to transfer.
      */
     function _transferIfNonzero(
-        IERC20Upgradeable token,
+        IERC20 token,
         address to,
         uint256 amount
     ) internal {

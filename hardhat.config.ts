@@ -12,6 +12,7 @@ import "./tasks/account";
 import "./tasks/clean";
 import "./tasks/functions/generate";
 import "hardhat-deploy";
+import "hardhat-deploy-tenderly";
 
 import { resolve } from "path";
 
@@ -41,7 +42,7 @@ const chainIds = {
 let mnemonic: string;
 mnemonic = getMnemonic();
 if (!mnemonic) {
-    console.log("***SET PK IN ENVIRONMENT VARIABLES***");
+    console.log("*** Setup PK in 'generated' folder, see docs folder for instruciton ***");
 }
 // fork mainnet?
 const forkMainnet = process.env.FORK_MAINNET;
@@ -121,7 +122,7 @@ const config: HardhatUserConfig = {
     },
     gasReporter: {
         currency: "USD",
-        enabled: process.env.REPORT_GAS ? true : false,
+        enabled: true,
         excludeContracts: [],
         src: "./contracts",
         coinmarketcap: process.env.COINMARKETCAP_API_KEY,

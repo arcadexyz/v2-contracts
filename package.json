@@ -11,7 +11,7 @@
         "@nomiclabs/hardhat-ethers": "npm:hardhat-deploy-ethers",
         "@nomiclabs/hardhat-etherscan": "^2.1.7",
         "@nomiclabs/hardhat-waffle": "^2.0.1",
-        "@openzeppelin/contracts": "^4.0.0",
+        "@openzeppelin/contracts": "^4.4.2",
         "@typechain/ethers-v5": "^5.0.0",
         "@typechain/hardhat": "^1.0.1",
         "@types/chai": "^4.2.13",
@@ -95,19 +95,20 @@
         "test": "hardhat test",
         "typechain": "hardhat typechain",
         "bootstrap-with-loans": "npx hardhat --network localhost run scripts/bootstrap-state-with-loans.ts",
-        "bootstrap-no-loans": "npx hardhat --network localhost run scripts/bootstrap-state-no-loans.ts"
+        "bootstrap-no-loans": "npx hardhat --network localhost run scripts/bootstrap-state-no-loans.ts",
+        "verify": "hardhat run verify"
     },
     "dependencies": {
         "@ethersproject/address": "^5.6.0",
-        "@openzeppelin/contracts-upgradeable": "^4.5.2",
         "@openzeppelin/hardhat-upgrades": "^1.17.0",
         "@types/ethereumjs-util": "^6.1.0",
         "@types/qrcode-terminal": "^0.12.0",
         "bip39": "^3.0.4",
         "ethereumjs-wallet": "^1.0.2",
         "fs": "^0.0.1-security",
-        "hardhat-deploy": "0.11.5",
+        "hardhat-deploy": "0.11.10",
         "hardhat-deploy-ethers": "^0.3.0-beta.13",
+        "hardhat-deploy-tenderly": "^0.1.1",
         "hardhat-preprocessor": "^0.1.4",
         "qrcode-terminal": "^0.12.0"
     }

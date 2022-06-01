@@ -2,15 +2,15 @@
 
 pragma solidity ^0.8.11;
 
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/cryptography/draft-EIP712Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/Context.sol";
+import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/interfaces/IERC1271.sol";
 
 import "./interfaces/IOriginationController.sol";
@@ -22,6 +22,9 @@ import "./interfaces/ISignatureVerifier.sol";
 
 import "./InstallmentsCalc.sol";
 import "./verifiers/ItemsVerifier.sol";
+
+import "hardhat-deploy/solc_0.8/proxy/Proxied.sol";
+
 import { OC_ZeroAddress, OC_InvalidState, OC_InvalidVerifier, OC_BatchLengthMismatch, OC_PredicateFailed, OC_SelfApprove, OC_ApprovedOwnLoan, OC_InvalidSignature, OC_CallerNotParticipant, OC_PrincipalTooLow, OC_LoanDuration, OC_InterestRate, OC_NumberInstallments, OC_SignatureIsExpired, OC_RolloverCurrencyMismatch, OC_RolloverCollateralMismatch } from "./errors/Lending.sol";
 
 /**
@@ -38,14 +41,15 @@ import { OC_ZeroAddress, OC_InvalidState, OC_InvalidVerifier, OC_BatchLengthMism
 contract OriginationController is
     Initializable,
     InstallmentsCalc,
-    ContextUpgradeable,
+    Context,
     IOriginationController,
-    EIP712Upgradeable,
-    ReentrancyGuardUpgradeable,
-    OwnableUpgradeable,
-    UUPSUpgradeable
+    EIP712,
+    ReentrancyGuard,
+    Ownable,
+    UUPSUpgradeable,
+    Proxied
 {
-    using SafeERC20Upgradeable for IERC20Upgradeable;
+    using SafeERC20 for IERC20;
 
     // ============================================ STATE ==============================================
 
@@ -84,7 +88,7 @@ contract OriginationController is
      *  @dev Add Unsafe-allow comment to notify upgrades plugin to accept the constructor.
      */
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() initializer {}
+    constructor() initializer EIP712("OriginationController", "2") {}
 
     // ========================================== INITIALIZER ===========================================
 
@@ -98,11 +102,13 @@ contract OriginationController is
      * @param _loanCore                     The address of the loan core logic of the protocol.
      */
 
-    function initialize(address _loanCore) public initializer {
-        __EIP712_init("OriginationController", "2");
-        __Ownable_init_unchained();
-        __UUPSUpgradeable_init_unchained();
+    function initialize(address owner, address _loanCore) public initializer proxied {
         if (_loanCore == address(0)) revert OC_ZeroAddress();
+
+        // solhint-disable-next-line security/no-inline-assembly
+        assembly {
+            sstore(0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103, owner)
+        }
 
         loanCore = _loanCore;
     }
@@ -695,8 +701,8 @@ contract OriginationController is
         address lender
     ) internal nonReentrant returns (uint256 loanId) {
         // Take custody of funds
-        IERC20Upgradeable(loanTerms.payableCurrency).safeTransferFrom(lender, address(this), loanTerms.principal);
-        IERC20Upgradeable(loanTerms.payableCurrency).approve(loanCore, loanTerms.principal);
+        IERC20(loanTerms.payableCurrency).safeTransferFrom(lender, address(this), loanTerms.principal);
+        IERC20(loanTerms.payableCurrency).approve(loanCore, loanTerms.principal);
 
         IERC721(loanTerms.collateralAddress).transferFrom(borrower, address(this), loanTerms.collateralId);
         IERC721(loanTerms.collateralAddress).approve(loanCore, loanTerms.collateralId);
@@ -726,7 +732,7 @@ contract OriginationController is
         LoanLibrary.LoanTerms memory oldTerms = oldLoanData.terms;
 
         address oldLender = ILoanCore(loanCore).lenderNote().ownerOf(oldLoanId);
-        IERC20Upgradeable payableCurrency = IERC20Upgradeable(oldTerms.payableCurrency);
+        IERC20 payableCurrency = IERC20(oldTerms.payableCurrency);
         uint256 rolloverFee = ILoanCore(loanCore).feeController().getRolloverFee();
 
         // Settle amounts

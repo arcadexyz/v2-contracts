@@ -2,15 +2,18 @@
 
 pragma solidity ^0.8.11;
 
-import "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC1155/IERC1155Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
+import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/proxy/Clones.sol";
 
 import "../interfaces/IAssetVault.sol";
 import "../interfaces/IVaultFactory.sol";
-import "../ERC721PermitUpgradeable.sol";
+import "../ERC721Permit.sol";
 
 import { VF_InvalidTemplate, VF_TokenIdOutOfBounds, VF_NoTransferWithdrawEnabled } from "../errors/Vault.sol";
 
@@ -32,7 +35,7 @@ import { VF_InvalidTemplate, VF_TokenIdOutOfBounds, VF_NoTransferWithdrawEnabled
  * VaultFactory in order to determine their own contract owner. The VaultFactory contains
  * conveniences to allow switching between the address and uint256 formats.
  */
-contract VaultFactory is ERC721EnumerableUpgradeable, ERC721PermitUpgradeable, IVaultFactory {
+contract VaultFactory is ERC721Enumerable, ERC721Permit, IVaultFactory, Initializable, AccessControl, UUPSUpgradeable {
     // ============================================ STATE ==============================================
 
     /// @dev The template contract for asset vaults.
@@ -48,13 +51,11 @@ contract VaultFactory is ERC721EnumerableUpgradeable, ERC721PermitUpgradeable, I
      * @dev Added unsafe-allow comment to notify upgrades plugin to accept the constructor.
      */
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() initializer {}
+    constructor() initializer ERC721("Asset Wrapper V2", "AW-V2") ERC721Permit("Asset Wrapper V2") {}
 
     // ========================================== INITIALIZER ===========================================
 
     function initialize(address _template, address _whitelist) public initializer {
-        __ERC721_init("Asset Wrapper V2", "AW-V2");
-        __ERC721PermitUpgradeable_init("Asset Wrapper V2");
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
         if (_template == address(0)) revert VF_InvalidTemplate(_template);
         template = _template;
@@ -168,7 +169,7 @@ contract VaultFactory is ERC721EnumerableUpgradeable, ERC721PermitUpgradeable, I
         address from,
         address to,
         uint256 tokenId
-    ) internal virtual override(ERC721Upgradeable, ERC721EnumerableUpgradeable) {
+    ) internal virtual override(ERC721, ERC721Enumerable) {
         IAssetVault vault = IAssetVault(address(uint160(tokenId)));
         if (vault.withdrawEnabled()) revert VF_NoTransferWithdrawEnabled(tokenId);
 
@@ -182,7 +183,7 @@ contract VaultFactory is ERC721EnumerableUpgradeable, ERC721PermitUpgradeable, I
         public
         view
         virtual
-        override(ERC721PermitUpgradeable, ERC721EnumerableUpgradeable)
+        override(ERC721Enumerable, AccessControl, ERC721)
         returns (bool)
     {
         return super.supportsInterface(interfaceId);

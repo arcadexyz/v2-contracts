@@ -2,9 +2,9 @@
 
 pragma solidity ^0.8.11;
 
-import "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721Upgradeable.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
-interface IERC721PermitUpgradeable is IERC721Upgradeable {
+interface IERC721PermitUpgradeable is IERC721 {
     // ================ Permit Functionality ================
 
     function permit(
