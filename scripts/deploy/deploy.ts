@@ -1,9 +1,16 @@
 import { ethers, upgrades } from "hardhat";
 
+import proxyAddress from "../../.openzeppelin/ropsten.json"
+
 import { main as writeJson } from "../utils/verify/writeJson";
 import { SECTION_SEPARATOR, SUBSECTION_SEPARATOR } from "../utils/bootstrap-tools";
 
-import { ORIGINATOR_ROLE as DEFAULT_ORIGINATOR_ROLE, REPAYER_ROLE as DEFAULT_REPAYER_ROLE } from "../utils/constants";
+import {
+    ORIGINATOR_ROLE as DEFAULT_ORIGINATOR_ROLE,
+    REPAYER_ROLE as DEFAULT_REPAYER_ROLE,
+    WRAPPED_PUNKS as DEFAULT_WRAPPED_PUNKS,
+    CRYPTO_PUNKS as DEFAULT_CRYPTO_PUNKS
+    } from "../utils/constants";
 
 import {
     AssetVault,
@@ -14,7 +21,6 @@ import {
     OriginationController,
     CallWhitelist,
     VaultFactory,
-    PunkRouter,
 } from "../../typechain";
 
 export interface deploymentData {
@@ -45,14 +51,13 @@ export interface DeployedResources {
     originationController: OriginationController;
     whitelist: CallWhitelist;
     vaultFactory: VaultFactory;
-    punkRouter: PunkRouter;
 }
 
 export async function main(
     ORIGINATOR_ROLE = DEFAULT_ORIGINATOR_ROLE,
     REPAYER_ROLE = DEFAULT_REPAYER_ROLE,
-    WRAPPED_PUNKS = "0xb7F7F6C52F2e2fdb1963Eab30438024864c313F6",
-    CRYPTO_PUNKS = "0xb47e3cd837ddf8e4c57f05d70ab865de6e193bbb",
+    WRAPPED_PUNKS = DEFAULT_WRAPPED_PUNKS,
+    CRYPTO_PUNKS = DEFAULT_CRYPTO_PUNKS,
 ): Promise<DeployedResources> {
     // Hardhat always runs the compile task when running scripts through it.
     // If this runs in a standalone fashion you may want to call compile manually
@@ -84,7 +89,7 @@ export async function main(
     console.log("AssetVault deployed to:", assetVault.address);
 
     contractInfo["AssetVault"] = {
-        "contractAddress" : assetVault.address,
+        "contractAddress": assetVault.address,
 
         "constructorArgs": []
     };
@@ -103,10 +108,12 @@ export async function main(
 
     console.log("VaultFactory deployed to:", vaultFactory.address);
 
+    const factoryProxyAddress = proxyAddress.proxies[0].address
+    const factoryImplAddress = await upgrades.erc1967.getImplementationAddress(factoryProxyAddress)
     contractInfo["VaultFactory"] = {
-        "contractAddress" : vaultFactory.address,
+        "contractAddress": factoryImplAddress,
 
-        "constructorArgs": []
+        "constructorArgs": [assetVault.address, whitelist.address]
     };
 
     console.log(SUBSECTION_SEPARATOR);
@@ -118,7 +125,7 @@ export async function main(
     console.log("FeeController deployed to: ", feeController.address);
 
     contractInfo["FeeController"] = {
-        "contractAddress" :feeController.address,
+        "contractAddress": feeController.address,
 
         "constructorArgs": []
     };
@@ -164,10 +171,13 @@ export async function main(
 
     console.log("LoanCore deployed to:", loanCore.address);
 
-    contractInfo["LoanCore"] = {
-        "contractAddress" :loanCore.address,
+    const loanCoreProxyAddress = proxyAddress.proxies[1].address
+    const loanCoreImplAddress = await upgrades.erc1967.getImplementationAddress(loanCoreProxyAddress);
 
-        "constructorArgs": []
+    contractInfo["LoanCore"] = {
+        "contractAddress": loanCoreImplAddress,
+
+        "constructorArgs": [feeController.address, borrowerNote.address, lenderNote.address]
     };
 
     console.log(SUBSECTION_SEPARATOR);
@@ -179,16 +189,16 @@ export async function main(
     await repaymentController.deployed();
 
     console.log("RepaymentController deployed to:", repaymentController.address);
-
+console.log("187 ------------------------------------------------------------------------------------------------------")
     contractInfo["RepaymentController"] = {
-        "contractAddress" :repaymentController.address,
+        "contractAddress": repaymentController.address,
 
         "constructorArgs": []
     };
 
-    const updateRepaymentControllerPermissions = await loanCore.grantRole(REPAYER_ROLE, repaymentController.address);
-    await updateRepaymentControllerPermissions.wait();
-
+    // const updateRepaymentControllerPermissions = await loanCore.grantRole(REPAYER_ROLE, repaymentController.address);
+    // await updateRepaymentControllerPermissions.wait();
+console.log("196 ------------------------------------------------------------------------------------------------------")
     console.log(SUBSECTION_SEPARATOR);
 
     const OriginationControllerFactory = await ethers.getContractFactory("OriginationController");
@@ -199,32 +209,34 @@ export async function main(
 
     console.log("OriginationController deployed to:", originationController.address)
 
+    const originationContProxyAddress = proxyAddress.proxies[2].address
+    const originationContImplAddress = await upgrades.erc1967.getImplementationAddress(originationContProxyAddress)
     contractInfo["OriginationController"] = {
-        "contractAddress" :originationController.address,
+        "contractAddress": originationContImplAddress,
 
-        "constructorArgs": []
+        "constructorArgs": [loanCore.address]
     };
-
-    const updateOriginationControllerPermissions = await loanCore.grantRole(
-        ORIGINATOR_ROLE,
-        originationController.address,
-    );
-    await updateOriginationControllerPermissions.wait();
+console.log("212 ------------------------------------------------------------------------------------------------------")
+    // const updateOriginationControllerPermissions = await loanCore.grantRole(
+    //     ORIGINATOR_ROLE,
+    //     originationController.address,
+    // );
+    // await updateOriginationControllerPermissions.wait();
 
     console.log(SUBSECTION_SEPARATOR);
+console.log("220 ------------------------------------------------------------------------------------------------------")
+    // const PunkRouterFactory = await ethers.getContractFactory("PunkRouter");
+    // const punkRouter = <PunkRouter>await PunkRouterFactory.deploy(WRAPPED_PUNKS, CRYPTO_PUNKS);
+    // await punkRouter.deployed();
 
-    const PunkRouterFactory = await ethers.getContractFactory("PunkRouter");
-    const punkRouter = <PunkRouter>await PunkRouterFactory.deploy(WRAPPED_PUNKS, CRYPTO_PUNKS);
-    await punkRouter.deployed();
+    // console.log("PunkRouter deployed to:", punkRouter.address);
 
-    console.log("PunkRouter deployed to:", punkRouter.address);
+    // contractInfo["PunkRouter"] = {
+    //     "contractAddress" :punkRouter.address,
 
-    contractInfo["PunkRouter"] = {
-        "contractAddress" :punkRouter.address,
-
-        "constructorArgs": [WRAPPED_PUNKS, CRYPTO_PUNKS]
-    };
-
+    //     "constructorArgs": [WRAPPED_PUNKS, CRYPTO_PUNKS]
+    // };
+console.log("232 ------------------------------------------------------------------------------------------------------")
     writeJson(contractInfo)
     console.log(SECTION_SEPARATOR);
 
@@ -238,7 +250,6 @@ export async function main(
         originationController,
         whitelist,
         vaultFactory,
-        punkRouter
     };
 }
 

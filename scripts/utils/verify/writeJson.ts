@@ -39,13 +39,3 @@ export async function main(
             console.log(SECTION_SEPARATOR);
   }
 
-// // We recommend this pattern to be able to use async/await everywhere
-// // and properly handle errors.
-// if (require.main === module) {
-//     main(contractInfo)
-//         .then(() => process.exit(0))
-//         .catch((error: Error) => {
-//             console.error(error);
-//             process.exit(1);
-//         });
-// }
