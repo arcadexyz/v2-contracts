@@ -1,8 +1,7 @@
 import { ethers, upgrades } from "hardhat";
 
-import proxyAddress from "../../.openzeppelin/ropsten.json"
-
 import { main as writeJson } from "../utils/verify/writeJson";
+import { main as writeInfo } from "../utils/verify/writeInfo";
 import { SECTION_SEPARATOR, SUBSECTION_SEPARATOR } from "../utils/bootstrap-tools";
 
 import {
@@ -20,7 +19,7 @@ import {
     RepaymentController,
     OriginationController,
     CallWhitelist,
-    VaultFactory,
+    VaultFactory
 } from "../../typechain";
 
 export interface deploymentData {
@@ -65,35 +64,22 @@ export async function main(
     // await run("compile");
     // const signers: SignerWithAddress[] = await hre.ethers.getSigners();
     // const [admin] = signers;
-    let contractInfo: deploymentData = {}
 
     console.log(SECTION_SEPARATOR);
 
     const CallWhiteListFactory = await ethers.getContractFactory("CallWhitelist");
     const whitelist = <CallWhitelist>await CallWhiteListFactory.deploy();
 
-    console.log("CallWhiteList deployed to:", whitelist.address);
-
-    contractInfo["CallWhitelist"] = {
-        "contractAddress": whitelist.address,
-
-        "constructorArgs": []
-    };
-
+    const whitelistAddress = whitelist.address
+    console.log("CallWhiteList deployed to:", whitelistAddress);
     console.log(SUBSECTION_SEPARATOR);
 
     const AssetVaultFactory = await ethers.getContractFactory("AssetVault");
     const assetVault = <AssetVault>await AssetVaultFactory.deploy();
     await assetVault.deployed();
 
-    console.log("AssetVault deployed to:", assetVault.address);
-
-    contractInfo["AssetVault"] = {
-        "contractAddress": assetVault.address,
-
-        "constructorArgs": []
-    };
-
+    const assetVaultAddress = assetVault.address
+    console.log("AssetVault deployed to:", assetVaultAddress);
     console.log(SUBSECTION_SEPARATOR);
 
     const VaultFactoryFactory = await ethers.getContractFactory("VaultFactory");
@@ -106,80 +92,38 @@ export async function main(
         },
     );
 
+    const vaultFactoryProxyAddress = "0x0a7decEd17B4239D2E90ad2cc74411bbE442bED8"
     console.log("VaultFactory deployed to:", vaultFactory.address);
-
-    const factoryProxyAddress = proxyAddress.proxies[0].address
-    const factoryImplAddress = await upgrades.erc1967.getImplementationAddress(factoryProxyAddress)
-    contractInfo["VaultFactory"] = {
-        "contractAddress": factoryImplAddress,
-
-        "constructorArgs": [assetVault.address, whitelist.address]
-    };
-
     console.log(SUBSECTION_SEPARATOR);
 
     const FeeControllerFactory = await ethers.getContractFactory("FeeController");
     const feeController = <FeeController>await FeeControllerFactory.deploy();
     await feeController.deployed();
 
-    console.log("FeeController deployed to: ", feeController.address);
-
-    contractInfo["FeeController"] = {
-        "contractAddress": feeController.address,
-
-        "constructorArgs": []
-    };
-
+    const feeControllerAddress = feeController.address
+    console.log("FeeController deployed to: ", feeControllerAddress);
     console.log(SUBSECTION_SEPARATOR);
 
     const PromissoryNoteFactory = await ethers.getContractFactory("PromissoryNote");
     const borrowerNote = <PromissoryNote>await PromissoryNoteFactory.deploy("Arcade.xyz BorrowerNote", "aBN");
     await borrowerNote.deployed();
 
+    const borrowerNoteAddress = borrowerNote.address
     console.log("BorrowerNote deployed to:", borrowerNote.address);
 
     const lenderNote = <PromissoryNote>await PromissoryNoteFactory.deploy("Arcade.xyz LenderNote", "aLN");
     await lenderNote.deployed();
 
-    console.log("LenderNote deployed to:", lenderNote.address);
-
-    let promissoryNoteDataBn: PromissoryNoteTypeBn = {
-
-            "contractAddress": borrowerNote.address,
-
-            "constructorArgs": ["Arcade.xyz BorrowerNote", "aBN"]
-
-    };
-
-    contractInfo["BorrowerNote"] = promissoryNoteDataBn
-
-    let promissoryNoteDataLn: PromissoryNoteTypeLn = {
-
-        "contractAddress": lenderNote.address,
-
-        "constructorArgs": ["Arcade.xyz LenderNote", "aLN"]
-
-    };
-
-    contractInfo["LenderNote"] = promissoryNoteDataLn
-
+    const lenderNoteAddress = lenderNote.address
+    console.log("LenderNote deployed to:", lenderNoteAddress);
     console.log(SUBSECTION_SEPARATOR);
 
     const LoanCoreFactory = await ethers.getContractFactory("LoanCore");
     const loanCore = <LoanCore>await upgrades.deployProxy(LoanCoreFactory, [feeController.address, borrowerNote.address, lenderNote.address], { kind: "uups" });
     await loanCore.deployed();
 
+    const loanCoreProxyAddress = "0x761163b497ebd35ABA78978203D767b74D6Bc067"
     console.log("LoanCore deployed to:", loanCore.address);
-
-    const loanCoreProxyAddress = proxyAddress.proxies[1].address
-    const loanCoreImplAddress = await upgrades.erc1967.getImplementationAddress(loanCoreProxyAddress);
-
-    contractInfo["LoanCore"] = {
-        "contractAddress": loanCoreImplAddress,
-
-        "constructorArgs": [feeController.address, borrowerNote.address, lenderNote.address]
-    };
-
     console.log(SUBSECTION_SEPARATOR);
 
     const RepaymentControllerFactory = await ethers.getContractFactory("RepaymentController");
@@ -188,14 +132,9 @@ export async function main(
     );
     await repaymentController.deployed();
 
-    console.log("RepaymentController deployed to:", repaymentController.address);
+    const repaymentContAddress = repaymentController.address
+    console.log("RepaymentController deployed to:", repaymentContAddress);
 console.log("187 ------------------------------------------------------------------------------------------------------")
-    contractInfo["RepaymentController"] = {
-        "contractAddress": repaymentController.address,
-
-        "constructorArgs": []
-    };
-
     // const updateRepaymentControllerPermissions = await loanCore.grantRole(REPAYER_ROLE, repaymentController.address);
     // await updateRepaymentControllerPermissions.wait();
 console.log("196 ------------------------------------------------------------------------------------------------------")
@@ -207,15 +146,8 @@ console.log("196 ---------------------------------------------------------------
     );
     await originationController.deployed();
 
+    const originationContProxyAddress = "0xaA9B7AC3180Ec6735dCf1d03eF5cA011E2c30EA0"
     console.log("OriginationController deployed to:", originationController.address)
-
-    const originationContProxyAddress = proxyAddress.proxies[2].address
-    const originationContImplAddress = await upgrades.erc1967.getImplementationAddress(originationContProxyAddress)
-    contractInfo["OriginationController"] = {
-        "contractAddress": originationContImplAddress,
-
-        "constructorArgs": [loanCore.address]
-    };
 console.log("212 ------------------------------------------------------------------------------------------------------")
     // const updateOriginationControllerPermissions = await loanCore.grantRole(
     //     ORIGINATOR_ROLE,
@@ -237,7 +169,20 @@ console.log("220 ---------------------------------------------------------------
     //     "constructorArgs": [WRAPPED_PUNKS, CRYPTO_PUNKS]
     // };
 console.log("232 ------------------------------------------------------------------------------------------------------")
-    writeJson(contractInfo)
+    console.log("Write to deployments json...");
+    await writeJson(
+        assetVaultAddress,
+        feeControllerAddress,
+        borrowerNoteAddress,
+        lenderNoteAddress,
+        repaymentContAddress,
+        whitelistAddress,
+        vaultFactoryProxyAddress,
+        loanCoreProxyAddress,
+        originationContProxyAddress
+    )
+    //writeInfo(assetVaultAddress, feeControllerAddress, borrowerNoteAddress, lenderNoteAddress, repaymentContAddress, whitelistAddress, vaultFactoryAddress, loanCoreAddress, originationContAddress)
+    //writeJson(contractInfo)
     console.log(SECTION_SEPARATOR);
 
     return {
@@ -249,7 +194,7 @@ console.log("232 ---------------------------------------------------------------
         repaymentController,
         originationController,
         whitelist,
-        vaultFactory,
+        vaultFactory
     };
 }
 
