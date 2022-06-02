@@ -4,7 +4,6 @@ import hre from "hardhat";
 import { contractData } from './deploy/deploy'
 
 import { SECTION_SEPARATOR, SUBSECTION_SEPARATOR } from "./utils/bootstrap-tools";
-import "../tasks/verify-task";
 
 async function verifyArtifacts(contractName: string, contractAddress: string, constructorArgs: any[]) {
     console.log(`${contractName}: ${contractAddress}`)
@@ -22,9 +21,8 @@ async function verifyArtifacts(contractName: string, contractAddress: string, co
 // get data from deployments json to run verify artifacts
 export async function main(): Promise<void> {
     // retrieve command line args array
-    console.log("25 ---------------------")
     const args = process.argv.slice(2)
-    console.log("26 ---------------------",args)
+
     // assemble args to access the relevant deplyment json in .deployment
     const file = `./.deployments/${args[0]}/${args[0]}-${args[1]}.json`
 
