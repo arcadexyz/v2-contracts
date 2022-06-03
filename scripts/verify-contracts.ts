@@ -35,7 +35,6 @@ export async function main(): Promise<void> {
 
     // loop through jsonData to run verifyArtifacts function
     for (const property in jsonData) {
-    //     console.log("property", property)
     let dataFromJson = <contractData>jsonData[property]
     await verifyArtifacts(property, dataFromJson.contractAddress, dataFromJson.constructorArgs)
     }
