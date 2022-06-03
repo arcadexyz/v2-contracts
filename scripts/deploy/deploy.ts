@@ -1,7 +1,6 @@
 import hre, { ethers, upgrades } from "hardhat";
 
 import { main as writeJson } from "../utils/verify/writeJson";
-import { main as writeInfo } from "../utils/verify/writeInfo";
 import { SECTION_SEPARATOR, SUBSECTION_SEPARATOR } from "../utils/bootstrap-tools";
 
 import {
@@ -19,7 +18,8 @@ import {
     RepaymentController,
     OriginationController,
     CallWhitelist,
-    VaultFactory
+    VaultFactory,
+    PunkRouter
 } from "../../typechain";
 
 export interface deploymentData {
@@ -50,6 +50,7 @@ export interface DeployedResources {
     originationController: OriginationController;
     whitelist: CallWhitelist;
     vaultFactory: VaultFactory;
+    punkRouter: PunkRouter;
 }
 
 export async function main(
@@ -62,8 +63,6 @@ export async function main(
     // If this runs in a standalone fashion you may want to call compile manually
     // to make sure everything is compiled
     // await run("compile");
-    // const signers: SignerWithAddress[] = await hre.ethers.getSigners();
-    // const [admin] = signers;
 
     console.log(SECTION_SEPARATOR);
 
@@ -134,10 +133,10 @@ export async function main(
 
     const repaymentContAddress = repaymentController.address
     console.log("RepaymentController deployed to:", repaymentContAddress);
-console.log("187 ------------------------------------------------------------------------------------------------------")
+
     // const updateRepaymentControllerPermissions = await loanCore.grantRole(REPAYER_ROLE, repaymentController.address);
     // await updateRepaymentControllerPermissions.wait();
-console.log("196 ------------------------------------------------------------------------------------------------------")
+
     console.log(SUBSECTION_SEPARATOR);
 
     const OriginationControllerFactory = await ethers.getContractFactory("OriginationController");
@@ -148,7 +147,7 @@ console.log("196 ---------------------------------------------------------------
 
     const originationContProxyAddress = originationController.address
     console.log("OriginationController proxy deployed to:", originationContProxyAddress)
-console.log("212 ------------------------------------------------------------------------------------------------------")
+
     // const updateOriginationControllerPermissions = await loanCore.grantRole(
     //     ORIGINATOR_ROLE,
     //     originationController.address,
@@ -156,20 +155,14 @@ console.log("212 ---------------------------------------------------------------
     // await updateOriginationControllerPermissions.wait();
 
     console.log(SUBSECTION_SEPARATOR);
-console.log("220 ------------------------------------------------------------------------------------------------------")
-    // const PunkRouterFactory = await ethers.getContractFactory("PunkRouter");
-    // const punkRouter = <PunkRouter>await PunkRouterFactory.deploy(WRAPPED_PUNKS, CRYPTO_PUNKS);
-    // await punkRouter.deployed();
 
-    // console.log("PunkRouter deployed to:", punkRouter.address);
+    const PunkRouterFactory = await ethers.getContractFactory("PunkRouter");
+    const punkRouter = <PunkRouter>await PunkRouterFactory.deploy(WRAPPED_PUNKS, CRYPTO_PUNKS);
+    await punkRouter.deployed();
 
-    // contractInfo["PunkRouter"] = {
-    //     "contractAddress" :punkRouter.address,
+    console.log("PunkRouter deployed to:", punkRouter.address);
 
-    //     "constructorArgs": [WRAPPED_PUNKS, CRYPTO_PUNKS]
-    // };
-console.log("232 ------------------------------------------------------------------------------------------------------")
-    console.log("Write to deployments json...");
+    console.log("Writing to deployments json file...");
     await writeJson(
         assetVaultAddress,
         feeControllerAddress,
@@ -193,7 +186,8 @@ console.log("232 ---------------------------------------------------------------
         repaymentController,
         originationController,
         whitelist,
-        vaultFactory
+        vaultFactory,
+        punkRouter
     };
 }
 
