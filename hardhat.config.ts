@@ -105,7 +105,7 @@ function createMainnetConfig(): NetworkUserConfig {
 const optimizerEnabled = process.env.DISABLE_OPTIMIZER ? false : true;
 
 const config: HardhatUserConfig = {
-    defaultNetwork: "ropsten",
+    defaultNetwork: "hardhat",
     gasReporter: {
         currency: "USD",
         enabled: process.env.REPORT_GAS ? true : false,
