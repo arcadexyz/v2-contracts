@@ -134,8 +134,8 @@ export async function main(
     const repaymentContAddress = repaymentController.address
     console.log("RepaymentController deployed to:", repaymentContAddress);
 
-    // const updateRepaymentControllerPermissions = await loanCore.grantRole(REPAYER_ROLE, repaymentController.address);
-    // await updateRepaymentControllerPermissions.wait();
+    const updateRepaymentControllerPermissions = await loanCore.grantRole(REPAYER_ROLE, repaymentController.address);
+    await updateRepaymentControllerPermissions.wait();
 
     console.log(SUBSECTION_SEPARATOR);
 
@@ -148,11 +148,11 @@ export async function main(
     const originationContProxyAddress = originationController.address
     console.log("OriginationController proxy deployed to:", originationContProxyAddress)
 
-    // const updateOriginationControllerPermissions = await loanCore.grantRole(
-    //     ORIGINATOR_ROLE,
-    //     originationController.address,
-    // );
-    // await updateOriginationControllerPermissions.wait();
+    const updateOriginationControllerPermissions = await loanCore.grantRole(
+        ORIGINATOR_ROLE,
+        originationController.address,
+    );
+    await updateOriginationControllerPermissions.wait();
 
     console.log(SUBSECTION_SEPARATOR);
 
@@ -161,6 +161,7 @@ export async function main(
     await punkRouter.deployed();
 
     console.log("PunkRouter deployed to:", punkRouter.address);
+    console.log(SECTION_SEPARATOR);
 
     console.log("Writing to deployments json file...");
     await writeJson(

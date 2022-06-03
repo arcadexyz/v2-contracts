@@ -10,7 +10,6 @@ export interface deploymentData {
     [contractName: string]: contractData | PromissoryNoteTypeBn | PromissoryNoteTypeLn
 }
 
-//let contractInfo;
 export async function main(
     assetVaultAddress: string,
     feeControllerAddress: string,
@@ -56,9 +55,7 @@ export async function main(
                 )
             );
 
-            console.log(SECTION_SEPARATOR);
             console.log("Contract info written to: ", `${networkName} ${timestamp}`);
-
   }
 
 
