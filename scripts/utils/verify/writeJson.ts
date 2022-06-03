@@ -1,4 +1,4 @@
-const fs = require('fs');
+const fs = require("fs");
 import hre from "hardhat";
 
 import { main as writeInfo } from "./writeInfo";
@@ -7,7 +7,7 @@ import { contractData, PromissoryNoteTypeBn, PromissoryNoteTypeLn } from "../../
 import { SECTION_SEPARATOR } from "../bootstrap-tools";
 
 export interface deploymentData {
-    [contractName: string]: contractData | PromissoryNoteTypeBn | PromissoryNoteTypeLn
+    [contractName: string]: contractData | PromissoryNoteTypeBn | PromissoryNoteTypeLn;
 }
 
 export async function main(
@@ -19,43 +19,34 @@ export async function main(
     whitelistAddress: string,
     vaultFactoryAddress: string,
     loanCoreAddress: string,
-    originationContAddress: string
-  ): Promise<void> {
-            const timestamp = new Date().getTime() * 1000
-            const networkName = hre.network.name
-            const deploymentsFolder = `./.deployments/`
-            const jsonFile = `${networkName}-${timestamp}.json`
+    originationContAddress: string,
+): Promise<void> {
+    const timestamp = new Date().getTime() * 1000;
+    const networkName = hre.network.name;
+    const deploymentsFolder = `./.deployments/`;
+    const jsonFile = `${networkName}-${timestamp}.json`;
 
-            if (!fs.existsSync(deploymentsFolder)) {
-                fs.mkdirSync(deploymentsFolder);
-            }
+    if (!fs.existsSync(deploymentsFolder)) {
+        fs.mkdirSync(deploymentsFolder);
+    }
 
-            if (!fs.existsSync(deploymentsFolder + `${networkName}`)) {
-                fs.mkdirSync(deploymentsFolder + `${networkName}`);
-            }
+    if (!fs.existsSync(deploymentsFolder + `${networkName}`)) {
+        fs.mkdirSync(deploymentsFolder + `${networkName}`);
+    }
 
-            await writeInfo(
-                assetVaultAddress,
-                feeControllerAddress,
-                borrowerNoteAddress,
-                lenderNoteAddress,
-                repaymentContAddress,
-                whitelistAddress,
-                vaultFactoryAddress,
-                loanCoreAddress,
-                originationContAddress
-            )
+    await writeInfo(
+        assetVaultAddress,
+        feeControllerAddress,
+        borrowerNoteAddress,
+        lenderNoteAddress,
+        repaymentContAddress,
+        whitelistAddress,
+        vaultFactoryAddress,
+        loanCoreAddress,
+        originationContAddress,
+    );
 
-            fs.writeFileSync(
-            deploymentsFolder  + `${networkName}/` + jsonFile,
-            JSON.stringify(
-                contractInfo,
-                undefined,
-                2
-                )
-            );
+    fs.writeFileSync(deploymentsFolder + `${networkName}/` + jsonFile, JSON.stringify(contractInfo, undefined, 2));
 
-            console.log("Contract info written to: ", `${networkName} ${timestamp}`);
-  }
-
-
+    console.log("Contract info written to: ", `${networkName} ${timestamp}`);
+}

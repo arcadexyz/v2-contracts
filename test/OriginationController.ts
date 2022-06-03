@@ -79,10 +79,12 @@ const fixture = async (): Promise<TestContext> => {
     const lenderNote = <PromissoryNote>await deploy("PromissoryNote", deployer, ["Arcade.xyz LenderNote", "aLN"]);
 
     const LoanCore = await hre.ethers.getContractFactory("LoanCore");
-    const loanCore = <LoanCore>(
-        await upgrades.deployProxy(LoanCore, [feeController.address, borrowerNote.address, lenderNote.address], {
+    const loanCore = <LoanCore>await upgrades.deployProxy(
+        LoanCore,
+        [feeController.address, borrowerNote.address, lenderNote.address],
+        {
             kind: "uups",
-        })
+        },
     );
 
     // Grant correct permissions for promissory note

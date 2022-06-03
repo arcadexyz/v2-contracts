@@ -1,12 +1,9 @@
 import { upgrades } from "hardhat";
 
-
-import { SECTION_SEPARATOR, SUBSECTION_SEPARATOR } from "../bootstrap-tools";
-
 import { deploymentData, PromissoryNoteTypeBn, PromissoryNoteTypeLn } from "../../deploy/deploy";
 
-export let contractInfo: deploymentData = {}
-export async function main (
+export let contractInfo: deploymentData = {};
+export async function main(
     assetVaultAddress: string,
     feeControllerAddress: string,
     borrowerNoteAddress: string,
@@ -15,73 +12,67 @@ export async function main (
     whitelistAddress: string,
     vaultFactoryAddress: string,
     loanCoreAddress: string,
-    originationContAddress: string
+    originationContAddress: string,
 ): Promise<void> {
     contractInfo["CallWhitelist"] = {
-        "contractAddress": whitelistAddress,
+        contractAddress: whitelistAddress,
 
-        "constructorArgs": []
+        constructorArgs: [],
     };
 
-     contractInfo["AssetVault"] = {
-        "contractAddress": assetVaultAddress,
+    contractInfo["AssetVault"] = {
+        contractAddress: assetVaultAddress,
 
-        "constructorArgs": []
+        constructorArgs: [],
     };
 
-    const factoryProxyAddress = vaultFactoryAddress
-    const factoryImplAddress = await upgrades.erc1967.getImplementationAddress(factoryProxyAddress)
+    const factoryProxyAddress = vaultFactoryAddress;
+    const factoryImplAddress = await upgrades.erc1967.getImplementationAddress(factoryProxyAddress);
     contractInfo["VaultFactory"] = {
-        "contractAddress": factoryImplAddress,
+        contractAddress: factoryImplAddress,
 
-        "constructorArgs": []
+        constructorArgs: [],
     };
 
     contractInfo["FeeController"] = {
-        "contractAddress": feeControllerAddress,
+        contractAddress: feeControllerAddress,
 
-        "constructorArgs": []
+        constructorArgs: [],
     };
 
     let promissoryNoteDataBn: PromissoryNoteTypeBn = {
+        contractAddress: borrowerNoteAddress,
 
-        "contractAddress": borrowerNoteAddress,
-
-        "constructorArgs": ["Arcade.xyz BorrowerNote", "aBN"]
-
+        constructorArgs: ["Arcade.xyz BorrowerNote", "aBN"],
     };
-    contractInfo["BorrowerNote"] = promissoryNoteDataBn
-
+    contractInfo["BorrowerNote"] = promissoryNoteDataBn;
 
     let promissoryNoteDataLn: PromissoryNoteTypeLn = {
+        contractAddress: lenderNoteAddress,
 
-        "contractAddress": lenderNoteAddress,
-
-        "constructorArgs": ["Arcade.xyz LenderNote", "aLN"]
-
+        constructorArgs: ["Arcade.xyz LenderNote", "aLN"],
     };
-    contractInfo["LenderNote"] = promissoryNoteDataLn
+    contractInfo["LenderNote"] = promissoryNoteDataLn;
 
-    const loanCoreProxyAddress = loanCoreAddress
+    const loanCoreProxyAddress = loanCoreAddress;
     const loanCoreImplAddress = await upgrades.erc1967.getImplementationAddress(loanCoreProxyAddress);
     contractInfo["LoanCore"] = {
-        "contractAddress": loanCoreImplAddress,
+        contractAddress: loanCoreImplAddress,
 
-        "constructorArgs": []
+        constructorArgs: [],
     };
-
 
     contractInfo["RepaymentController"] = {
-        "contractAddress": repaymentContAddress,
+        contractAddress: repaymentContAddress,
 
-        "constructorArgs": [loanCoreProxyAddress, borrowerNoteAddress, lenderNoteAddress]
+        constructorArgs: [loanCoreProxyAddress, borrowerNoteAddress, lenderNoteAddress],
     };
 
-    const originationContProxyAddress = originationContAddress
-    const originationContImplAddress = await upgrades.erc1967.getImplementationAddress(originationContProxyAddress)
+    const originationContProxyAddress = originationContAddress;
+    const originationContImplAddress = await upgrades.erc1967.getImplementationAddress(originationContProxyAddress);
     contractInfo["OriginationController"] = {
-        "contractAddress": originationContImplAddress,
+        contractAddress: originationContImplAddress,
 
-        "constructorArgs": []
+        constructorArgs: [],
     };
 }

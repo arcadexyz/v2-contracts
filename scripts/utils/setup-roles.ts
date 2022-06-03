@@ -8,10 +8,10 @@ import {
     ORIGINATOR_ROLE as DEFAULT_ORIGINATOR_ROLE,
     ADMIN_ROLE as DEFAULT_ADMIN_ROLE,
     FEE_CLAIMER_ROLE as DEFAULT_FEE_CLAIMER_ROLE,
-    REPAYER_ROLE as DEFAULT_REPAYER_ROLE
+    REPAYER_ROLE as DEFAULT_REPAYER_ROLE,
 } from "./constants";
 
-export async function main (
+export async function main(
     signers: SignerWithAddress[],
     factory: Contract,
     originationController: Contract,
@@ -25,7 +25,7 @@ export async function main (
     ADMIN_ROLE = DEFAULT_ADMIN_ROLE,
     FEE_CLAIMER_ROLE = DEFAULT_FEE_CLAIMER_ROLE,
     ORIGINATOR_ROLE = DEFAULT_ORIGINATOR_ROLE,
-    REPAYER_ROLE = DEFAULT_REPAYER_ROLE
+    REPAYER_ROLE = DEFAULT_REPAYER_ROLE,
 ): Promise<void> {
     signers = await ethers.getSigners();
     const [admin, adminMultiSig] = signers;
@@ -40,7 +40,7 @@ export async function main (
     const FEE_CONTROLLER_ADDRESS = feeController.address;
     const REPAYMENT_CONTROLLER_ADDRESS = repaymentContoller.address;
     const CALL_WHITELIST_ADDRESS = whitelist.address;
-    const PUNK_ROUTER_ADDRESS= punkRouter.address;
+    const PUNK_ROUTER_ADDRESS = punkRouter.address;
 
     if (!LOAN_CORE_ADDRESS) {
         throw new Error("Must specify LOAN_CORE_ADDRESS in environment!");
@@ -92,13 +92,19 @@ export async function main (
     console.log(`originationController has granted admin role: ${ADMIN_ROLE} to address: ${ADMIN_ADDRESS}`);
 
     // grant originationContoller the originator role
-    const updateOriginationControllerRole = await loanCore.connect(admin).grantRole(ORIGINATOR_ROLE, ORIGINATION_CONTROLLER_ADDRESS);
+    const updateOriginationControllerRole = await loanCore
+        .connect(admin)
+        .grantRole(ORIGINATOR_ROLE, ORIGINATION_CONTROLLER_ADDRESS);
     await updateOriginationControllerRole.wait();
 
-    console.log(`originationController has granted originator role: ${ORIGINATOR_ROLE} to address: ${ORIGINATION_CONTROLLER_ADDRESS}`);
+    console.log(
+        `originationController has granted originator role: ${ORIGINATOR_ROLE} to address: ${ORIGINATION_CONTROLLER_ADDRESS}`,
+    );
 
     // grant repaymentContoller the REPAYER_ROLE
-    const updateRepaymentControllerAdmin = await loanCore.connect(admin).grantRole(REPAYER_ROLE, REPAYMENT_CONTROLLER_ADDRESS);
+    const updateRepaymentControllerAdmin = await loanCore
+        .connect(admin)
+        .grantRole(REPAYER_ROLE, REPAYMENT_CONTROLLER_ADDRESS);
     await updateRepaymentControllerAdmin.wait();
 
     console.log(`loanCore has granted repayer role: ${REPAYER_ROLE} to address: ${REPAYMENT_CONTROLLER_ADDRESS}`);
@@ -110,12 +116,16 @@ export async function main (
 
     console.log(`loanCore has renounced admin role.`);
 
-    const renounceOriginationControllerAdmin = await loanCore.connect(admin).renounceRole(ADMIN_ROLE, await deployer.getAddress());
+    const renounceOriginationControllerAdmin = await loanCore
+        .connect(admin)
+        .renounceRole(ADMIN_ROLE, await deployer.getAddress());
     await renounceOriginationControllerAdmin.wait();
 
     console.log(`originationController has renounced originator role.`);
 
-    const renounceVaultFactoryAdmin = await factory.connect(admin).renounceRole(ADMIN_ROLE, await deployer.getAddress());
+    const renounceVaultFactoryAdmin = await factory
+        .connect(admin)
+        .renounceRole(ADMIN_ROLE, await deployer.getAddress());
     await renounceVaultFactoryAdmin.wait();
 
     console.log(`vaultFactory has renounced admin role.`);
@@ -149,5 +159,4 @@ export async function main (
     console.log(`punkRouter has transferred ownership to address: ${adminMultiSig.address}`);
     console.log(SECTION_SEPARATOR);
     console.log("Transferred all ownership.\n");
-
 }

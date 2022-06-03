@@ -1,10 +1,6 @@
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
 
-import {
-    MockERC1155Metadata,
-    MockERC20,
-    MockERC721Metadata,
-} from "../../typechain";
+import { MockERC1155Metadata, MockERC20, MockERC721Metadata } from "../../typechain";
 
 import { getBalance, mintTokens } from "./tokens";
 import { getBalanceERC1155, mintNFTs } from "./nfts";

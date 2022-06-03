@@ -34,7 +34,6 @@ export interface DeployedResources {
     repaymentController: RepaymentController;
     originationController: OriginationController;
     admin: SignerWithAddress;
-
 }
 
 export async function main(
@@ -65,14 +64,20 @@ export async function main(
     // Start deploying new contracts
     const PromissoryNoteFactory = await ethers.getContractFactory("PromissoryNote");
     const borrowerNote = <PromissoryNote>await PromissoryNoteFactory.deploy("Arcade.xyz BorrowerNote", "aBN");
-    await borrowerNote.deployed()
+    await borrowerNote.deployed();
     const lenderNote = <PromissoryNote>await PromissoryNoteFactory.deploy("Arcade.xyz LenderNote", "aLN");
-    await lenderNote.deployed()
+    await lenderNote.deployed();
     console.log("BorrowerNote deployed to:", borrowerNote.address);
     console.log("LenderNote deployed to:", lenderNote.address);
 
     const LoanCoreFactory = await ethers.getContractFactory("LoanCore");
-    const loanCore = <LoanCore>await upgrades.deployProxy(LoanCoreFactory, [FEE_CONTROLLER_ADDRESS, borrowerNote.address, lenderNote.address], { kind: "uups" });
+    const loanCore = <LoanCore>(
+        await upgrades.deployProxy(
+            LoanCoreFactory,
+            [FEE_CONTROLLER_ADDRESS, borrowerNote.address, lenderNote.address],
+            { kind: "uups" },
+        )
+    );
     await loanCore.deployed();
 
     console.log("LoanCore deployed to:", loanCore.address);
@@ -117,7 +122,7 @@ export async function main(
         lenderNote,
         repaymentController,
         originationController,
-        admin
+        admin,
     };
 }
 

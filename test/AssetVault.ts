@@ -70,10 +70,12 @@ describe("AssetVault", () => {
 
         const vaultTemplate = <AssetVault>await deploy("AssetVault", signers[0], []);
         const VaultFactoryFactory = await hre.ethers.getContractFactory("VaultFactory");
-        const factory = <VaultFactory>(
-            await upgrades.deployProxy(VaultFactoryFactory, [vaultTemplate.address, whitelist.address], {
+        const factory = <VaultFactory>await upgrades.deployProxy(
+            VaultFactoryFactory,
+            [vaultTemplate.address, whitelist.address],
+            {
                 kind: "uups",
-            })
+            },
         );
         const vault = await createVault(factory, signers[0]);
 

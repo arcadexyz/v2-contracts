@@ -6,14 +6,8 @@ import { LoanTerms } from "../../test/utils/types";
 import { createLoanTermsSignature } from "../../test/utils/eip712";
 import { main as setupRoles } from "./setup-roles";
 
-import {
-    MockERC1155Metadata,
-    MockERC20,
-    MockERC721Metadata,
-    VaultFactory
-} from "../../typechain";
+import { MockERC1155Metadata, MockERC20, MockERC721Metadata, VaultFactory } from "../../typechain";
 import { createVault } from "./vault";
-
 
 export const SECTION_SEPARATOR = "\n" + "=".repeat(80) + "\n";
 export const SUBSECTION_SEPARATOR = "-".repeat(10);
@@ -27,7 +21,7 @@ export async function vaultAssetsAndMakeLoans(
     lenderNote: Contract,
     loanCore: Contract,
     feeController: Contract,
-    whitelist : Contract,
+    whitelist: Contract,
     punkRouter: Contract,
     punks: MockERC721Metadata,
     usd: MockERC20,
@@ -35,8 +29,7 @@ export async function vaultAssetsAndMakeLoans(
     weth: MockERC20,
     art: MockERC721Metadata,
     pawnToken: MockERC20,
-    ): Promise<void> {
-
+): Promise<void> {
     console.log(SECTION_SEPARATOR);
     console.log("But let's set up roles and permissions first...\n");
     // setup the role privileges
@@ -46,15 +39,16 @@ export async function vaultAssetsAndMakeLoans(
         originationController,
         borrowerNote,
         repaymentController,
-        lenderNote, loanCore,
+        lenderNote,
+        loanCore,
         feeController,
         whitelist,
-        punkRouter
+        punkRouter,
     );
 
     // Connect the first signer with the
     const signer1 = signers[1];
-    const signer1Address = await signers[1].getAddress()
+    const signer1Address = await signers[1].getAddress();
     // Create vault 1
     const av1A = await createVault(factory, signer1); // this is the Vault Id
     // Deposit 1 punk and 1000 usd to user's first vault:
@@ -72,7 +66,7 @@ export async function vaultAssetsAndMakeLoans(
     // Deposit 1 punk and 2 beats edition 0 for bundle 2
     // Create vault 2
     const av1B = await createVault(factory, signer1);
-    const av2Punk2Id = await punks.tokenOfOwnerByIndex(signer1Address, 1)
+    const av2Punk2Id = await punks.tokenOfOwnerByIndex(signer1Address, 1);
 
     await punks.connect(signer1).approve(av1B.address, av2Punk2Id.toNumber());
     await punks.connect(signer1).transferFrom(signer1Address, av1B.address, av2Punk2Id.toNumber());
@@ -80,10 +74,9 @@ export async function vaultAssetsAndMakeLoans(
     await beats.connect(signer1).safeBatchTransferFrom(signer1Address, av1B.address, [0, 1], [2, 1], "0x00"); //
     console.log(`(Vault 1B) Signer ${signer1.address} created a vault with 1 PawnFiPunk and 2 PawnBeats Edition 0`);
 
-
     // Connect the third signer
     const signer3 = signers[3];
-    const signer3Address = await signers[3].getAddress()
+    const signer3Address = await signers[3].getAddress();
 
     // Create vault 3A
     const av3A = await createVault(factory, signer3);
@@ -121,7 +114,9 @@ export async function vaultAssetsAndMakeLoans(
     await beats.connect(signer3).safeBatchTransferFrom(signer3Address, av3C.address, [0], [4], "0x00");
     await usd.connect(signer3).approve(av3C.address, ethers.utils.parseUnits("2000", 6));
     await usd.connect(signer3).transfer(av3C.address, ethers.utils.parseUnits("2000", 6));
-    console.log(`(Vault 3C) Signer ${signer3.address} created a vault with 1 PawnArt, 4 PawnBeats Edition 0, and 2000 PUSD`,);
+    console.log(
+        `(Vault 3C) Signer ${signer3.address} created a vault with 1 PawnArt, 4 PawnBeats Edition 0, and 2000 PUSD`,
+    );
     // Connect the fourth signer
     const signer4 = signers[4];
     const signer4Address = await signers[4].getAddress();
@@ -132,7 +127,6 @@ export async function vaultAssetsAndMakeLoans(
     const av4Art1Id = await art.tokenOfOwnerByIndex(signer4.address, 0);
     const av4Art2Id = await art.tokenOfOwnerByIndex(signer4.address, 1);
     const av4Art3Id = await art.tokenOfOwnerByIndex(signer4.address, 2);
-
 
     await art.connect(signer4).approve(av4A.address, av4Art1Id);
     await art.connect(signer4).approve(av4A.address, av4Art2Id);
@@ -188,7 +182,7 @@ export async function vaultAssetsAndMakeLoans(
         signer1,
         "2",
         BigNumber.from(1),
-        "b"
+        "b",
     );
 
     await weth.connect(signer2).approve(originationController.address, ethers.utils.parseEther("10"));
@@ -222,16 +216,14 @@ export async function vaultAssetsAndMakeLoans(
         signer1,
         "2",
         BigNumber.from(2),
-        "b"
+        "b",
     );
 
     await pawnToken.connect(signer3).approve(originationController.address, ethers.utils.parseEther("10000"));
     await factory.connect(signer1).approve(originationController.address, av1B.address);
 
     // Borrower signed, so lender will initialize
-    await originationController
-        .connect(signer3)
-        .initializeLoan(loan2Terms, signer1.address, signer3.address, sig2, 2);
+    await originationController.connect(signer3).initializeLoan(loan2Terms, signer1.address, signer3.address, sig2, 2);
 
     console.log(
         `(Loan 2) Signer ${signer1.address} borrowed 10000 PAWN at 5% interest from ${signer3.address} against Vault 1B`,
@@ -256,16 +248,14 @@ export async function vaultAssetsAndMakeLoans(
         signer3,
         "2",
         BigNumber.from(1),
-        "b"
+        "b",
     );
 
     await usd.connect(signer2).approve(originationController.address, ethers.utils.parseUnits("1000", 6));
     await factory.connect(signer3).approve(originationController.address, av3A.address);
 
     // Borrower signed, so lender will initialize
-    await originationController
-        .connect(signer2)
-        .initializeLoan(loan3Terms, signer3.address, signer2.address, sig3, 1);
+    await originationController.connect(signer2).initializeLoan(loan3Terms, signer3.address, signer2.address, sig3, 1);
 
     console.log(
         `(Loan 3) Signer ${signer3.address} borrowed 1000 PUSD at 8% interest from ${signer2.address} against Vault 3A`,
@@ -290,16 +280,14 @@ export async function vaultAssetsAndMakeLoans(
         signer3,
         "2",
         BigNumber.from(2),
-        "b"
+        "b",
     );
 
     await usd.connect(signer2).approve(originationController.address, ethers.utils.parseUnits("1000", 6));
     await factory.connect(signer3).approve(originationController.address, av3B.address);
 
     // Borrower signed, so lender will initialize
-    await originationController
-        .connect(signer2)
-        .initializeLoan(loan4Terms, signer3.address, signer2.address, sig4, 2);
+    await originationController.connect(signer2).initializeLoan(loan4Terms, signer3.address, signer2.address, sig4, 2);
 
     console.log(
         `(Loan 4) Signer ${signer3.address} borrowed 1000 PUSD at 14% interest from ${signer2.address} against Vault 3B`,
@@ -324,16 +312,14 @@ export async function vaultAssetsAndMakeLoans(
         signer3,
         "2",
         BigNumber.from(3),
-        "b"
+        "b",
     );
 
     await weth.connect(signer4).approve(originationController.address, ethers.utils.parseEther("20"));
     await factory.connect(signer3).approve(originationController.address, av3C.address);
 
     // Borrower signed, so lender will initialize
-    await originationController
-        .connect(signer4)
-        .initializeLoan(loan5Terms, signer3.address, signer4.address, sig5, 3);
+    await originationController.connect(signer4).initializeLoan(loan5Terms, signer3.address, signer4.address, sig5, 3);
 
     console.log(
         `(Loan 5) Signer ${signer3.address} borrowed 20 WETH at 2% interest from ${signer4.address} against Vault 3C`,
@@ -358,16 +344,14 @@ export async function vaultAssetsAndMakeLoans(
         signer4,
         "2",
         BigNumber.from(1),
-        "b"
+        "b",
     );
 
     await pawnToken.connect(signer2).approve(originationController.address, ethers.utils.parseEther("300.33"));
     await factory.connect(signer4).approve(originationController.address, av4A.address);
 
     // Borrower signed, so lender will initialize
-    await originationController
-        .connect(signer2)
-        .initializeLoan(loan6Terms, signer4.address, signer2.address, sig6, 1);
+    await originationController.connect(signer2).initializeLoan(loan6Terms, signer4.address, signer2.address, sig6, 1);
 
     console.log(
         `(Loan 6) Signer ${signer4.address} borrowed 300.33 PAWN at 6% interest from ${signer2.address} against Vault 4A`,
@@ -396,6 +380,3 @@ export async function vaultAssetsAndMakeLoans(
     console.log("Bootstrapping complete!");
     console.log(SECTION_SEPARATOR);
 }
-
-
-

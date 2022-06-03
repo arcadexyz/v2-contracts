@@ -13,7 +13,6 @@ export async function main(): Promise<void> {
     // first signer will be the deployer.
     const [, ...signers] = (await ethers.getSigners()).slice(1, 7);
 
-
     console.log(SECTION_SEPARATOR);
     console.log("Deploying resources...\n");
 
@@ -27,7 +26,7 @@ export async function main(): Promise<void> {
         lenderNote,
         loanCore,
         feeController,
-        whitelist
+        whitelist,
     } = await deploy();
 
     // Mint some NFTs

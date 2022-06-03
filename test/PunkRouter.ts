@@ -53,10 +53,12 @@ describe("PunkRouter", async () => {
         const vaultTemplate = <AssetVault>await deploy("AssetVault", signers[0], []);
 
         const VaultFactoryFactory = await hre.ethers.getContractFactory("VaultFactory");
-        const vaultFactory = <VaultFactory>(
-            await upgrades.deployProxy(VaultFactoryFactory, [vaultTemplate.address, whitelist.address], {
+        const vaultFactory = <VaultFactory>await upgrades.deployProxy(
+            VaultFactoryFactory,
+            [vaultTemplate.address, whitelist.address],
+            {
                 kind: "uups",
-            })
+            },
         );
 
         const feeController = <FeeController>await deploy("FeeController", signers[0], []);
@@ -67,10 +69,12 @@ describe("PunkRouter", async () => {
         const lenderNote = <PromissoryNote>await deploy("PromissoryNote", signers[0], ["Arcade.xyz LenderNote", "aLN"]);
 
         const LoanCore = await hre.ethers.getContractFactory("LoanCore");
-        const loanCore = <LoanCore>(
-            await upgrades.deployProxy(LoanCore, [feeController.address, borrowerNote.address, lenderNote.address], {
+        const loanCore = <LoanCore>await upgrades.deployProxy(
+            LoanCore,
+            [feeController.address, borrowerNote.address, lenderNote.address],
+            {
                 kind: "uups",
-            })
+            },
         );
 
         // Grant correct permissions for promissory note

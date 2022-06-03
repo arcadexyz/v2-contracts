@@ -2,11 +2,7 @@
 
 import { ethers } from "hardhat";
 
-import {
-    ERC721,
-    LoanCore,
-    PromissoryNote
-} from "../typechain";
+import { ERC721, LoanCore, PromissoryNote } from "../typechain";
 
 /**
  * This script checks ownership by the borrower of a collateralized
@@ -29,7 +25,7 @@ export async function main(
     NFT_ADDRESS: string,
     BORROWER_NOTE_ADDRESS: string,
     LOAN_CORE_ADDRESS: string,
-    VAULT_FACTORY_ADDRESS: string
+    VAULT_FACTORY_ADDRESS: string,
 ): Promise<boolean> {
     const noteFactory = await ethers.getContractFactory("PromissoryNote");
     const borrowerNote = <PromissoryNote>await noteFactory.attach(BORROWER_NOTE_ADDRESS);
