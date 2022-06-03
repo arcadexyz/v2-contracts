@@ -10,8 +10,8 @@ async function verifyArtifacts(contractName: string, contractAddress: string, co
     console.log(SUBSECTION_SEPARATOR);
 
     await hre.run("verify:verify", {
-       address: contractAddress,
-       constructorArguments: constructorArgs,
+    address: contractAddress,
+    constructorArguments: constructorArgs,
     });
 
     console.log(`${contractName}: ${contractAddress}`, "has been verified.")

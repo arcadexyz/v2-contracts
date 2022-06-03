@@ -1,4 +1,4 @@
-import { ethers, upgrades } from "hardhat";
+import hre, { ethers, upgrades } from "hardhat";
 
 import { main as writeJson } from "../utils/verify/writeJson";
 import { main as writeInfo } from "../utils/verify/writeInfo";
@@ -92,8 +92,8 @@ export async function main(
         },
     );
 
-    const vaultFactoryProxyAddress = "0x0a7decEd17B4239D2E90ad2cc74411bbE442bED8"
-    console.log("VaultFactory deployed to:", vaultFactory.address);
+    const vaultFactoryProxyAddress = vaultFactory.address
+    console.log("VaultFactory proxy deployed to:", vaultFactoryProxyAddress);
     console.log(SUBSECTION_SEPARATOR);
 
     const FeeControllerFactory = await ethers.getContractFactory("FeeController");
@@ -122,8 +122,8 @@ export async function main(
     const loanCore = <LoanCore>await upgrades.deployProxy(LoanCoreFactory, [feeController.address, borrowerNote.address, lenderNote.address], { kind: "uups" });
     await loanCore.deployed();
 
-    const loanCoreProxyAddress = "0x761163b497ebd35ABA78978203D767b74D6Bc067"
-    console.log("LoanCore deployed to:", loanCore.address);
+    const loanCoreProxyAddress = loanCore.address
+    console.log("LoanCore proxy deployed to:", loanCoreProxyAddress);
     console.log(SUBSECTION_SEPARATOR);
 
     const RepaymentControllerFactory = await ethers.getContractFactory("RepaymentController");
@@ -146,8 +146,8 @@ console.log("196 ---------------------------------------------------------------
     );
     await originationController.deployed();
 
-    const originationContProxyAddress = "0xaA9B7AC3180Ec6735dCf1d03eF5cA011E2c30EA0"
-    console.log("OriginationController deployed to:", originationController.address)
+    const originationContProxyAddress = originationController.address
+    console.log("OriginationController proxy deployed to:", originationContProxyAddress)
 console.log("212 ------------------------------------------------------------------------------------------------------")
     // const updateOriginationControllerPermissions = await loanCore.grantRole(
     //     ORIGINATOR_ROLE,
@@ -181,8 +181,7 @@ console.log("232 ---------------------------------------------------------------
         loanCoreProxyAddress,
         originationContProxyAddress
     )
-    //writeInfo(assetVaultAddress, feeControllerAddress, borrowerNoteAddress, lenderNoteAddress, repaymentContAddress, whitelistAddress, vaultFactoryAddress, loanCoreAddress, originationContAddress)
-    //writeJson(contractInfo)
+
     console.log(SECTION_SEPARATOR);
 
     return {
