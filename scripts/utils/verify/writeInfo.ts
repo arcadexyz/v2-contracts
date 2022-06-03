@@ -23,17 +23,11 @@ export async function main (
         "constructorArgs": []
     };
 
-    console.log("Whitelist contract info written.");
-    console.log(SUBSECTION_SEPARATOR);
-
      contractInfo["AssetVault"] = {
         "contractAddress": assetVaultAddress,
 
         "constructorArgs": []
     };
-
-    console.log("Asset vault contract info written.");
-    console.log(SUBSECTION_SEPARATOR);
 
     const factoryProxyAddress = vaultFactoryAddress
     const factoryImplAddress = await upgrades.erc1967.getImplementationAddress(factoryProxyAddress)
@@ -43,17 +37,11 @@ export async function main (
         "constructorArgs": []
     };
 
-    console.log("Vault factory contract info written.");
-    console.log(SUBSECTION_SEPARATOR);
-
     contractInfo["FeeController"] = {
         "contractAddress": feeControllerAddress,
 
         "constructorArgs": []
     };
-
-    console.log("Fee controller contract info written.");
-    console.log(SUBSECTION_SEPARATOR);
 
     let promissoryNoteDataBn: PromissoryNoteTypeBn = {
 
@@ -62,10 +50,8 @@ export async function main (
         "constructorArgs": ["Arcade.xyz BorrowerNote", "aBN"]
 
     };
-
     contractInfo["BorrowerNote"] = promissoryNoteDataBn
 
-    console.log("Borrower note contract info written.");
 
     let promissoryNoteDataLn: PromissoryNoteTypeLn = {
 
@@ -74,11 +60,7 @@ export async function main (
         "constructorArgs": ["Arcade.xyz LenderNote", "aLN"]
 
     };
-
     contractInfo["LenderNote"] = promissoryNoteDataLn
-
-    console.log("Lender note contract info written.");
-    console.log(SUBSECTION_SEPARATOR);
 
     const loanCoreProxyAddress = loanCoreAddress
     const loanCoreImplAddress = await upgrades.erc1967.getImplementationAddress(loanCoreProxyAddress);
@@ -88,17 +70,12 @@ export async function main (
         "constructorArgs": []
     };
 
-    console.log("Loan core contract info written.");
-    console.log(SUBSECTION_SEPARATOR);
 
     contractInfo["RepaymentController"] = {
         "contractAddress": repaymentContAddress,
 
         "constructorArgs": [loanCoreProxyAddress, borrowerNoteAddress, lenderNoteAddress]
     };
-
-    console.log("Repayment controller contract info written.");
-    console.log(SECTION_SEPARATOR);
 
     const originationContProxyAddress = originationContAddress
     const originationContImplAddress = await upgrades.erc1967.getImplementationAddress(originationContProxyAddress)
@@ -107,6 +84,4 @@ export async function main (
 
         "constructorArgs": []
     };
-
-    console.log("Origination controller contract info written.");
 }
