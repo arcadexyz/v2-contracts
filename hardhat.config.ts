@@ -4,7 +4,7 @@ import "@nomiclabs/hardhat-etherscan";
 import "hardhat-gas-reporter";
 import "solidity-coverage";
 import "@nomiclabs/hardhat-ethers";
-import "@nomiclabs/hardhat-etherscan"
+import "@nomiclabs/hardhat-etherscan";
 import "@openzeppelin/hardhat-upgrades";
 import "hardhat-contract-sizer";
 
@@ -16,7 +16,6 @@ import { resolve } from "path";
 import { config as dotenvConfig } from "dotenv";
 import { HardhatUserConfig } from "hardhat/config";
 import { NetworkUserConfig, HardhatNetworkUserConfig } from "hardhat/types";
-
 
 dotenvConfig({ path: resolve(__dirname, "./.env") });
 
@@ -60,7 +59,7 @@ function createTestnetConfig(network: keyof typeof chainIds): NetworkUserConfig 
         },
         chainId: chainIds[network],
         url,
-        gas: 500000
+        gas: 500000,
     };
 }
 
@@ -166,8 +165,8 @@ const config: HardhatUserConfig = {
         target: "ethers-v5",
     },
     etherscan: {
-        apiKey: process.env.ETHERSCAN_API_KEY
-    }
+        apiKey: process.env.ETHERSCAN_API_KEY,
+    },
 };
 
 export default config;

@@ -1,9 +1,8 @@
 import { Contract } from "ethers";
-import { MockERC1155Metadata, MockERC721Metadata} from "../../typechain";
-
+import { MockERC1155Metadata, MockERC721Metadata } from "../../typechain";
 
 export function getBalanceERC1155(asset: Contract, id: number, addr: string): Promise<string> {
-    return (asset.balanceOf(addr, id)).toString();
+    return asset.balanceOf(addr, id).toString();
 }
 
 export async function mintNFTs(

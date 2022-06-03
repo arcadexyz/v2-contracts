@@ -5,8 +5,8 @@ import { VaultFactory, AssetVault } from "../../typechain";
 
 type Signer = SignerWithAddress;
 
- let vault: AssetVault | undefined;
-export const createVault = async (factory: VaultFactory, user: Signer): Promise<AssetVault> =>     {
+let vault: AssetVault | undefined;
+export const createVault = async (factory: VaultFactory, user: Signer): Promise<AssetVault> => {
     const tx = await factory.connect(user).initializeBundle(await user.getAddress());
     const receipt = await tx.wait();
 
@@ -23,4 +23,4 @@ export const createVault = async (factory: VaultFactory, user: Signer): Promise<
         throw new Error("Unable to create new vault");
     }
     return vault;
-    };
+};

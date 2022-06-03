@@ -50,10 +50,12 @@ describe("ItemsVerifier", () => {
 
         const vaultTemplate = <AssetVault>await deploy("AssetVault", deployer, []);
         const VaultFactoryFactory = await hre.ethers.getContractFactory("VaultFactory");
-        const vaultFactory = <VaultFactory>(
-            await upgrades.deployProxy(VaultFactoryFactory, [vaultTemplate.address, whitelist.address], {
+        const vaultFactory = <VaultFactory>await upgrades.deployProxy(
+            VaultFactoryFactory,
+            [vaultTemplate.address, whitelist.address],
+            {
                 kind: "uups",
-            })
+            },
         );
 
         return {

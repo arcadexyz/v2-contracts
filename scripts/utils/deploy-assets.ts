@@ -1,10 +1,6 @@
 import { ethers } from "hardhat";
 
-import {
-    MockERC1155Metadata,
-    MockERC20,
-    MockERC721Metadata,
-} from "../../typechain";
+import { MockERC1155Metadata, MockERC20, MockERC721Metadata } from "../../typechain";
 
 import { SECTION_SEPARATOR } from "./bootstrap-tools";
 
@@ -22,14 +18,11 @@ export async function deployNFTs(): Promise<DeployedNFT> {
     const erc721Factory = await ethers.getContractFactory("MockERC721Metadata");
     const erc1155Factory = await ethers.getContractFactory("MockERC1155Metadata");
 
-
     const punks = <MockERC721Metadata>await erc721Factory.deploy("PawnFiPunks", "PFPUNKS");
     console.log("(ERC721) PawnFiPunks deployed to:", punks.address);
 
-
     const art = <MockERC721Metadata>await erc721Factory.deploy("PawnArt.io", "PWART");
     console.log("(ERC721) PawnArt.io deployed to:", art.address);
-
 
     const beats = <MockERC1155Metadata>await erc1155Factory.deploy();
     console.log("(ERC1155) PawnBeats deployed to:", beats.address);
@@ -42,7 +35,6 @@ export async function deployNFTs(): Promise<DeployedNFT> {
 
     const weth = <MockERC20>await erc20Factory.deploy("Wrapped Ether", "WETH");
     console.log("(ERC20) WETH deployed to:", weth.address);
-
 
     const pawnToken = <MockERC20>await erc20Factory.deploy("PawnToken", "PAWN");
     console.log("(ERC20) PAWN deployed to:", pawnToken.address);
