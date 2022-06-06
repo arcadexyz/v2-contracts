@@ -13,6 +13,10 @@ export async function main(
     vaultFactoryAddress: string,
     loanCoreAddress: string,
     originationContAddress: string,
+    bNoteName: string,
+    bNoteSymbol: string,
+    lNoteName: string,
+    lNoteSymbol: string,
 ): Promise<void> {
     contractInfo["CallWhitelist"] = {
         contractAddress: whitelistAddress,
@@ -43,14 +47,14 @@ export async function main(
     let promissoryNoteDataBn: PromissoryNoteTypeBn = {
         contractAddress: borrowerNoteAddress,
 
-        constructorArgs: ["Arcade.xyz BorrowerNote", "aBN"],
+        constructorArgs: [bNoteName, bNoteSymbol],
     };
     contractInfo["BorrowerNote"] = promissoryNoteDataBn;
 
     let promissoryNoteDataLn: PromissoryNoteTypeLn = {
         contractAddress: lenderNoteAddress,
 
-        constructorArgs: ["Arcade.xyz LenderNote", "aLN"],
+        constructorArgs: [lNoteName, lNoteSymbol],
     };
     contractInfo["LenderNote"] = promissoryNoteDataLn;
 

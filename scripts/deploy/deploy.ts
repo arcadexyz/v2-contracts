@@ -103,14 +103,18 @@ export async function main(
     console.log("FeeController deployed to: ", feeControllerAddress);
     console.log(SUBSECTION_SEPARATOR);
 
+    const bNoteName = "Arcade.xyz BorrowerNote"
+    const bNoteSymbol = "aBN"
     const PromissoryNoteFactory = await ethers.getContractFactory("PromissoryNote");
-    const borrowerNote = <PromissoryNote>await PromissoryNoteFactory.deploy("Arcade.xyz BorrowerNote", "aBN");
+    const borrowerNote = <PromissoryNote>await PromissoryNoteFactory.deploy(bNoteName, bNoteSymbol);
     await borrowerNote.deployed();
 
     const borrowerNoteAddress = borrowerNote.address;
     console.log("BorrowerNote deployed to:", borrowerNote.address);
 
-    const lenderNote = <PromissoryNote>await PromissoryNoteFactory.deploy("Arcade.xyz LenderNote", "aLN");
+    const lNoteName = "Arcade.xyz LenderNote"
+    const lNoteSymbol = "aLN"
+    const lenderNote = <PromissoryNote>await PromissoryNoteFactory.deploy(lNoteName, lNoteSymbol);
     await lenderNote.deployed();
 
     const lenderNoteAddress = lenderNote.address;
@@ -180,6 +184,10 @@ export async function main(
         vaultFactoryProxyAddress,
         loanCoreProxyAddress,
         originationContProxyAddress,
+        bNoteName,
+        bNoteSymbol,
+        lNoteName,
+        lNoteSymbol,
     );
 
     console.log(SECTION_SEPARATOR);
@@ -194,7 +202,7 @@ export async function main(
         originationController,
         whitelist,
         vaultFactory,
-        punkRouter,
+        punkRouter
     };
 }
 
