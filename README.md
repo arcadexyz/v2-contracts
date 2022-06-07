@@ -102,3 +102,13 @@ fees at different parts of the loan lifecycle. The fee amounts can be updated by
 This is version 2 of the protocol. Version 1 of the protocol can be found [here](https://github.com/Non-fungible-Technologies/pawnfi-contracts).
 
 ## Breaking Changes from V1
+
+* Creating bundles via the old `AssetWrapper` contract is no longer supported. Each borrower using a bundle should deploy their own vault contract using the `VaultFactory` to create a new bundle.
+* `AssetVault` contracts do not support the `deposit{ETH,ERC20,ERC721,ERC1155}` methods from `AssetWrapper` for depositing assets. Deposits are made by transferring asset ownership to the vault.
+* `AssetVaults` do not support the `withdraw` method from `AssetWrapper`. Every asset held by the vault must be withdrawn individually using the `withdraw{ETH,ERC20,ERC721,ERC1155}` functions. Each withdraw must specify the particular asset, since the vault does not track what assets it owns - this must be done off-chain. Owners must call `enableWithdraw` to enable the withdrawal methods on an asset vault. Vaults are non-transferrable with withdraw enabled.
+* Signed terms must now contain a `deadline`, `interestRate`, `collateralAddress`, and `collateralId` field. The `interest` field is no longer supported.
+* A signature can only be for a specific side of a loan - borrowing or lending. This defined by the `side` field in the signature. The field is an enum where `0` represents borrowing and `1` represents lending.
+* A signature must also contain a `nonce`, a unique ID preventing signature re-use. The nonce must be in the signature payload and provided in `initializeLoan`.
+* The typehash for signatures has changed to reflecting these new fields: see `_TOKEN_ID_TYPEHASH` in OriginationController.sol.
+* Any repayment functions now take `loanId` as parameters instead of the appropriate note IDs. Note that in V2 these values are guaranteed to be the same.
+* `PunkRouter` is no longer supported. CryptoPunks should be directly transferred to asset vaults for deposits.
