@@ -1,4 +1,4 @@
-The [Pawn](https://docs.arcade.xyz/docs/faq) Protocol facilitates trustless borrowing, lending, and escrow of NFT assets on EVM blockchains. This repository contains the core contracts that power the protocol, written in Solidity.
+[Arcade.xyz](https://docs.arcade.xyz/docs/faq) facilitates trustless borrowing, lending, and escrow of NFT assets on EVM blockchains. This repository contains the core contracts that power the protocol, written in Solidity.
 
 # Relevant Links
 
@@ -7,94 +7,108 @@ The [Pawn](https://docs.arcade.xyz/docs/faq) Protocol facilitates trustless borr
 - 💬 [Discord](https://discord.gg/uNrDStEb) - Join the Arcade community! Great for further technical discussion and real-time support.
 - 🔔 [Twitter](https://twitter.com/arcade_xyz) - Follow us on Twitter for alerts and announcements.
 
-If you are interested in being whitelisted for the Pawn private beta, contact us on Discord. Public launch coming soon!
-
-# Local Setup
-
-This repo uses a fork of [Paul Berg's excellent Solidity template](https://github.com/paulrberg/solidity-template). General usage instructions for the repo can be found there. We use a very normal TypeScript/Yarn/Hardhat toolchain.
-
-## Deploying
-
-In order to deploy the contracts to a local hardhat instance run the deploy script.
-
-`yarn hardhat run scripts/deploy.ts`
-
-The same can be done for non-local instances like Ropsten or Mainnet, but a private key for the address to deploy from must be supplied in `hardhat.config.ts` as specified in [the Hardhat documentation](https://hardhat.org/config/).
-
-## Local Development
-
-In one window, start a node. Wait for it to load. This is a local Ethereum node forked from the current mainnet Ethereum state.
-
-`npx hardhat node`
-
-In another window run the bootrap script with or without loans created.
-
-`yarn bootstrap-with-loans`
-or
-`yarn bootstrap-no-loans`
-
-Both will deploy our smart contracts, create a collection of ERC20 and ERC721/ERC1155 NFTs, and distribute them amongst the first 5 signers, skipping the first one since it deploys the smart contract. The second target will also wrap assets, and create loans.
-
 # Overview of Contracts
 
-## Version 1
+See natspec for technical detail.
+## Custody
 
-The Version 1 of the Pawn protocol uses the contracts described below for its operation. These contracts are currently deployed on the Ethereum mainnet and the Rinkeby testnet. [The addresses of our deployed can be found in our documentation](https://docs.pawn.fi/docs/contract-addresses). All contracts are verified on [Etherscan](https://etherscan.io/). [Audit reports](https://docs.pawn.fi/docs/audit-reports) are also available.
+### VaultFactory
 
-### AssetWrapper
+The Vault Factory is an ERC721 that tracks ownership of Asset Vault contracts (see OwnableERC721). Minting a new
+VaultFactory token involves deploying a new AssetVault clone, and assigning the token's ID to the uint160 derived
+from the clone's address.
 
-This contract holds ERC20, ERC721, and ERC1155 assets on behalf of another address. The Pawn protocol interacts with asset wrapped bundles, but bundles have no coupling to the Pawn protocol and can be used for other uses. Any collateral used in the Pawn protocol takes the form of an `AssetWrapper` bundle.
+Token ownership represents ownership of the underlying clone contract and be transferred - however, to prevent
+frontrunning attacks, any vault with withdrawals enabled cannot be transferred (see [AssetVault](#AssetVault)).
+### AssetVault
 
-[AssetWrapper API Specification](docs/AssetWrapper.md)
+The Asset Vault is a holding contract that functions as a bundling mechanism for multiple assets. Assets deposited
+into the vault can only be withdrawn by the owner, and the vault contract itself's ownership is tracked by
+an ERC721 (see [VaultFactory](#VaultFactory)).
 
-### BorrowerNote
+AssetVaults are created with withdrawals disabled, and enabling withdrawals is an irreversible "unwrapping" operation.
+Vaults with withdrawals enabled cannot be transferred. Deposits are always possible, by sending a given asset to the
+vault's contract address. Asset Vaults can hold ETH, ERC20s, ERC721, ERC1155, and CryptoPunks.
 
-The BorrowerNote is an ERC721 asset that represents the borrower's obligation for a specific loan in the Pawn protocol. The asset can be transferred like a normal ERC721 NFT, which transfers the borrowing obligation to the recipient of the transfer. Holding the `BorrowerNote` attached to a specific loan gives the holder the right to reclaim the collateral bundle when the loan is repaid.
+The owner of a vault can also place an arbitrary `call` via the vault, in order to access utility derived from
+NFTs held in the vault. Other contracts can delegate the ability to make calls. In practice, an Asset Vault custodied
+by LoanCore delegates calling ability to the borrower, such that the borrower can accesss utility for a collateralized
+vault. The protocol maintains a list of allowed calls (see [CallWhitelist](#CallWhitelist)).
 
-`BorrowerNote` and `LenderNote` are both instantiations of `PromissoryNote`, a generalized NFT contract that implements [ERC721Burnable](https://docs.openzeppelin.com/contracts/3.x/api/token/erc721#ERC721Burnable).
+### CallWhitelist
 
-[PromissoryNote API Specification](docs/PromissoryNote.md)
+A global whitelist contract that all Asset Vaults refer to in order to allow/disallow certain calldata from being
+used in the vault's `call` functionality. Transfer methods are blacklisted in order to prevent backdoor withdrawals from
+vaults. The contract owner can choose to add or remove target addresses and function selectors from the list.
 
-### LenderNote
+## Verification
 
-The LenderNote is an ERC721 asset that represents the lender's rights for a specific loan in the Pawn protocol. The asset can be transferred like a normal ERC721 NFT, which transfers the rights of the lender to the recipient of the transfer. Holding the `LenderNote` attached to a specific loan gives the holder the right to any funds from loan repayments, and the right to claim a collateral bundle for a defaulted loan.
+### ItemsVerifier
 
-`BorrowerNote` and `LenderNote` are both instantiations of `PromissoryNote`, a generalized NFT contract that implements [ERC721Burnable](https://docs.openzeppelin.com/contracts/3.x/api/token/erc721#ERC721Burnable).
+A contract that parses a payload of calldata and a target AssetVault, and decodes the in order to use it
+for logic proving or disproving defined predicates about the vault. The ItemsVerifier decodes the calldata
+as a list of required items the vault must hold in order for its predicates to pass. In the future, other contracts
+implementing `IArcadeSignatureVerifier` can support other calldata formats and associated validation logic.
 
-[PromissoryNote API Specification](docs/PromissoryNote.md)
+## Loan Lifecycle
 
 ### LoanCore
 
-The core invariants of the Pawn protocol are maintained here. `LoanCore` tracks all active loans, the associated `AssetWrapper` collateral, and `PromissoryNote` obligations. Any execution logic arond loan origination, repayment, or default is contained within `LoanCore`. When a loan is in progress, collateral is held by `LoanCore`, and `LoanCore` contains relevant information about loan terms and due dates.
+The hub logic contract of the protocol, which contains storage information about loans (expressed by the `LoanData` struct),
+and all required logic to update storage to reflect loan state, as well as handle both the intake and release of asset custody
+during the loan lifecycle. Only specialized "controller" contracts have the ability to call LoanCore (see [OriginationController](#OriginationController)
+and [RepaymentController](#RepaymentController)).
 
-This contract also contains admin functionality where operators of the protocol can withdraw any accrued revenue from assessed protocol fees.
+During active loans, the collateral asset is owned by LoanCore. LoanCore also collects fees for the protocol, which
+can be withdrawn by the contract owner. LoanCore also tracks global signature nonces for required protocol signatures.
 
-[LoanCore API Specification](docs/LoanCore.md)
+### PromissoryNote
+
+An ERC721 representing obligation in an active loan. When a loan begins, two types of notes - a `BorrowerNote` and `LenderNote` -
+are minted to the respective loan counterparties. When a loan ends via payoff or default, these notes are burned. The token IDs of each
+note are synced with the unique ID of the loan.
+
+Only the holder of the `LenderNote` can claim defaulted collateral for a different loan. No special permissions are afforded
+to the `BorrowerNote` - it is simply a representation and reminder of an obligation.
 
 ### OriginationController
 
-This is an external-facing periphery contract that manages loan origination interactions with `LoanCore`. The `OriginationController` takes responsibility for transferring collateral assets from the borrower to `LoanCore`. This controller also checks the validity of origination signatures against the specified parties and loan terms.
+The entry point contract for all new loans - this contract has exclusive permission to call functions which begin new loans
+in `LoanCore`. The Origination Controller is responsible for validating the submitted terms of any new loan, parsing and
+validating counterparty signatures to loan terms, and handling delegation of signing authority for an address.
 
-[OriginationController API Specification](docs/OriginationController.md)
+When a loan begins, the Origination Controller collects the principal from the lender, and the collateral from
+the borrower. Loans can also be initialized with an ERC721 Permit message for collateral, removing the need for
+a prior approval transaction from the borrower for assets which support `permit`.
+
+In addition to new loans, the Origination Controller is the entry point for rollovers, which use funds from a new loan
+to repay an old loan and define new terms. In this case, the origination controller contract nets out funds
+from the old and new loan, and collects any needed balance from the responsible party.
 
 ### RepaymentController
 
-This is an external-facing periphery contract that manages interactions with `LoanCore` that end the loan lifecycle. The `RepaymentController` takes responsibility for transferring repaid principal + interest from the borrower to `LoanCore` for disbursal to the lender, and returning collateral assets from `LoanCore` back to the borrower on a successful repayment. This controller also handles lender claims in case of default, and ensures ownership of the lender note before allowing a claim.
+The repayment controller handles all lifecycle progression for currently active loans - this contract has exclusive
+permission to call functions in `LoanCore` which repay loans, in whole or in part, or claim collateral on loan defaults.
+This contract is repsonsible for validating repayments inputs, calculating owed amounts, and collecting owed amounts
+from the relevant counterparty. This contract also contains a convenience function for calculating the total amount
+due on any loan at a given time.
 
-[RepaymentController API Specification](docs/RepaymentController.md)
+### FeeController
 
-## PunkRouter
+The fee controller is a contract containing functions that return values, in basis points, for assessed protocol
+fees at different parts of the loan lifecycle. The fee amounts can be updated by the contract owner.
+## Version 1
 
-[CryptoPunks](https://www.larvalabs.com/cryptopunks) serve as valuable collateral within the NFT ecosystem, but they do not conform to the ERC721 standard. The `PunkRouter` uilizes the [Wrapped Punks](https://wrappedpunks.com/) contract to enable users to deposit CryptoPunks into `AssetWrapper` collateral bundles. This allows wrapping and depositing to a bundle to be an atomic operation.
+This is version 2 of the protocol. Version 1 of the protocol can be found [here](https://github.com/Non-fungible-Technologies/pawnfi-contracts).
 
-[PunkRouter API Specification](docs/PunkRouter.md)
+## Breaking Changes from V1
 
-## FlashRollover
-
-This contract allows borrowers with a currently-active loan to roll over their collateral to a new loan, without needing to pay back the entire principal + interest. The contract uses an [AAVE Flash Loan](https://docs.aave.com/faq/flash-loans) to borrow enough tokens to repay the loan with interest. Once the original loan is repaid, a new loan is issued with the lender's signature, with the principal of the new loan repaying the flash loan plus the flash loan fee (0.09%). This allows borrowers to extend their loan term without having to move any deployed capital from loan proceeds. Note: if the principal of the new loan less fees is smaller than the old loan's principal + interest + flash loan fee, the contract will attempt to withdraw the balance from the borrower's wallet. If the new loan's principal is larger than the old loan's principal + interest + flash loan fee, the leftover loan proceeds will be sent to the borrower, making this like a refinance.
-
-[FlashRollover API Specification](docs/FlashRollover.md)
-
-## Version 2
-
-Version 2 of the Pawn protocol is currently in development. More details will be added to this section as the protocol progresses towards release.
+* Creating bundles via the old `AssetWrapper` contract is no longer supported. Each borrower using a bundle should deploy their own vault contract using the `VaultFactory` to create a new bundle.
+* `AssetVault` contracts do not support the `deposit{ETH,ERC20,ERC721,ERC1155}` methods from `AssetWrapper` for depositing assets. Deposits are made by transferring asset ownership to the vault.
+* `AssetVaults` do not support the `withdraw` method from `AssetWrapper`. Every asset held by the vault must be withdrawn individually using the `withdraw{ETH,ERC20,ERC721,ERC1155}` functions. Each withdraw must specify the particular asset, since the vault does not track what assets it owns - this must be done off-chain. Owners must call `enableWithdraw` to enable the withdrawal methods on an asset vault. Vaults are non-transferrable with withdraw enabled.
+* Signed terms must now contain a `deadline`, `interestRate`, `collateralAddress`, and `collateralId` field. The `interest` field is no longer supported.
+* A signature can only be for a specific side of a loan - borrowing or lending. This defined by the `side` field in the signature. The field is an enum where `0` represents borrowing and `1` represents lending.
+* A signature must also contain a `nonce`, a unique ID preventing signature re-use. The nonce must be in the signature payload and provided in `initializeLoan`.
+* The typehash for signatures has changed to reflecting these new fields: see `_TOKEN_ID_TYPEHASH` in OriginationController.sol.
+* Any repayment functions now take `loanId` as parameters instead of the appropriate note IDs. Note that in V2 these values are guaranteed to be the same.
+* `PunkRouter` is no longer supported. CryptoPunks should be directly transferred to asset vaults for deposits.
