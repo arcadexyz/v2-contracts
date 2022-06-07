@@ -636,7 +636,7 @@ contract OriginationController is
         if (terms.durationSecs < 3600 || terms.durationSecs > 94_608_000) revert OC_LoanDuration(terms.durationSecs);
 
         // interest rate must be greater than or equal to 0.01%
-        // and less than 10,000% (1e8 basis points)
+        // and less than 10,000% (1e6 basis points)
         if (terms.interestRate < 1e18 || terms.interestRate > 1e24) revert OC_InterestRate(terms.interestRate);
 
         // number of installments must be between either 0, or between 2 and 1000.

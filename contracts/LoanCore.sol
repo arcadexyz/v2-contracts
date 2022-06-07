@@ -20,6 +20,7 @@ import "./interfaces/ILoanCore.sol";
 import "./InstallmentsCalc.sol";
 import "./PromissoryNote.sol";
 import "./vault/OwnableERC721.sol";
+<<<<<<< HEAD
 import {
     LC_ZeroAddress,
     LC_ReusedNote,
@@ -31,6 +32,9 @@ import {
     LC_NonceUsed,
     LC_LoanNotDefaulted
 } from "./errors/Lending.sol";
+=======
+import { LC_ZeroAddress, LC_CollateralInUse, LC_CollateralNotInUse, LC_InvalidState, LC_NotExpired, LC_NonceUsed, LC_LoanNotDefaulted } from "./errors/Lending.sol";
+>>>>>>> 06ee51f (fix(roku-minor-1): error comments fixed, 1 error removed, origination controller comment fix)
 
 /**
  * @title LoanCore
