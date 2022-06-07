@@ -54,7 +54,7 @@ contract FeeController is AccessControlEnumerable, IFeeController, Ownable {
      * @param _rolloverFee          The new rollover fee, in bps.
      */
     function setRolloverFee(uint256 _rolloverFee) external override onlyOwner {
-        if (_rolloverFee > MAX_ORIGINATION_FEE) revert FC_FeeTooLarge();
+        if (_rolloverFee > MAX_ROLLOVER_FEE) revert FC_FeeTooLarge();
 
         rolloverFee = _rolloverFee;
         emit UpdateRolloverFee(_rolloverFee);
