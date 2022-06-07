@@ -20,7 +20,7 @@ import "./interfaces/ILoanCore.sol";
 import "./InstallmentsCalc.sol";
 import "./PromissoryNote.sol";
 import "./vault/OwnableERC721.sol";
-import { LC_ZeroAddress, LC_CollateralInUse, LC_CollateralNotInUse, LC_InvalidState, LC_NotExpired, LC_BalanceGTZero, LC_NonceUsed, LC_LoanNotDefaulted } from "./errors/Lending.sol";
+import { LC_ZeroAddress, LC_CollateralInUse, LC_CollateralNotInUse, LC_InvalidState, LC_NotExpired, LC_NonceUsed, LC_LoanNotDefaulted } from "./errors/Lending.sol";
 
 /**
  * @title LoanCore
