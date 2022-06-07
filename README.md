@@ -18,7 +18,7 @@ The Vault Factory is an ERC721 that tracks ownership of Asset Vault contracts (s
 VaultFactory token involves deploying a new AssetVault clone, and assigning the token's ID to the uint160 derived
 from the clone's address.
 
-Token ownership represents ownership of the underlying clone contract and be transferred - however, to prevent
+Token ownership represents ownership of the underlying clone contract and can be transferred - however, to prevent
 frontrunning attacks, any vault with withdrawals enabled cannot be transferred (see [AssetVault](#AssetVault)).
 ### AssetVault
 
@@ -45,7 +45,7 @@ vaults. The contract owner can choose to add or remove target addresses and func
 
 ### ItemsVerifier
 
-A contract that parses a payload of calldata and a target AssetVault, and decodes the in order to use it
+A contract that parses a payload of calldata and a target AssetVault, and decodes the payload in order to use it
 for logic proving or disproving defined predicates about the vault. The ItemsVerifier decodes the calldata
 as a list of required items the vault must hold in order for its predicates to pass. In the future, other contracts
 implementing `IArcadeSignatureVerifier` can support other calldata formats and associated validation logic.
