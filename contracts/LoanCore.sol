@@ -20,7 +20,17 @@ import "./interfaces/ILoanCore.sol";
 import "./InstallmentsCalc.sol";
 import "./PromissoryNote.sol";
 import "./vault/OwnableERC721.sol";
-import { LC_ZeroAddress, LC_CollateralInUse, LC_CollateralNotInUse, LC_InvalidState, LC_NotExpired, LC_BalanceGTZero, LC_NonceUsed, LC_LoanNotDefaulted } from "./errors/Lending.sol";
+import {
+    LC_ZeroAddress,
+    LC_BorrowerAddressEqualLenderAddress,
+    LC_CollateralInUse,
+    LC_CollateralNotInUse,
+    LC_InvalidState,
+    LC_NotExpired,
+    LC_BalanceGTZero,
+    LC_NonceUsed,
+    LC_LoanNotDefaulted
+} from "./errors/Lending.sol";
 
 /**
  * @title LoanCore
@@ -95,6 +105,7 @@ contract LoanCore is
         if (address(_feeController) == address(0)) revert LC_ZeroAddress();
         if (address(_borrowerNote) == address(0)) revert LC_ZeroAddress();
         if (address(_lenderNote) == address(0)) revert LC_ZeroAddress();
+        if (address(_lenderNote) == address(_borrowerNote)) revert LC_BorrowerAddressEqualLenderAddress();
 
         // only those with FEE_CLAIMER_ROLE can update or grant FEE_CLAIMER_ROLE
         __AccessControl_init();
