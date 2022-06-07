@@ -22,7 +22,25 @@ import "./interfaces/ISignatureVerifier.sol";
 
 import "./InstallmentsCalc.sol";
 import "./verifiers/ItemsVerifier.sol";
-import { OC_ZeroAddress, OC_InvalidState, OC_InvalidVerifier, OC_BatchLengthMismatch, OC_PredicateFailed, OC_SelfApprove, OC_ApprovedOwnLoan, OC_InvalidSignature, OC_CallerNotParticipant, OC_PrincipalTooLow, OC_LoanDuration, OC_InterestRate, OC_NumberInstallments, OC_SignatureIsExpired, OC_RolloverCurrencyMismatch, OC_RolloverCollateralMismatch } from "./errors/Lending.sol";
+import {
+    OC_ZeroAddress,
+    OC_InvalidState,
+    OC_InvalidVerifier,
+    OC_BatchLengthMismatch,
+    OC_PredicateFailed,
+    OC_PredicatesArrayEmpty,
+    OC_SelfApprove,
+    OC_ApprovedOwnLoan,
+    OC_InvalidSignature,
+    OC_CallerNotParticipant,
+    OC_PrincipalTooLow,
+    OC_LoanDuration,
+    OC_InterestRate,
+    OC_NumberInstallments,
+    OC_SignatureIsExpired,
+    OC_RolloverCurrencyMismatch,
+    OC_RolloverCollateralMismatch
+    } from "./errors/Lending.sol";
 
 /**
  * @title OriginationController
@@ -197,6 +215,10 @@ contract OriginationController is
         );
 
         _validateCounterparties(borrower, lender, msg.sender, externalSigner, sig, sighash, neededSide);
+
+        if (itemPredicates.length == 0) {
+            revert OC_PredicatesArrayEmpty();
+        }
 
         for (uint256 i = 0; i < itemPredicates.length; i++) {
             // Verify items are held in the wrapper
@@ -378,6 +400,10 @@ contract OriginationController is
         );
 
         _validateCounterparties(borrower, lender, msg.sender, externalSigner, sig, sighash, neededSide);
+
+        if (itemPredicates.length == 0) {
+            revert OC_PredicatesArrayEmpty();
+        }
 
         for (uint256 i = 0; i < itemPredicates.length; i++) {
             // Verify items are held in the wrapper

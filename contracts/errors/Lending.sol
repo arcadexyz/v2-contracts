@@ -58,6 +58,11 @@ error OC_NumberInstallments(uint256 numInstallments);
 error OC_PredicateFailed(address verifier, bytes data, address vault);
 
 /**
+ * @notice The predicates array is empty.
+ */
+error OC_PredicatesArrayEmpty();
+
+/**
  * @notice A caller attempted to approve themselves.
  *
  * @param caller                        The caller of the approve function.
