@@ -1,6 +1,6 @@
 {
-    "name": "pawn-contracts",
-    "description": "Smart contracts for the Pawn Finance protocol",
+    "name": "arcade-contracts",
+    "description": "Smart contracts for Arcade.xyz",
     "version": "1.0.0",
     "devDependencies": {
         "@aave/protocol-v2": "^1.0.1",
