@@ -29,7 +29,7 @@ import { AV_WithdrawsDisabled, AV_WithdrawsEnabled, AV_AlreadyInitialized, AV_Ca
  * the owner calls "enableWithdraw()", the state is set to a withdrawEnabled state.
  * Withdraws cannot be disabled once enabled. This restriction protects integrations
  * and purchasers of AssetVaults from unexpected withdrawal and frontrunning attacks.
- * For exampple: someone buys an AV assuming it contains token X, but I withdraw token X
+ * For example: someone buys an AV assuming it contains token X, but I withdraw token X
  * immediately before the sale concludes.
  *
  * @dev Asset Vaults support arbitrary external calls by either:

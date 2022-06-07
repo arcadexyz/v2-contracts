@@ -49,10 +49,6 @@ contract RepaymentController is IRepaymentController, InstallmentsCalc, AccessCo
     IPromissoryNote private borrowerNote;
     IPromissoryNote private lenderNote;
 
-    // Installment parameters
-    // * * * NOTE!!! Finish implementation of grace period
-    uint256 public constant GRACE_PERIOD = 604800; // 60*60*24*7 // 1 week
-
     constructor(
         ILoanCore _loanCore,
         IPromissoryNote _borrowerNote,
@@ -195,7 +191,8 @@ contract RepaymentController is IRepaymentController, InstallmentsCalc, AccessCo
 
     /**
      * @notice Called when paying back installment loan with an amount greater than the minimum amount due.
-     *         Do not call for single payment loan types.
+     *         Do not call for single payment loan types. If one wishes to repay the minimum, use
+     *         repayPartMinimum.
      *
      * @dev Pay off the current interest and, if applicable any late fees accrued, and an additional
      *      amount to be deducted from the loan principal.
