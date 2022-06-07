@@ -1,6 +1,8 @@
 import hre, { ethers, upgrades } from "hardhat";
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
 
 import { main as writeJson } from "../utils/verify/writeJson";
+import { main as setupRoles } from "../utils/setup-roles";
 import { SECTION_SEPARATOR, SUBSECTION_SEPARATOR } from "../utils/bootstrap-tools";
 
 import {
@@ -19,7 +21,6 @@ import {
     OriginationController,
     CallWhitelist,
     VaultFactory,
-    PunkRouter,
 } from "../../typechain";
 
 export interface deploymentData {
@@ -50,7 +51,6 @@ export interface DeployedResources {
     originationController: OriginationController;
     whitelist: CallWhitelist;
     vaultFactory: VaultFactory;
-    punkRouter: PunkRouter;
 }
 
 export async function main(
@@ -144,9 +144,6 @@ export async function main(
     const repaymentContAddress = repaymentController.address;
     console.log("RepaymentController deployed to:", repaymentContAddress);
 
-    const updateRepaymentControllerPermissions = await loanCore.grantRole(REPAYER_ROLE, repaymentController.address);
-    await updateRepaymentControllerPermissions.wait();
-
     console.log(SUBSECTION_SEPARATOR);
 
     const OriginationControllerFactory = await ethers.getContractFactory("OriginationController");
@@ -158,19 +155,13 @@ export async function main(
     const originationContProxyAddress = originationController.address;
     console.log("OriginationController proxy deployed to:", originationContProxyAddress);
 
-    const updateOriginationControllerPermissions = await loanCore.grantRole(
-        ORIGINATOR_ROLE,
-        originationController.address,
-    );
-    await updateOriginationControllerPermissions.wait();
-
     console.log(SUBSECTION_SEPARATOR);
 
-    const PunkRouterFactory = await ethers.getContractFactory("PunkRouter");
-    const punkRouter = <PunkRouter>await PunkRouterFactory.deploy(WRAPPED_PUNKS, CRYPTO_PUNKS);
-    await punkRouter.deployed();
+    // const PunkRouterFactory = await ethers.getContractFactory("PunkRouter");
+    // const punkRouter = <PunkRouter>await PunkRouterFactory.deploy(WRAPPED_PUNKS, CRYPTO_PUNKS);
+    // await punkRouter.deployed();
 
-    console.log("PunkRouter deployed to:", punkRouter.address);
+    // console.log("PunkRouter deployed to:", punkRouter.address);
     console.log(SECTION_SEPARATOR);
 
     console.log("Writing to deployments json file...");
@@ -192,6 +183,18 @@ export async function main(
 
     console.log(SECTION_SEPARATOR);
 
+       await setupRoles(
+        vaultFactory,
+        originationController,
+        borrowerNote,
+        repaymentController,
+        lenderNote,
+        loanCore,
+        feeController,
+        whitelist,
+    );
+
+
     return {
         assetVault,
         feeController,
@@ -202,7 +205,6 @@ export async function main(
         originationController,
         whitelist,
         vaultFactory,
-        punkRouter
     };
 }
 
