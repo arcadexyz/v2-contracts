@@ -105,7 +105,7 @@ contract LoanCore is
         if (address(_feeController) == address(0)) revert LC_ZeroAddress();
         if (address(_borrowerNote) == address(0)) revert LC_ZeroAddress();
         if (address(_lenderNote) == address(0)) revert LC_ZeroAddress();
-        if (address(_lenderNote) == address(_borrowerNote)) revert LC_BorrowerAddressEqualLenderAddress();
+        if (address(_borrowerNote) == address(_lenderNote)) revert LC_BorrowerAddressEqualLenderAddress();
 
         // only those with FEE_CLAIMER_ROLE can update or grant FEE_CLAIMER_ROLE
         __AccessControl_init();
