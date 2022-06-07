@@ -400,7 +400,6 @@ describe("RepaymentController", () => {
 
         expect(await mockERC20.balanceOf(borrower.address)).to.equal(0);
 
-        // LC_BalanceGTZero unreachable?
         await mint(mockERC20, borrower, ethers.utils.parseEther("1"));
         await mockERC20.connect(borrower).approve(repaymentController.address, ethers.utils.parseEther("1"));
         await expect(repaymentController.connect(borrower).repay(loanId)).to.be.revertedWith("RC_InvalidState");
