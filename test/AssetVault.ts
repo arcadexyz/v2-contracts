@@ -687,6 +687,7 @@ describe("AssetVault", () => {
                     .to.emit(mockERC721, "Transfer")
                     .withArgs(vault.address, await user.getAddress(), tokenId);
             });
+
             it("should withdraw a CryptoPunk from a vault", async () => {
                 const { vault, punks, user } = await loadFixture(fixture);
                 const punkIndex = 1234;
