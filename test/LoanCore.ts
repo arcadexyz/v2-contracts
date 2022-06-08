@@ -1105,7 +1105,7 @@ describe("LoanCore", () => {
             const { loanCore, lender } = await loadFixture(fixture);
 
             await expect(loanCore.connect(lender).setFeeController(lender.address)).to.be.revertedWith(
-                "AccessControl: account 0xadd93e738a415c5248f7cb044fcfc71d86b18572 is missing role 0x8dd046eb6fe22791cf064df41dbfc76ef240a563550f519aac88255bd8c2d3bb",
+                `AccessControl: account ${await(await lender.address.toLowerCase())} is missing role ${CLAIM_FEES_ROLE}`,
             );
         });
 
