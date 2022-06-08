@@ -82,7 +82,7 @@ contract LoanCore is
     // ========================================== INITIALIZER ===========================================
 
     /**
-     * @notice Initializes tehe loan core contract, by initializing parent
+     * @notice Initializes the loan core contract, by initializing parent
      *         contracts, setting up roles, and setting up contract references.
      *
      * @param _feeController      The address of the contract governing protocol fees.
@@ -181,7 +181,7 @@ contract LoanCore is
      * @notice Repay the given loan. Can only be called by RepaymentController,
      *         which verifies repayment conditions. This method will calculate
      *         the total interest due, collect it from the borrower, and redistribute
-     *         principal + interest to he lender, and collateral to the borrower.
+     *         principal + interest to the lender, and collateral to the borrower.
      *         All promissory notes will be burned and the loan will be marked as complete.
      *
      * @param loanId                The ID of the loan to repay.
@@ -218,8 +218,8 @@ contract LoanCore is
 
     /**
      * @notice Claim collateral on a given loan. Can only be called by RepaymentController,
-     *         which verifies claim conditions. This method validate that the loan's due
-     *         date has passed, and then distribute collateral to the lender. All promissory
+     *         which verifies claim conditions. This method validates that the loan's due
+     *         date has passed, and then distributes collateral to the lender. All promissory
      *         notes will be burned and the loan will be marked as complete.
      *
      * @param loanId                              The ID of the loan to claim.
@@ -634,7 +634,7 @@ contract LoanCore is
     }
 
     /**
-     * @dev Burn a borrower and lender note together - eiaser to make sure
+     * @dev Burn a borrower and lender note together - easier to make sure
      *      they are synchronized.
      *
      * @param loanId                The token ID to burn.
