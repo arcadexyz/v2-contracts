@@ -235,7 +235,7 @@ describe("PromissoryNote", () => {
             await expect(PromissoryNote.connect(signers[0]).initialize(signers[0].address)).to.not.be.reverted;
 
             await expect(PromissoryNote.connect(signers[1]).setPaused(true)).to.be.revertedWith(
-                "AccessControl: account 0xadd93e738a415c5248f7cb044fcfc71d86b18572 is missing role 0xa49807205ce4d355092ef5a8a18f56e8913cf4a201fbe287825b095693c21775",
+                `AccessControl: account ${(signers[1].address).toLowerCase()} is missing role 0xa49807205ce4d355092ef5a8a18f56e8913cf4a201fbe287825b095693c21775`,
             );
         });
 
@@ -247,7 +247,7 @@ describe("PromissoryNote", () => {
             await expect(PromissoryNote.connect(signers[0]).initialize(signers[0].address)).to.not.be.reverted;
 
             await expect(PromissoryNote.connect(signers[1]).setPaused(false)).to.be.revertedWith(
-                "AccessControl: account 0xadd93e738a415c5248f7cb044fcfc71d86b18572 is missing role 0xa49807205ce4d355092ef5a8a18f56e8913cf4a201fbe287825b095693c21775",
+                `AccessControl: account ${(signers[1].address).toLowerCase()} is missing role 0xa49807205ce4d355092ef5a8a18f56e8913cf4a201fbe287825b095693c21775`,
             );
         });
 
