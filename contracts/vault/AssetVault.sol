@@ -16,7 +16,13 @@ import "../interfaces/IAssetVault.sol";
 import "../external/interfaces/IPunks.sol";
 import "./OwnableERC721.sol";
 
-import { AV_WithdrawsDisabled, AV_WithdrawsEnabled, AV_AlreadyInitialized, AV_CallDisallowed, AV_NonWhitelistedCall } from "../errors/Vault.sol";
+import {
+    AV_WithdrawsDisabled,
+    AV_WithdrawsEnabled,
+    AV_AlreadyInitialized,
+    AV_CallDisallowed,
+    AV_NonWhitelistedCall
+} from "../errors/Vault.sol";
 
 /**
  * @title AssetVault
@@ -189,7 +195,7 @@ contract AssetVault is IAssetVault, OwnableERC721, Initializable, ERC1155Holder,
         address to
     ) external onlyOwner onlyWithdrawEnabled {
         IPunks(punks).transferPunk(to, punkIndex);
-        emit WithdrawERC721(msg.sender, punks, to, punkIndex);
+        emit WithdrawPunk(msg.sender, punks, to, punkIndex);
     }
 
     // ====================================== UTILITY OPERATIONS ========================================
