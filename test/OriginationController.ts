@@ -882,6 +882,41 @@ describe("OriginationController", () => {
             ).to.be.revertedWith("OC_PredicateFailed");
         });
 
+        it("Reverts if the required predicates array is empty", async () => {
+            const { originationController, mockERC20, mockERC721, vaultFactory, user: lender, other: borrower } = ctx;
+            const bundleId = await initializeBundle(vaultFactory, borrower);
+            const tokenId = await mint721(mockERC721, borrower);
+            // Do not transfer erc721 to bundle
+            const loanTerms = createLoanTerms(mockERC20.address, vaultFactory.address, { collateralId: bundleId });
+
+            const predicates: ItemsPredicate[] = [];
+
+            const sig = await createLoanItemsSignature(
+                originationController.address,
+                "OriginationController",
+                loanTerms,
+                encodePredicates(predicates),
+                lender,
+                "2",
+                "1",
+                "l",
+            );
+
+            await vaultFactory.connect(borrower).approve(originationController.address, bundleId);
+            await expect(
+                originationController
+                    .connect(borrower)
+                    .initializeLoanWithItems(
+                        loanTerms,
+                        await borrower.getAddress(),
+                        await lender.getAddress(),
+                        sig,
+                        1,
+                        predicates,
+                    ),
+            ).to.be.revertedWith("OC_PredicatesArrayEmpty");
+        });
+
         it("Reverts for an invalid nonce", async () => {
             const { originationController, mockERC20, mockERC721, vaultFactory, user: lender, other: borrower } = ctx;
 
