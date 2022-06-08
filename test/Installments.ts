@@ -1355,15 +1355,15 @@ describe("Installments", () => {
                 for (let i = 0; i < 12; i++) {
                     await mockERC20
                         .connect(borrower)
-                        .approve(repaymentController.address, ethers.utils.parseEther("8791.599")); // first and maximum repayment
+                        .approve(repaymentController.address, ethers.utils.parseEther("8791.59")); // first and maximum repayment
                     await expect(
-                        repaymentController.connect(borrower).repayPart(loanId, ethers.utils.parseEther("8791.599")),
+                        repaymentController.connect(borrower).repayPart(loanId, ethers.utils.parseEther("8791.59")),
                     )
                         .to.emit(mockERC20, "Transfer")
                         .withArgs(
                             await borrower.getAddress(),
                             repaymentController.address,
-                            ethers.utils.parseEther("8791.599"),
+                            ethers.utils.parseEther("8791.59"),
                         );
                     //increase one installment period
                     await blockchainTime.increaseTime(31536000 / 12);
@@ -1373,15 +1373,18 @@ describe("Installments", () => {
                 const loanDATA = await loanCore.connect(borrower).getLoan(loanId);
                 expect(loanDATA.balance).to.equal(ethers.utils.parseEther("0"));
                 expect(loanDATA.state).to.equal(LoanState.Repaid);
-                expect(loanDATA.balancePaid).to.equal(ethers.utils.parseEther("105499.058840292240863275"));
+                expect(loanDATA.balancePaid).to.equal(ethers.utils.parseEther("105499.063930405056532804"));
 
                 const borrowerBalanceAfter = await mockERC20.balanceOf(await borrower.getAddress());
                 const lenderBalanceAfter = await mockERC20.balanceOf(await lender.getAddress());
+                console.log(borrowerBalanceBefore.sub(borrowerBalanceAfter))
+                console.log(lenderBalanceBefore.add(lenderBalanceAfter))
+
                 await expect(borrowerBalanceAfter).to.equal(
-                    borrowerBalanceBefore.sub(ethers.utils.parseEther("105499.058840292240863275")),
+                    borrowerBalanceBefore.sub(ethers.utils.parseEther("105499.08")),
                 );
                 await expect(lenderBalanceAfter).to.equal(
-                    lenderBalanceBefore.add(ethers.utils.parseEther("105499.058840292240863275")),
+                    lenderBalanceBefore.add(ethers.utils.parseEther("105499.063930405056532804")),
                 );
             });
 
@@ -1428,8 +1431,9 @@ describe("Installments", () => {
 
                 const borrowerBalanceAfter = await mockERC20.balanceOf(await borrower.getAddress());
                 const lenderBalanceAfter = await mockERC20.balanceOf(await lender.getAddress());
+
                 await expect(borrowerBalanceAfter).to.equal(
-                    borrowerBalanceBefore.sub(ethers.utils.parseEther("106.187109375")),
+                    borrowerBalanceBefore.sub(ethers.utils.parseEther("110")),
                 );
                 await expect(lenderBalanceAfter).to.equal(
                     lenderBalanceBefore.add(ethers.utils.parseEther("106.187109375")),
