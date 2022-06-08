@@ -307,8 +307,8 @@ contract LoanCore is
 
             data.lateFeesAccrued += lateFees;
             data.numInstallmentsPaid += uint24(numMissedPayments) + 1;
-            data.balance = 0;
             data.balancePaid += data.balance + interestDue + lateFees;
+            data.balance = 0;
         }
 
         _burnLoanNotes(oldLoanId);
