@@ -335,3 +335,11 @@ error PN_BurningRole(address caller);
  * @notice No token transfers while contract is in paused state.
  */
 error PN_ContractPaused();
+
+// ==================================== Fee Controller ======================================
+/// @notice All errors prefixed with FC_, to separate from other contracts in the protocol.
+
+/**
+ * @notice Caller attempted to set a fee which is larger than the global maximum.
+ */
+error FC_FeeTooLarge();

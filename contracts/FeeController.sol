@@ -6,6 +6,8 @@ import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interfaces/IFeeController.sol";
 
+import { FC_FeeTooLarge } from "./errors/Lending.sol";
+
 /**
  * @title FeeController
  * @author Non-Fungible Technologies, Inc.
@@ -19,6 +21,11 @@ import "./interfaces/IFeeController.sol";
  */
 contract FeeController is AccessControlEnumerable, IFeeController, Ownable {
     // ============================================ STATE ==============================================
+
+    /// @dev Global maximum fees, preventing attacks by owners
+    ///      which drain principal.
+    uint256 public constant MAX_ORIGINATION_FEE = 1000;
+    uint256 public constant MAX_ROLLOVER_FEE = 500;
 
     /// @dev Fee for origination - default is 0.5%
     uint256 private originationFee = 50;
@@ -34,6 +41,8 @@ contract FeeController is AccessControlEnumerable, IFeeController, Ownable {
      * @param _originationFee       The new origination fee, in bps.
      */
     function setOriginationFee(uint256 _originationFee) external override onlyOwner {
+        if (_originationFee > MAX_ORIGINATION_FEE) revert FC_FeeTooLarge();
+
         originationFee = _originationFee;
         emit UpdateOriginationFee(_originationFee);
     }
@@ -45,6 +54,8 @@ contract FeeController is AccessControlEnumerable, IFeeController, Ownable {
      * @param _rolloverFee          The new rollover fee, in bps.
      */
     function setRolloverFee(uint256 _rolloverFee) external override onlyOwner {
+        if (_rolloverFee > MAX_ROLLOVER_FEE) revert FC_FeeTooLarge();
+
         rolloverFee = _rolloverFee;
         emit UpdateRolloverFee(_rolloverFee);
     }
@@ -59,8 +70,6 @@ contract FeeController is AccessControlEnumerable, IFeeController, Ownable {
     function getOriginationFee() public view override returns (uint256) {
         return originationFee;
     }
-
-    // ========================================= FEE GETTERS ===========================================
 
     /**
      * @notice Get the current origination fee in bps.

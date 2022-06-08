@@ -34,14 +34,20 @@ describe("FeeController", () => {
         describe("setOriginationFee", () => {
             it("reverts if sender does not have admin role", async () => {
                 const { feeController, other } = await loadFixture(fixture);
-                await expect(feeController.connect(other).setOriginationFee(1234)).to.be.reverted;
+                await expect(feeController.connect(other).setOriginationFee(1234)).to.be.revertedWith("Ownable: caller is not the owner");
+            });
+
+            it("reverts if new fee is over the maximum", async () => {
+                const { feeController, user } = await loadFixture(fixture);
+                await expect(feeController.connect(user).setOriginationFee(10_000))
+                    .to.be.revertedWith("FC_FeeTooLarge");
             });
 
             it("sets origination fee", async () => {
                 const { feeController, user } = await loadFixture(fixture);
-                await expect(feeController.connect(user).setOriginationFee(1234))
+                await expect(feeController.connect(user).setOriginationFee(123))
                     .to.emit(feeController, "UpdateOriginationFee")
-                    .withArgs(1234);
+                    .withArgs(123);
             });
         });
 
@@ -60,6 +66,26 @@ describe("FeeController", () => {
 
                 const originationFee = await feeController.connect(user).getOriginationFee();
                 expect(originationFee).to.equal(newFee);
+            });
+        });
+
+        describe("setRolloverFee", () => {
+            it("reverts if sender does not have admin role", async () => {
+                const { feeController, other } = await loadFixture(fixture);
+                await expect(feeController.connect(other).setRolloverFee(1234)).to.be.revertedWith("Ownable: caller is not the owner");
+            });
+
+            it("reverts if new fee is over the maximum", async () => {
+                const { feeController, user } = await loadFixture(fixture);
+                await expect(feeController.connect(user).setRolloverFee(10_000))
+                    .to.be.revertedWith("FC_FeeTooLarge");
+            });
+
+            it("sets origination fee", async () => {
+                const { feeController, user } = await loadFixture(fixture);
+                await expect(feeController.connect(user).setRolloverFee(123))
+                    .to.emit(feeController, "UpdateRolloverFee")
+                    .withArgs(123);
             });
         });
 
