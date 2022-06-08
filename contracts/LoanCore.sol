@@ -235,14 +235,18 @@ contract LoanCore is
         LoanLibrary.LoanData memory data = loans[loanId];
         // ensure valid initial loan state when starting loan
         if (data.state != LoanLibrary.LoanState.Active) revert LC_InvalidState(data.state);
-        // for legacy loans (currentInstallmentPeriod == 0) ensure lender is claiming
-        // after the loan has ended and if so, block.timstamp must be greater than the dueDate.
-        // for installment loan types (currentInstallmentPeriod > 0), check if the loan
-        // is in default, if not, revert.
-        if (data.terms.numInstallments == 0) {
-            uint256 dueDate = data.startDate + data.terms.durationSecs;
+        // All loans are able to be claimed after the loanIds dueDate.
+        // First check that the call happens after the dueDate and if not verify the loanId
+        // is an installment loan type and passes verification of missing greater than
+        // 40% the total number of installments.
+        uint256 dueDate = data.startDate + data.terms.durationSecs;
+        if (data.terms.numInstallments == 0 || dueDate < block.timestamp) {
             if (dueDate > block.timestamp) revert LC_NotExpired(dueDate);
-        } else {
+        }
+        else {
+            // verify installment loan type, not legacy loan (safety check)
+            if (data.terms.numInstallments == 0) revert LC_NotExpired(dueDate);
+            // verify >40% total installments have been missed
             _verifyDefaultedLoan(data.terms.numInstallments, data.numInstallmentsPaid, currentInstallmentPeriod);
         }
 
