@@ -248,7 +248,7 @@ error RC_RepayPartLTMin(uint256 amount, uint256 minAmount);
 error LC_ZeroAddress();
 
 /// @notice Borrower address is same as lender address.
-error LC_BorrowerAddressEqualLenderAddress();
+error LC_ReusedNote();
 
 /**
  * @notice Check collateral is not already used in a active loan.
