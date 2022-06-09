@@ -452,8 +452,7 @@ contract LoanCore is
      * @param nonce                 The nonce to consume.
      */
     function cancelNonce(uint160 nonce) external override {
-        address user = _msgSender();
-        _useNonce(user, nonce);
+        _useNonce(_msgSender(), nonce);
     }
 
     // ========================================= VIEW FUNCTIONS =========================================
