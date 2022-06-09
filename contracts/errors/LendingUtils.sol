@@ -9,7 +9,7 @@ import "../libraries/LoanLibrary.sol";
  * @author Non-Fungible Technologies, Inc.
  *
  * This file contains custom errors for utilities used by the lending protocol contracts.
- * Errors are prefixed by the contract that throws them (e.g., "PR_" for PunkRouter).
+ * Errors are prefixed by the contract that throws them (e.g., "LC_" for LoanCore).
  */
 
 // ==================================== ERC721 Permit ======================================
@@ -36,12 +36,4 @@ error ERC721P_NotTokenOwner(address owner);
  */
 error ERC721P_InvalidSignature(address signer);
 
-// ==================================== Punk Router ======================================
-/// @notice All errors prefixed with PR_, to separate from other contracts in the protocol.
 
-/**
- * @notice Not the owner of the specified punkIndex.
- *
- * @param caller                        Msg.sender of the function call.
- */
-error PR_NotOwner(address caller);
