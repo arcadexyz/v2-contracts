@@ -193,6 +193,13 @@ error IV_NonPositiveAmount20(address asset, uint256 amount);
 error RC_CannotDereference(uint256 target);
 
 /**
+ * @notice Ensure valid loan state for loan lifceycle operations.
+ *
+ * @param state                         Current state of a loan according to LoanState enum.
+ */
+error RC_InvalidState(LoanLibrary.LoanState state);
+
+/**
  * @notice Repayment has already been completed for this loan without installments.
  */
 error RC_NoPaymentDue();

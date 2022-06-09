@@ -113,7 +113,7 @@ const fixture = async (): Promise<TestContext> => {
     await originationController.deployed();
 
     const repaymentController = <RepaymentController>(
-        await deploy("RepaymentController", admin, [loanCore.address, borrowerNote.address, lenderNote.address])
+        await deploy("RepaymentController", admin, [loanCore.address])
     );
     await repaymentController.deployed();
     const updateRepaymentControllerPermissions = await loanCore.grantRole(REPAYER_ROLE, repaymentController.address);
@@ -332,7 +332,7 @@ describe("Installments", () => {
             ).to.be.revertedWith("RC_CannotDereference");
         });
 
-        it("returns 0 for an already closed loan", async () => {
+        it("reverts for an already closed loan", async () => {
             const context = await loadFixture(fixture);
             const { repaymentController, mockERC20, borrower, lender, blockchainTime } = context;
             const { loanId } = await initializeInstallmentLoan(
@@ -359,15 +359,11 @@ describe("Installments", () => {
                 .to.emit(mockERC20, "Transfer")
                 .withArgs(await borrower.getAddress(), repaymentController.address, ethers.utils.parseEther("102.5"));
 
-            const installmentRes = await repaymentController
-                .connect(borrower)
-                .callStatic.getInstallmentMinPayment(loanId);
-            const minInterestDue = installmentRes[0];
-            const lateFees = installmentRes[1];
-            const numMissedPayments2 = installmentRes[2].toNumber();
-            expect(minInterestDue).to.equal(0);
-            expect(lateFees).to.equal(0);
-            expect(numMissedPayments2).to.equal(0);
+            await expect(
+                repaymentController
+                    .connect(borrower)
+                    .getInstallmentMinPayment(loanId)
+            ).to.be.revertedWith("RC_InvalidState");
         });
     });
 
@@ -490,7 +486,7 @@ describe("Installments", () => {
 
             await expect(
                 repaymentController.connect(borrower).repayPart(loanId, ethers.utils.parseEther("102.5")),
-            ).to.be.revertedWith("LC_InvalidState");
+            ).to.be.revertedWith("RC_InvalidState");
         });
 
         it("Fast Forward to 2nd period. Verify missed payments equals one.", async () => {

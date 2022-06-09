@@ -32,7 +32,7 @@ vault's contract address. Asset Vaults can hold ETH, ERC20s, ERC721, ERC1155, an
 
 The owner of a vault can also place an arbitrary `call` via the vault, in order to access utility derived from
 NFTs held in the vault. Other contracts can delegate the ability to make calls. In practice, an Asset Vault custodied
-by LoanCore delegates calling ability to the borrower, such that the borrower can accesss utility for a collateralized
+by LoanCore delegates calling ability to the borrower, such that the borrower can access utility for a collateralized
 vault. The protocol maintains a list of allowed calls (see [CallWhitelist](#CallWhitelist)).
 
 ### CallWhitelist
@@ -48,7 +48,7 @@ vaults. The contract owner can choose to add or remove target addresses and func
 A contract that parses a payload of calldata and a target AssetVault, and decodes the payload in order to use it
 for logic proving or disproving defined predicates about the vault. The ItemsVerifier decodes the calldata
 as a list of required items the vault must hold in order for its predicates to pass. In the future, other contracts
-implementing `IArcadeSignatureVerifier` can support other calldata formats and associated validation logic.
+implementing `ISignatureVerifier` can support other calldata formats and associated validation logic.
 
 ## Loan Lifecycle
 
@@ -89,7 +89,7 @@ from the old and new loan, and collects any needed balance from the responsible 
 
 The repayment controller handles all lifecycle progression for currently active loans - this contract has exclusive
 permission to call functions in `LoanCore` which repay loans, in whole or in part, or claim collateral on loan defaults.
-This contract is repsonsible for validating repayments inputs, calculating owed amounts, and collecting owed amounts
+This contract is responsible for validating repayments inputs, calculating owed amounts, and collecting owed amounts
 from the relevant counterparty. This contract also contains a convenience function for calculating the total amount
 due on any loan at a given time.
 

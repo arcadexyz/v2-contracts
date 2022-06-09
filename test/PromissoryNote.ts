@@ -113,9 +113,7 @@ describe("PromissoryNote", () => {
 
         const repaymentController = <RepaymentController>(
             await deploy("RepaymentController", signers[0], [
-                loanCore.address,
-                borrowerNote.address,
-                lenderNote.address,
+                loanCore.address
             ])
         );
         await repaymentController.deployed();

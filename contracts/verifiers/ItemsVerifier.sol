@@ -43,7 +43,7 @@ import { IV_ItemMissingAddress, IV_InvalidCollateralType, IV_NonPositiveAmount11
  * - All multi-item signatures assume AND - any optional expressed by OR
  *      can be implemented by simply signing multiple separate signatures.
  */
-contract ArcadeItemsVerifier is IArcadeSignatureVerifier {
+contract ArcadeItemsVerifier is ISignatureVerifier {
     using SafeCast for int256;
 
     /// @dev Enum describing the collateral type of a signature item

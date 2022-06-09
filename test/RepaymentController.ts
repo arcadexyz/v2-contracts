@@ -103,7 +103,7 @@ const fixture = async (): Promise<TestContext> => {
     await originationController.deployed();
 
     const repaymentController = <RepaymentController>(
-        await deploy("RepaymentController", admin, [loanCore.address, borrowerNote.address, lenderNote.address])
+        await deploy("RepaymentController", admin, [loanCore.address])
     );
 
     await repaymentController.deployed();
@@ -403,7 +403,7 @@ describe("RepaymentController", () => {
         // LC_BalanceGTZero unreachable?
         await mint(mockERC20, borrower, ethers.utils.parseEther("1"));
         await mockERC20.connect(borrower).approve(repaymentController.address, ethers.utils.parseEther("1"));
-        await expect(repaymentController.connect(borrower).repay(loanId)).to.be.revertedWith("LC_InvalidState");
+        await expect(repaymentController.connect(borrower).repay(loanId)).to.be.revertedWith("RC_InvalidState");
     });
 });
 
