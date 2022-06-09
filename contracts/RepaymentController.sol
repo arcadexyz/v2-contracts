@@ -143,8 +143,9 @@ contract RepaymentController is IRepaymentController, InstallmentsCalc, AccessCo
     {
         // load terms from loanId
         LoanLibrary.LoanData memory data = loanCore.getLoan(loanId);
-        // get loan from borrower note
+        // verify neither dummy or defaulted loan state
         if (data.state == LoanLibrary.LoanState.DUMMY_DO_NOT_USE) revert RC_CannotDereference(loanId);
+        if (data.state == LoanLibrary.LoanState.Defaulted) revert RC_CannotDereference(loanId);
 
         uint256 installments = data.terms.numInstallments;
         if (installments == 0) revert RC_NoInstallments(installments);
