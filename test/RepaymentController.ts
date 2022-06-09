@@ -103,7 +103,7 @@ const fixture = async (): Promise<TestContext> => {
     await originationController.deployed();
 
     const repaymentController = <RepaymentController>(
-        await deploy("RepaymentController", admin, [loanCore.address, borrowerNote.address, lenderNote.address])
+        await deploy("RepaymentController", admin, [loanCore.address])
     );
 
     await repaymentController.deployed();

@@ -84,7 +84,7 @@ describe("Integration", () => {
         const mockERC20 = <MockERC20>await deploy("MockERC20", admin, ["Mock ERC20", "MOCK"]);
 
         const repaymentController = <RepaymentController>(
-            await deploy("RepaymentController", admin, [loanCore.address, borrowerNote.address, lenderNote.address])
+            await deploy("RepaymentController", admin, [loanCore.address])
         );
         await repaymentController.deployed();
         const updateRepaymentControllerPermissions = await loanCore.grantRole(

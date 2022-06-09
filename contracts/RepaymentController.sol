@@ -16,7 +16,6 @@ pragma solidity ^0.8.11;
  */
 
 import "@openzeppelin/contracts/utils/Context.sol";
-import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -40,23 +39,19 @@ import { RC_CannotDereference, RC_InvalidState, RC_NoPaymentDue, RC_OnlyLender, 
  * claim collateral on a defaulted loan. It is this contract's responsibility
  * to verify loan conditions before calling LoanCore.
  */
-contract RepaymentController is IRepaymentController, InstallmentsCalc, AccessControl {
+contract RepaymentController is IRepaymentController, InstallmentsCalc, Context {
     using SafeERC20 for IERC20;
 
     // ============================================ STATE ===============================================
 
     ILoanCore private loanCore;
-    IPromissoryNote private borrowerNote;
     IPromissoryNote private lenderNote;
 
     constructor(
-        ILoanCore _loanCore,
-        IPromissoryNote _borrowerNote,
-        IPromissoryNote _lenderNote
+        ILoanCore _loanCore
     ) {
         loanCore = _loanCore;
-        borrowerNote = _borrowerNote;
-        lenderNote = _lenderNote;
+        lenderNote = loanCore.lenderNote();
     }
 
     // ==================================== LIFECYCLE OPERATIONS ========================================
