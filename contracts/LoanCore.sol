@@ -204,9 +204,6 @@ contract LoanCore is
 
         uint256 returnAmount = getFullInterestAmount(data.terms.principal, data.terms.interestRate);
 
-        // transfer from msg.sender to this contract
-        IERC20Upgradeable(data.terms.payableCurrency).safeTransferFrom(_msgSender(), address(this), returnAmount);
-
         // get promissory notes from two parties involved
         address lender = lenderNote.ownerOf(loanId);
         address borrower = borrowerNote.ownerOf(loanId);
@@ -218,6 +215,8 @@ contract LoanCore is
 
         _burnLoanNotes(loanId);
 
+        // transfer from msg.sender to this contract
+        IERC20Upgradeable(data.terms.payableCurrency).safeTransferFrom(_msgSender(), address(this), returnAmount);
         // asset and collateral redistribution
         // Not using safeTransfer to prevent lenders from blocking
         // loan receipt and forcing a default
@@ -377,10 +376,6 @@ contract LoanCore is
         // ensure valid initial loan state when repaying loan
         if (data.state != LoanLibrary.LoanState.Active) revert LC_InvalidState(data.state);
 
-        // calculate total sent by borrower and transferFrom repayment controller to this address
-        uint256 paymentTotal = _paymentToPrincipal + _paymentToLateFees + _paymentToInterest;
-        IERC20Upgradeable(data.terms.payableCurrency).safeTransferFrom(_msgSender(), address(this), paymentTotal);
-
         // get the lender and borrower
         address lender = lenderNote.ownerOf(_loanId);
         address borrower = borrowerNote.ownerOf(_loanId);
@@ -405,6 +400,9 @@ contract LoanCore is
         data.balance -= _balanceToPay;
         data.balancePaid += boundedPaymentTotal;
 
+        // calculate total sent by borrower and transferFrom repayment controller to this address
+        uint256 paymentTotal = _paymentToPrincipal + _paymentToLateFees + _paymentToInterest;
+        IERC20Upgradeable(data.terms.payableCurrency).safeTransferFrom(_msgSender(), address(this), paymentTotal);
         // Send payment to lender.
         // Not using safeTransfer to prevent lenders from blocking
         // loan receipt and forcing a default
