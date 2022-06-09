@@ -48,7 +48,7 @@ vaults. The contract owner can choose to add or remove target addresses and func
 A contract that parses a payload of calldata and a target AssetVault, and decodes the payload in order to use it
 for logic proving or disproving defined predicates about the vault. The ItemsVerifier decodes the calldata
 as a list of required items the vault must hold in order for its predicates to pass. In the future, other contracts
-implementing `IArcadeSignatureVerifier` can support other calldata formats and associated validation logic.
+implementing `ISignatureVerifier` can support other calldata formats and associated validation logic.
 
 ## Loan Lifecycle
 
