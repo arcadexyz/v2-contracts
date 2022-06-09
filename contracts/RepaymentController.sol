@@ -27,7 +27,7 @@ import "./interfaces/IPromissoryNote.sol";
 import "./interfaces/ILoanCore.sol";
 import "./interfaces/IRepaymentController.sol";
 
-import { RC_CannotDereference, RC_NoPaymentDue, RC_OnlyLender, RC_BeforeStartDate, RC_NoInstallments, RC_NoMinPaymentDue, RC_RepayPartZero, RC_RepayPartLTMin, RC_HasInstallments } from "./errors/Lending.sol";
+import { RC_CannotDereference, RC_InvalidState, RC_NoPaymentDue, RC_OnlyLender, RC_BeforeStartDate, RC_NoInstallments, RC_NoMinPaymentDue, RC_RepayPartZero, RC_RepayPartLTMin, RC_HasInstallments } from "./errors/Lending.sol";
 
 /**
  * @title RepaymentController
@@ -69,8 +69,11 @@ contract RepaymentController is IRepaymentController, InstallmentsCalc, AccessCo
      * @param  loanId               The ID of the loan.
      */
     function repay(uint256 loanId) external override {
-        LoanLibrary.LoanTerms memory terms = loanCore.getLoan(loanId).terms;
-        if (terms.durationSecs == 0) revert RC_CannotDereference(loanId);
+        LoanLibrary.LoanData memory data = loanCore.getLoan(loanId);
+        if (data.state == LoanLibrary.LoanState.DUMMY_DO_NOT_USE) revert RC_CannotDereference(loanId);
+        if (data.state != LoanLibrary.LoanState.Active) revert RC_InvalidState(data.state);
+
+        LoanLibrary.LoanTerms memory terms = data.terms;
 
         //cannot use for installment loans, call repayPart or repayPartMinimum
         if (terms.numInstallments != 0) revert RC_HasInstallments(terms.numInstallments);
@@ -96,6 +99,7 @@ contract RepaymentController is IRepaymentController, InstallmentsCalc, AccessCo
      */
     function claim(uint256 loanId) external override {
         // make sure that caller owns lender note
+        // Implicitly checks if loan is active - if inactive, note will not exist
         address lender = lenderNote.ownerOf(loanId);
         if (lender != msg.sender) revert RC_OnlyLender(msg.sender);
         // get LoanData for determining how to send the current installment parameter to LoanCore
@@ -145,6 +149,7 @@ contract RepaymentController is IRepaymentController, InstallmentsCalc, AccessCo
         LoanLibrary.LoanData memory data = loanCore.getLoan(loanId);
         // get loan from borrower note
         if (data.state == LoanLibrary.LoanState.DUMMY_DO_NOT_USE) revert RC_CannotDereference(loanId);
+        if (data.state != LoanLibrary.LoanState.Active) revert RC_InvalidState(data.state);
 
         uint256 installments = data.terms.numInstallments;
         if (installments == 0) revert RC_NoInstallments(installments);

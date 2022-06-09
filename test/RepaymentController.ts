@@ -403,7 +403,7 @@ describe("RepaymentController", () => {
         // LC_BalanceGTZero unreachable?
         await mint(mockERC20, borrower, ethers.utils.parseEther("1"));
         await mockERC20.connect(borrower).approve(repaymentController.address, ethers.utils.parseEther("1"));
-        await expect(repaymentController.connect(borrower).repay(loanId)).to.be.revertedWith("LC_InvalidState");
+        await expect(repaymentController.connect(borrower).repay(loanId)).to.be.revertedWith("RC_InvalidState");
     });
 });
 
