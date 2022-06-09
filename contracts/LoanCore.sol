@@ -625,7 +625,7 @@ contract LoanCore is
     }
 
     /*
-     * @dev Mint a borrower and lender note together - eiaser to make sure
+     * @dev Mint a borrower and lender note together - easier to make sure
      *      they are synchronized.
      *
      * @param loanId                The token ID to mint.

@@ -225,7 +225,7 @@ contract OriginationController is
             address verifier = itemPredicates[i].verifier;
             if (!isAllowedVerifier(verifier)) revert OC_InvalidVerifier(verifier);
 
-            if (!IArcadeSignatureVerifier(verifier).verifyPredicates(itemPredicates[i].data, vault)) {
+            if (!ISignatureVerifier(verifier).verifyPredicates(itemPredicates[i].data, vault)) {
                 revert OC_PredicateFailed(verifier, itemPredicates[i].data, vault);
             }
         }
@@ -410,7 +410,7 @@ contract OriginationController is
             address verifier = itemPredicates[i].verifier;
             if (!isAllowedVerifier(verifier)) revert OC_InvalidVerifier(verifier);
 
-            if (!IArcadeSignatureVerifier(verifier).verifyPredicates(itemPredicates[i].data, vault)) {
+            if (!ISignatureVerifier(verifier).verifyPredicates(itemPredicates[i].data, vault)) {
                 revert OC_PredicateFailed(verifier, itemPredicates[i].data, vault);
             }
         }
@@ -584,7 +584,7 @@ contract OriginationController is
      *         for instance, an upgradeable third-party verifier controlled by a borrower could be maliciously
      *         upgraded to approve an empty bundle.
      *
-     * @param verifier              The specified verifier contract, should implement IArcadeSignatureVerifier.
+     * @param verifier              The specified verifier contract, should implement ISignatureVerifier.
      * @param isAllowed             Whether the specified contract should be allowed.
      */
     function setAllowedVerifier(address verifier, bool isAllowed) public override onlyOwner {
@@ -599,7 +599,7 @@ contract OriginationController is
      * @notice Batch update for verification whitelist, in case of multiple verifiers
      *         active in production.
      *
-     * @param verifiers             The list of specified verifier contracts, should implement IArcadeSignatureVerifier.
+     * @param verifiers             The list of specified verifier contracts, should implement ISignatureVerifier.
      * @param isAllowed             Whether the specified contracts should be allowed, respectively.
      */
     function setAllowedVerifierBatch(address[] calldata verifiers, bool[] calldata isAllowed) external override {
