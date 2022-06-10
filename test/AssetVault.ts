@@ -12,6 +12,7 @@ import {
     MockERC20,
     MockERC721,
     MockERC1155,
+    CryptoPunksMarket,
 } from "../typechain";
 import { mint } from "./utils/erc20";
 import { mint as mintERC721 } from "./utils/erc721";
@@ -29,6 +30,7 @@ interface TestContext {
     mockERC20: MockERC20;
     mockERC721: MockERC721;
     mockERC1155: MockERC1155;
+    punks: CryptoPunksMarket;
     user: Signer;
     other: Signer;
     signers: Signer[];
@@ -70,12 +72,16 @@ describe("AssetVault", () => {
 
         const vaultTemplate = <AssetVault>await deploy("AssetVault", signers[0], []);
         const VaultFactoryFactory = await hre.ethers.getContractFactory("VaultFactory");
-        const factory = <VaultFactory>(
-            await upgrades.deployProxy(VaultFactoryFactory, [vaultTemplate.address, whitelist.address], {
+        const factory = <VaultFactory>await upgrades.deployProxy(
+            VaultFactoryFactory,
+            [vaultTemplate.address, whitelist.address],
+            {
                 kind: "uups",
-            })
+            },
         );
         const vault = await createVault(factory, signers[0]);
+
+        const punks = <CryptoPunksMarket>await deploy("CryptoPunksMarket", signers[0], []);
 
         return {
             nft: factory,
@@ -89,6 +95,7 @@ describe("AssetVault", () => {
             user: signers[0],
             other: signers[1],
             signers: signers.slice(2),
+            punks,
         };
     };
 
@@ -679,6 +686,24 @@ describe("AssetVault", () => {
                     .withArgs(await user.getAddress(), mockERC721.address, await user.getAddress(), tokenId)
                     .to.emit(mockERC721, "Transfer")
                     .withArgs(vault.address, await user.getAddress(), tokenId);
+            });
+            it("should withdraw a CryptoPunk from a vault", async () => {
+                const { vault, punks, user } = await loadFixture(fixture);
+                const punkIndex = 1234;
+                // claim ownership of punk
+                await punks.setInitialOwner(await user.getAddress(), punkIndex);
+                await punks.allInitialOwnersAssigned();
+                // "approve" the punk to the vault
+                await punks.offerPunkForSaleToAddress(punkIndex, 0, vault.address);
+                // deposit the punk into the vault
+                await punks.transferPunk(vault.address, punkIndex);
+
+                await vault.enableWithdraw();
+                await expect(vault.connect(user).withdrawPunk(punks.address, punkIndex, await user.getAddress()))
+                    .to.emit(punks, "Transfer")
+                    .withArgs(vault.address, await user.getAddress(), 1)
+                    .to.emit(punks, "PunkTransfer")
+                    .withArgs(vault.address, await user.getAddress(), punkIndex);
             });
 
             it("should throw when already withdrawn", async () => {
