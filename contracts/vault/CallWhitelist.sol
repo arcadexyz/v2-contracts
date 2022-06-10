@@ -3,7 +3,12 @@
 pragma solidity ^0.8.11;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
 import "../interfaces/ICallWhitelist.sol";
+import "../interfaces/IERC721Permit.sol";
 
 /**
  * @title CallWhitelist
@@ -20,6 +25,7 @@ import "../interfaces/ICallWhitelist.sol";
  * The contract owner can add or remove items from the whitelist.
  */
 contract CallWhitelist is Ownable, ICallWhitelist {
+    using SafeERC20 for IERC20;
     // ============================================ STATE ==============================================
 
     // ============= Global Immutable State ==============
@@ -27,16 +33,16 @@ contract CallWhitelist is Ownable, ICallWhitelist {
     /**
      * @dev Global blacklist for transfer functions.
      */
-    bytes4 private constant ERC20_TRANSFER = 0xa9059cbb;
-    bytes4 private constant ERC20_ERC721_APPROVE = 0x095ea7b3;
-    bytes4 private constant ERC20_ERC721_TRANSFER_FROM = 0x23b872dd;
+    bytes4 private constant ERC20_TRANSFER = IERC20.transfer.selector;
+    bytes4 private constant ERC20_ERC721_APPROVE = IERC20.approve.selector;
+    bytes4 private constant ERC20_ERC721_TRANSFER_FROM = IERC20.transferFrom.selector;
 
-    bytes4 private constant ERC721_SAFE_TRANSFER_FROM = 0x42842e0e;
-    bytes4 private constant ERC721_SAFE_TRANSFER_FROM_DATA = 0xb88d4fde;
-    bytes4 private constant ERC721_ERC1155_SET_APPROVAL = 0xa22cb465;
+    bytes4 private constant ERC721_SAFE_TRANSFER_FROM = bytes4(keccak256("safeTransferFrom(address,address,uint256)"));
+    bytes4 private constant ERC721_SAFE_TRANSFER_FROM_DATA = bytes4(keccak256("safeTransferFrom(address,address,uint256,bytes)"));
+    bytes4 private constant ERC721_ERC1155_SET_APPROVAL = IERC721.setApprovalForAll.selector;
 
-    bytes4 private constant ERC1155_SAFE_TRANSFER_FROM = 0xf242432a;
-    bytes4 private constant ERC1155_SAFE_BATCH_TRANSFER_FROM = 0x2eb2c2d6;
+    bytes4 private constant ERC1155_SAFE_TRANSFER_FROM = IERC1155.safeTransferFrom.selector;
+    bytes4 private constant ERC1155_SAFE_BATCH_TRANSFER_FROM = IERC1155.safeBatchTransferFrom.selector;
 
     // ================= Whitelist State ==================
 

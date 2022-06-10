@@ -146,37 +146,37 @@ describe("CallWhitelist", () => {
         it("erc20 transfer", async () => {
             const { whitelist, mockERC20 } = await loadFixture(fixture);
             const selector = mockERC20.interface.getSighash("transfer");
-            expect(await whitelist.isWhitelisted(mockERC20.address, selector)).to.be.false;
+            expect(await whitelist.isBlacklisted(selector)).to.be.true;
         });
 
         it("erc20 approve", async () => {
             const { whitelist, mockERC20 } = await loadFixture(fixture);
             const selector = mockERC20.interface.getSighash("approve");
-            expect(await whitelist.isWhitelisted(mockERC20.address, selector)).to.be.false;
+            expect(await whitelist.isBlacklisted(selector)).to.be.true;
         });
 
         it("erc20 transferFrom", async () => {
             const { whitelist, mockERC20 } = await loadFixture(fixture);
             const selector = mockERC20.interface.getSighash("transferFrom");
-            expect(await whitelist.isWhitelisted(mockERC20.address, selector)).to.be.false;
+            expect(await whitelist.isBlacklisted(selector)).to.be.true;
         });
 
         it("erc721 transferFrom", async () => {
             const { whitelist, mockERC721 } = await loadFixture(fixture);
             const selector = mockERC721.interface.getSighash("transferFrom");
-            expect(await whitelist.isWhitelisted(mockERC721.address, selector)).to.be.false;
+            expect(await whitelist.isBlacklisted(selector)).to.be.true;
         });
 
         it("erc721 safeTransferFrom", async () => {
             const { whitelist, mockERC721 } = await loadFixture(fixture);
             const selector = mockERC721.interface.getSighash("safeTransferFrom(address,address,uint256)");
-            expect(await whitelist.isWhitelisted(mockERC721.address, selector)).to.be.false;
+            expect(await whitelist.isBlacklisted(selector)).to.be.true;
         });
 
         it("erc721 safeTransferFrom with data", async () => {
             const { whitelist, mockERC721 } = await loadFixture(fixture);
             const selector = mockERC721.interface.getSighash("safeTransferFrom(address,address,uint256,bytes)");
-            expect(await whitelist.isWhitelisted(mockERC721.address, selector)).to.be.false;
+            expect(await whitelist.isBlacklisted(selector)).to.be.true;
         });
 
         it("erc721 setApprovalForAll", async () => {
@@ -188,19 +188,19 @@ describe("CallWhitelist", () => {
         it("erc1155 setApprovalForAll", async () => {
             const { whitelist, mockERC1155 } = await loadFixture(fixture);
             const selector = mockERC1155.interface.getSighash("setApprovalForAll");
-            expect(await whitelist.isWhitelisted(mockERC1155.address, selector)).to.be.false;
+            expect(await whitelist.isBlacklisted(selector)).to.be.true;
         });
 
         it("erc1155 safeTransferFrom", async () => {
             const { whitelist, mockERC1155 } = await loadFixture(fixture);
             const selector = mockERC1155.interface.getSighash("safeTransferFrom");
-            expect(await whitelist.isWhitelisted(mockERC1155.address, selector)).to.be.false;
+            expect(await whitelist.isBlacklisted(selector)).to.be.true;
         });
 
         it("erc1155 safeBatchTransferFrom", async () => {
             const { whitelist, mockERC1155 } = await loadFixture(fixture);
             const selector = mockERC1155.interface.getSighash("safeBatchTransferFrom");
-            expect(await whitelist.isWhitelisted(mockERC1155.address, selector)).to.be.false;
+            expect(await whitelist.isBlacklisted(selector)).to.be.true;
         });
     });
 
