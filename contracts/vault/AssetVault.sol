@@ -16,13 +16,7 @@ import "../interfaces/IAssetVault.sol";
 import "../external/interfaces/IPunks.sol";
 import "./OwnableERC721.sol";
 
-import {
-    AV_WithdrawsDisabled,
-    AV_WithdrawsEnabled,
-    AV_AlreadyInitialized,
-    AV_CallDisallowed,
-    AV_NonWhitelistedCall
-} from "../errors/Vault.sol";
+import { AV_WithdrawsDisabled, AV_WithdrawsEnabled, AV_AlreadyInitialized, AV_CallDisallowed, AV_NonWhitelistedCall } from "../errors/Vault.sol";
 
 /**
  * @title AssetVault
