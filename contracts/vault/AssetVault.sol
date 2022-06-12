@@ -193,7 +193,7 @@ contract AssetVault is IAssetVault, OwnableERC721, Initializable, ERC1155Holder,
         address punks,
         uint256 punkIndex,
         address to
-    ) external onlyOwner onlyWithdrawEnabled {
+    ) external override onlyOwner onlyWithdrawEnabled {
         IPunks(punks).transferPunk(to, punkIndex);
         emit WithdrawPunk(msg.sender, punks, to, punkIndex);
     }

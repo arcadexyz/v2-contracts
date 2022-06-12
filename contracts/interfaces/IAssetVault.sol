@@ -53,6 +53,12 @@ interface IAssetVault {
 
     function withdrawETH(address to) external;
 
+    function withdrawPunk(
+        address punks,
+        uint256 punkIndex,
+        address to
+    ) external;
+
     // ================ Utility Operations ================
 
     function call(address to, bytes memory data) external;
