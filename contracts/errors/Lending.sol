@@ -271,11 +271,6 @@ error LC_ReusedNote();
 error LC_CollateralInUse(address collateralAddress, uint256 collateralId);
 
 /**
- * @notice Collateral is not in use for an attempted rollover.
- */
-error LC_CollateralNotInUse();
-
-/**
  * @notice Ensure valid loan state for loan lifceycle operations.
  *
  * @param state                         Current state of a loan according to LoanState enum.
@@ -290,7 +285,7 @@ error LC_InvalidState(LoanLibrary.LoanState state);
 error LC_NotExpired(uint256 dueDate);
 
 /**
- * @notice User and the specified nonce have already been used.
+ * @notice User address and the specified nonce have already been used.
  *
  * @param user                          Address of collateral owner.
  * @param nonce                         Represents the number of transactions sent by address.
