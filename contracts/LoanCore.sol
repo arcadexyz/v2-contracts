@@ -10,6 +10,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721Upgradeable.sol"
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 
 import "./interfaces/ICallDelegator.sol";
 import "./interfaces/IPromissoryNote.sol";
@@ -46,6 +47,7 @@ contract LoanCore is
     ILoanCore,
     Initializable,
     InstallmentsCalc,
+    ContextUpgradeable,
     AccessControlUpgradeable,
     PausableUpgradeable,
     ICallDelegator,
@@ -61,8 +63,10 @@ contract LoanCore is
     bytes32 public constant ORIGINATOR_ROLE = keccak256("ORIGINATOR_ROLE");
     bytes32 public constant REPAYER_ROLE = keccak256("REPAYER_ROLE");
     bytes32 public constant FEE_CLAIMER_ROLE = keccak256("FEE_CLAIMER_ROLE");
+    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
 
     uint256 private constant PERCENT_MISSED_FOR_LENDER_CLAIM = 4000;
+
     // =============== Contract References ================
 
     IPromissoryNote public override borrowerNote;
@@ -109,6 +113,7 @@ contract LoanCore is
         __AccessControl_init();
         __UUPSUpgradeable_init_unchained();
 
+        _grantRole(DEFAULT_ADMIN_ROLE, _msgSender());
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
         _setupRole(FEE_CLAIMER_ROLE, _msgSender());
         _setRoleAdmin(FEE_CLAIMER_ROLE, FEE_CLAIMER_ROLE);

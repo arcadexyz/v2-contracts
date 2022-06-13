@@ -58,8 +58,7 @@ function createTestnetConfig(network: keyof typeof chainIds): NetworkUserConfig 
             path: "m/44'/60'/0'/0", // HD derivation path
         },
         chainId: chainIds[network],
-        url,
-        gas: 500000,
+        url
     };
 }
 
