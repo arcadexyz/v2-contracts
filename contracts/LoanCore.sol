@@ -243,10 +243,12 @@ contract LoanCore is
         LoanLibrary.LoanData memory data = loans[loanId];
         // ensure valid initial loan state when starting loan
         if (data.state != LoanLibrary.LoanState.Active) revert LC_InvalidState(data.state);
-        // All loans are able to be claimed after the loanIds dueDate.
-        // First check that the call happens after the dueDate and if not verify the loanId
-        // is an installment loan type and passes verification of missing greater than
-        // 40% the total number of installments.
+        // All loans types are able to be claimed after the loanId dueDate.
+        // First check if the loan has installments or the call is being made after the dueDate.
+        // In either of these cases, re-check the call is not before the dueDate
+        // since this was not checked prior for non-installment loan types. Only for installment type loans,
+        // a loan can be claimed prior to the dueDate. This can occur when greater than 40% on the total
+        // installment periods have been missed.
         uint256 dueDate = data.startDate + data.terms.durationSecs;
         if (data.terms.numInstallments == 0 || dueDate < block.timestamp) {
             if (dueDate > block.timestamp) revert LC_NotExpired(dueDate);
@@ -617,8 +619,9 @@ contract LoanCore is
         // get installments missed necessary for loan default (*1000)
         uint256 installmentsMissedForDefault = ((numInstallments * PERCENT_MISSED_FOR_LENDER_CLAIM) * 1000) /
             BASIS_POINTS_DENOMINATOR;
+
         // get current installments missed (*1000)
-        // one added to numInstallmentsPaid for a grace period on the current installment.
+        // +1 added to numInstallmentsPaid as a grace period on the current installment payment.
         uint256 currentInstallmentsMissed = ((currentInstallmentPeriod) * 1000) - ((numInstallmentsPaid + 1) * 1000);
 
         // check if the number of missed payments is greater than
