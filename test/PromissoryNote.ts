@@ -73,10 +73,12 @@ describe("PromissoryNote", () => {
         const whitelist = <CallWhitelist>await deploy("CallWhitelist", signers[0], []);
         const vaultTemplate = <AssetVault>await deploy("AssetVault", signers[0], []);
         const VaultFactoryFactory = await hre.ethers.getContractFactory("VaultFactory");
-        const vaultFactory = <VaultFactory>(
-            await upgrades.deployProxy(VaultFactoryFactory, [vaultTemplate.address, whitelist.address], {
+        const vaultFactory = <VaultFactory>await upgrades.deployProxy(
+            VaultFactoryFactory,
+            [vaultTemplate.address, whitelist.address],
+            {
                 kind: "uups",
-            })
+            },
         );
         const mockERC20 = <MockERC20>await deploy("MockERC20", signers[0], ["Mock ERC20", "MOCK"]);
 
@@ -88,10 +90,12 @@ describe("PromissoryNote", () => {
         const lenderNote = <PromissoryNote>await deploy("PromissoryNote", signers[0], ["Arcade.xyz LenderNote", "aLN"]);
 
         const LoanCore = await hre.ethers.getContractFactory("LoanCore");
-        const loanCore = <LoanCore>(
-            await upgrades.deployProxy(LoanCore, [feeController.address, borrowerNote.address, lenderNote.address], {
+        const loanCore = <LoanCore>await upgrades.deployProxy(
+            LoanCore,
+            [feeController.address, borrowerNote.address, lenderNote.address],
+            {
                 kind: "uups",
-            })
+            },
         );
 
         // Grant correct permissions for promissory note

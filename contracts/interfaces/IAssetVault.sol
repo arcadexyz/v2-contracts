@@ -10,6 +10,7 @@ interface IAssetVault {
     event WithdrawEnabled(address operator);
     event WithdrawERC20(address indexed operator, address indexed token, address recipient, uint256 amount);
     event WithdrawERC721(address indexed operator, address indexed token, address recipient, uint256 tokenId);
+    event WithdrawPunk(address indexed operator, address indexed token, address recipient, uint256 tokenId);
 
     event WithdrawERC1155(
         address indexed operator,
@@ -51,6 +52,12 @@ interface IAssetVault {
     ) external;
 
     function withdrawETH(address to) external;
+
+    function withdrawPunk(
+        address punks,
+        uint256 punkIndex,
+        address to
+    ) external;
 
     // ================ Utility Operations ================
 

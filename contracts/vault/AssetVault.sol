@@ -13,6 +13,7 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "../interfaces/ICallWhitelist.sol";
 import "../interfaces/ICallDelegator.sol";
 import "../interfaces/IAssetVault.sol";
+import "../external/interfaces/IPunks.sol";
 import "./OwnableERC721.sol";
 
 import { AV_WithdrawsDisabled, AV_WithdrawsEnabled, AV_AlreadyInitialized, AV_CallDisallowed, AV_NonWhitelistedCall } from "../errors/Vault.sol";
@@ -171,6 +172,24 @@ contract AssetVault is IAssetVault, OwnableERC721, Initializable, ERC1155Holder,
         uint256 balance = address(this).balance;
         payable(to).sendValue(balance);
         emit WithdrawETH(msg.sender, to, balance);
+    }
+
+    /**
+     * @notice Withdraw cryptoPunk from the vault.
+     *         The vault must be in a "withdrawEnabled" state (non-transferrable),
+     *         and the caller must be the owner.
+     *
+     * @param punks                 The CryptoPunk contract address.
+     * @param punkIndex             The index of the CryptoPunk to withdraw (i.e. token ID).
+     * @param to                    The recipient of the withdrawn punk.
+     */
+    function withdrawPunk(
+        address punks,
+        uint256 punkIndex,
+        address to
+    ) external override onlyOwner onlyWithdrawEnabled {
+        IPunks(punks).transferPunk(to, punkIndex);
+        emit WithdrawPunk(msg.sender, punks, to, punkIndex);
     }
 
     // ====================================== UTILITY OPERATIONS ========================================
