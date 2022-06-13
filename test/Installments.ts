@@ -664,6 +664,7 @@ describe("Installments", () => {
 
             await expect(repaymentController.connect(borrower).repay(loanId)).to.be.revertedWith("RC_HasInstallments");
         });
+
         it("Scenario: numInstallments: 8, durationSecs: 36000, principal: 100, interest: 10%. Repay minimum on first payment.", async () => {
             const context = await loadFixture(fixture);
             const { repaymentController, mockERC20, borrower, lender, blockchainTime, loanCore } = context;
@@ -1579,6 +1580,7 @@ describe("Installments", () => {
                 await expect(borrowerBalanceAfter).to.equal(borrowerBalanceBefore.sub(ethers.utils.parseEther("7.5")));
                 await expect(lenderBalanceAfter).to.equal(lenderBalanceBefore.add(ethers.utils.parseEther("7.5")));
             });
+
             it("Send zero as amount for repayPart call.", async () => {
                 const context = await loadFixture(fixture);
                 const { repaymentController, mockERC20, loanCore, borrower, lender, blockchainTime } = context;
@@ -1908,6 +1910,7 @@ describe("Installments", () => {
             expect(borrowerBalanceAfter.sub(borrowerBalanceBefore)).to.equal(0);
             expect(lenderBalanceAfter.sub(lenderBalanceBefore)).to.equal(1);
         });
+
         it("Scenario: numInstallments: 2, durationSecs: 36000. Borrower calls claim after first missed installment, should revert.", async () => {
             const context = await loadFixture(fixture);
             const { repaymentController, loanCore, mockERC20, borrower, lender, blockchainTime } = context;
@@ -1929,6 +1932,7 @@ describe("Installments", () => {
             // have lender call claim on the collateral
             await expect(repaymentController.connect(borrower).claim(loanId)).to.be.revertedWith("RC_OnlyLender");
         });
+
         it("Scenario: numInstallments: 2, durationSecs: 36000. Claim in first installment period should revert.", async () => {
             const context = await loadFixture(fixture);
             const { repaymentController, loanCore, mockERC20, vaultFactory, borrower, lender, blockchainTime } =
@@ -1957,6 +1961,7 @@ describe("Installments", () => {
             expect(borrowerBalanceAfter.sub(borrowerBalanceBefore)).to.equal(0);
             expect(lenderBalanceAfter.sub(lenderBalanceBefore)).to.equal(0);
         });
+
         it("Scenario: numInstallments: 4, durationSecs: 36000. Claim after first missed installment, should revert.", async () => {
             const context = await loadFixture(fixture);
             const { repaymentController, loanCore, mockERC20, vaultFactory, borrower, lender, blockchainTime } =
@@ -1985,6 +1990,7 @@ describe("Installments", () => {
             expect(borrowerBalanceAfter.sub(borrowerBalanceBefore)).to.equal(0);
             expect(lenderBalanceAfter.sub(lenderBalanceBefore)).to.equal(0);
         });
+
         it("Scenario: numInstallments: 4, durationSecs: 36000. Claim after 40% the loan duration, should revert still second installment period.", async () => {
             const context = await loadFixture(fixture);
             const { repaymentController, loanCore, mockERC20, vaultFactory, borrower, lender, blockchainTime } =
@@ -2013,6 +2019,7 @@ describe("Installments", () => {
             expect(borrowerBalanceAfter.sub(borrowerBalanceBefore)).to.equal(0);
             expect(lenderBalanceAfter.sub(lenderBalanceBefore)).to.equal(0);
         });
+
         it("Scenario: numInstallments: 4, durationSecs: 36000. Borrower repays minimum. Lender tries to claim in same installment, should revert", async () => {
             const context = await loadFixture(fixture);
             const { repaymentController, loanCore, mockERC20, vaultFactory, borrower, lender, blockchainTime } =
@@ -2048,6 +2055,7 @@ describe("Installments", () => {
             expect(borrowerBalanceAfter.sub(borrowerBalanceBefore)).to.equal(0);
             expect(lenderBalanceAfter.sub(lenderBalanceBefore)).to.equal(0);
         });
+
         it("Scenario: numInstallments: 4, durationSecs: 36000. Borrower repays minimum. Lender tries to claim in second installment, should revert", async () => {
             const context = await loadFixture(fixture);
             const { repaymentController, loanCore, mockERC20, vaultFactory, borrower, lender, blockchainTime } =
@@ -2083,6 +2091,7 @@ describe("Installments", () => {
             expect(borrowerBalanceAfter.sub(borrowerBalanceBefore)).to.equal(0);
             expect(lenderBalanceAfter.sub(lenderBalanceBefore)).to.equal(0);
         });
+
         it("Scenario: numInstallments: 4, durationSecs: 36000. Borrower repays minimum. Lender tries to claim various times in loan duration.", async () => {
             const context = await loadFixture(fixture);
             const { repaymentController, loanCore, mockERC20, vaultFactory, borrower, lender, blockchainTime } =
@@ -2134,6 +2143,7 @@ describe("Installments", () => {
             expect(borrowerBalanceAfter.sub(borrowerBalanceBefore)).to.equal(0);
             expect(lenderBalanceAfter.sub(lenderBalanceBefore)).to.equal(1);
         });
+
         it("Scenario: numInstallments: 10, durationSecs: 36000. Borrower repays minimum. Lender tries to claim various times in loan duration.", async () => {
             const context = await loadFixture(fixture);
             const { repaymentController, loanCore, mockERC20, vaultFactory, borrower, lender, blockchainTime } =
@@ -2185,6 +2195,7 @@ describe("Installments", () => {
             expect(borrowerBalanceAfter.sub(borrowerBalanceBefore)).to.equal(0);
             expect(lenderBalanceAfter.sub(lenderBalanceBefore)).to.equal(1);
         });
+
         it("Scenario: numInstallments: 24, durationSecs: 2y. Borrower repays minimum. Lender tries to claim various times in loan duration.", async () => {
             const context = await loadFixture(fixture);
             const { repaymentController, loanCore, mockERC20, vaultFactory, borrower, lender, blockchainTime } =
@@ -2238,6 +2249,7 @@ describe("Installments", () => {
             expect(borrowerBalanceAfter.sub(borrowerBalanceBefore)).to.equal(0);
             expect(lenderBalanceAfter.sub(lenderBalanceBefore)).to.equal(1);
         });
+
         it("Scenario: numInstallments: 4, durationSecs: 1 month. Borrower repays min 4 times and leaves. Lender tries to claim various times in duration.", async () => {
             const context = await loadFixture(fixture);
             const { repaymentController, loanCore, mockERC20, vaultFactory, borrower, lender, blockchainTime } =
@@ -2291,6 +2303,7 @@ describe("Installments", () => {
             expect(borrowerBalanceAfter.sub(borrowerBalanceBefore)).to.equal(0);
             expect(lenderBalanceAfter.sub(lenderBalanceBefore)).to.equal(1);
         });
+
         it("Scenario: numInstallments: 3, durationSecs: 1 month. Borrower repays min 3 times and leaves. Lender tries to claim various times induration.", async () => {
             const context = await loadFixture(fixture);
             const { repaymentController, loanCore, mockERC20, vaultFactory, borrower, lender, blockchainTime } =
@@ -2337,6 +2350,7 @@ describe("Installments", () => {
             expect(borrowerBalanceAfter.sub(borrowerBalanceBefore)).to.equal(0);
             expect(lenderBalanceAfter.sub(lenderBalanceBefore)).to.equal(1);
         });
+
         it("Scenario: numInstallments: 2, durationSecs: 1 week. Borrower repays min 2 times and leaves. Lender tries to claim various times in duration.", async () => {
             const context = await loadFixture(fixture);
             const { repaymentController, loanCore, mockERC20, vaultFactory, borrower, lender, blockchainTime } =
