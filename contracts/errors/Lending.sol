@@ -42,7 +42,7 @@ error OC_LoanDuration(uint256 durationSecs);
 error OC_InterestRate(uint256 interestRate);
 
 /**
- * @notice Loan terms must have even number of installments and intallment periods must be < 1000000.
+ * @notice Number of installment periods must be greater than 1 and less than or equal to 1000.
  *
  * @param numInstallments               Number of installment periods in loan.
  */
@@ -271,11 +271,6 @@ error LC_ReusedNote();
 error LC_CollateralInUse(address collateralAddress, uint256 collateralId);
 
 /**
- * @notice Collateral is not in use for an attempted rollover.
- */
-error LC_CollateralNotInUse();
-
-/**
  * @notice Ensure valid loan state for loan lifceycle operations.
  *
  * @param state                         Current state of a loan according to LoanState enum.
@@ -290,14 +285,7 @@ error LC_InvalidState(LoanLibrary.LoanState state);
 error LC_NotExpired(uint256 dueDate);
 
 /**
- * @notice Loan duration has not expired.
- *
- * @param returnAmount                  Total amount due for entire loan repayment.
- */
-error LC_BalanceGTZero(uint256 returnAmount);
-
-/**
- * @notice Loan duration has not expired.
+ * @notice User address and the specified nonce have already been used.
  *
  * @param user                          Address of collateral owner.
  * @param nonce                         Represents the number of transactions sent by address.

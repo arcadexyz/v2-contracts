@@ -24,10 +24,8 @@ import {
     LC_ZeroAddress,
     LC_ReusedNote,
     LC_CollateralInUse,
-    LC_CollateralNotInUse,
     LC_InvalidState,
     LC_NotExpired,
-    LC_BalanceGTZero,
     LC_NonceUsed,
     LC_LoanNotDefaulted
 } from "./errors/Lending.sol";
