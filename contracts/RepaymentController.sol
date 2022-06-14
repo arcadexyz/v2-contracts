@@ -47,7 +47,9 @@ contract RepaymentController is IRepaymentController, InstallmentsCalc, Context 
     ILoanCore private loanCore;
     IPromissoryNote private lenderNote;
 
-    constructor(ILoanCore _loanCore) {
+    constructor(
+        ILoanCore _loanCore
+    ) {
         loanCore = _loanCore;
         lenderNote = loanCore.lenderNote();
     }

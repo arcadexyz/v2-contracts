@@ -43,7 +43,7 @@ abstract contract InstallmentsCalc is IInstallmentsCalc {
         // Interest rate to be greater than or equal to 0.01%
         if (interestRate / INTEREST_RATE_DENOMINATOR < 1) revert FIAC_InterestRate(interestRate);
 
-        return principal + (principal * interestRate) / INTEREST_RATE_DENOMINATOR / BASIS_POINTS_DENOMINATOR;
+        return principal + principal * interestRate / INTEREST_RATE_DENOMINATOR / BASIS_POINTS_DENOMINATOR;
     }
 
     /**
