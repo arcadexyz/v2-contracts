@@ -131,7 +131,7 @@ export async function main(
 
     const RepaymentControllerFactory = await ethers.getContractFactory("RepaymentController");
     const repaymentController = <RepaymentController>(
-        await RepaymentControllerFactory.deploy(loanCore.address, borrowerNote.address, lenderNote.address)
+        await RepaymentControllerFactory.deploy(loanCore.address)
     );
     await repaymentController.deployed();
 
