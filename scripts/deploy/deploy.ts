@@ -60,6 +60,7 @@ export async function main(
 
     const CallWhiteListFactory = await ethers.getContractFactory("CallWhitelist");
     const whitelist = <CallWhitelist>await CallWhiteListFactory.deploy();
+    await whitelist.deployed();
 
     const whitelistAddress = whitelist.address;
     console.log("CallWhiteList deployed to:", whitelistAddress);
@@ -82,6 +83,7 @@ export async function main(
             initializer: "initialize(address, address)",
         },
     );
+    await vaultFactory.deployed();
 
     const vaultFactoryProxyAddress = vaultFactory.address;
     console.log("VaultFactory proxy deployed to:", vaultFactoryProxyAddress);
