@@ -243,14 +243,21 @@ contract LoanCore is
         LoanLibrary.LoanData memory data = loans[loanId];
         // ensure valid initial loan state when starting loan
         if (data.state != LoanLibrary.LoanState.Active) revert LC_InvalidState(data.state);
-        // for legacy loans (currentInstallmentPeriod == 0) ensure lender is claiming
-        // after the loan has ended and if so, block.timstamp must be greater than the dueDate.
-        // for installment loan types (currentInstallmentPeriod > 0), check if the loan
-        // is in default, if not, revert.
-        if (data.terms.numInstallments == 0) {
-            uint256 dueDate = data.startDate + data.terms.durationSecs;
+
+        // First check if the call is being made after the due date.
+        // Additionally, if an unexpired installment loan, verify over 40% of the total
+        // number of installments have been missed before the lender can claim.
+        uint256 dueDate = data.startDate + data.terms.durationSecs;
+        if (data.terms.numInstallments == 0 || block.timestamp > dueDate) {
+            // for non installment loan types call must be after due date
             if (dueDate > block.timestamp) revert LC_NotExpired(dueDate);
-        } else {
+
+            // perform claim...
+        }
+        else {
+            // verify installment loan type, not legacy loan (safety check)
+            if (data.terms.numInstallments == 0) revert LC_NotExpired(dueDate);
+            // verify greater than 40% total installments have been missed
             _verifyDefaultedLoan(data.terms.numInstallments, data.numInstallmentsPaid, currentInstallmentPeriod);
         }
 
@@ -613,8 +620,9 @@ contract LoanCore is
         // get installments missed necessary for loan default (*1000)
         uint256 installmentsMissedForDefault = ((numInstallments * PERCENT_MISSED_FOR_LENDER_CLAIM) * 1000) /
             BASIS_POINTS_DENOMINATOR;
+
         // get current installments missed (*1000)
-        // one added to numInstallmentsPaid for a grace period on the current installment.
+        // +1 added to numInstallmentsPaid as a grace period on the current installment payment.
         uint256 currentInstallmentsMissed = ((currentInstallmentPeriod) * 1000) - ((numInstallmentsPaid + 1) * 1000);
 
         // check if the number of missed payments is greater than
