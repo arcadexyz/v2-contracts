@@ -93,17 +93,19 @@ export async function main(
     lenderNote = await ethers.getContractAt("PromissoryNote", LENDER_NOTE_ADDRESS);
     borrowerNote = await ethers.getContractAt("PromissoryNote", BORROWER_NOTE_ADDRESS);
 
+    const gasLimit = 300000
+
     // grant correct permissions for promissory note
     // giving to user to call PromissoryNote functions directly
     for (const note of [borrowerNote, lenderNote]) {
         await note.connect(deployer).initialize(loanCore.address, {
-            gasLimit: 300000,
+            gasLimit
         });
     }
 
     // change loancore's owner from deployer to admin
     const updateOwner = await loanCore.grantRole(DEFAULT_ADMIN_ROLE, admin.address, {
-        gasLimit: 300000,
+        gasLimit
     });
 
     await updateOwner.wait();
@@ -111,39 +113,21 @@ export async function main(
 
     // grant LoanCore admin fee claimer permissions
     const updateLoanCoreFeeClaimer = await loanCore.grantRole(FEE_CLAIMER_ROLE, admin.address, {
-        gasLimit: 300000,
+        gasLimit
     });
 
     await updateLoanCoreFeeClaimer.wait();
     console.log(`loanCore has granted fee claimer role: ${FEE_CLAIMER_ROLE} to address: ${ADMIN_ADDRESS}`);
 
-    //     // grant LoanCore the admin role to enable authorizeUpgrade onlyRole(DEFAULT_ADMIN_ROLE)
-    // //     const updateLoanCoreAdmin = await loanCore.connect(admin).grantRole(ADMIN_ROLE, ADMIN_ADDRESS);
-    // //     await updateLoanCoreAdmin.wait();
 
-    // //     console.log(`loanCore has granted admin role: ${ADMIN_ROLE} to address: ${ADMIN_ADDRESS}`);
-
-    //     // grant VaultFactory the admin role to enable authorizeUpgrade onlyRole(DEFAULT_ADMIN_ROLE)
-    //     const updateVaultFactoryAdmin = await factory.grantRole(ADMIN_ROLE, ADMIN_ADDRESS, {
-    //         gasLimit: 300000
-    //     });
-    //     await updateVaultFactoryAdmin.wait();
-
-    //     console.log(`vaultFactory has granted admin role: ${ADMIN_ROLE} to address: ${ADMIN_ADDRESS}`);
-
-    //     // grant originationContoller the owner role to enable authorizeUpgrade onlyOwner
-    // //     const updateOriginationControllerAdmin = await loanCore.connect(admin).grantRole(ADMIN_ROLE, ADMIN_ADDRESS, {
-    // //         gasLimit: 300000
-    // //     });
-    // //     await updateOriginationControllerAdmin.wait();
-
-    // //     console.log(`originationController has granted admin role: ${ADMIN_ROLE} to address: ${ADMIN_ADDRESS}`);
+    const gasPrice = ethers.utils.parseUnits('100', 'gwei')
 
     // grant originationContoller the originator role
     const updateOriginationControllerRole = await loanCore
         .connect(admin)
         .grantRole(ORIGINATOR_ROLE, ORIGINATION_CONTROLLER_ADDRESS, {
-            gasLimit: 300000,
+            gasPrice,
+            gasLimit
         });
     await updateOriginationControllerRole.wait();
 
@@ -155,7 +139,7 @@ export async function main(
     const updateRepaymentControllerAdmin = await loanCore
         .connect(admin)
         .grantRole(REPAYER_ROLE, REPAYMENT_CONTROLLER_ADDRESS, {
-            gasLimit: 300000,
+            gasLimit
         });
     await updateRepaymentControllerAdmin.wait();
 
@@ -164,21 +148,21 @@ export async function main(
 
     // renounce ownership from deployer
     const renounceAdmin = await loanCore.renounceRole(ADMIN_ROLE, await deployer.address, {
-        gasLimit: 300000,
+        gasLimit
     });
     await renounceAdmin.wait();
 
     console.log(`loanCore has renounced admin role.`);
 
     const renounceOriginationControllerAdmin = await loanCore.renounceRole(ADMIN_ROLE, await deployer.address, {
-        gasLimit: 300000,
+        gasLimit
     });
     await renounceOriginationControllerAdmin.wait();
 
     console.log(`originationController has renounced originator role.`);
 
     const renounceVaultFactoryAdmin = await factory.renounceRole(ADMIN_ROLE, await deployer.address, {
-        gasLimit: 300000,
+        gasLimit
     });
     await renounceVaultFactoryAdmin.wait();
 
@@ -227,7 +211,7 @@ async function attachAddresses(jsonFile: string): Promise<any> {
 }
 
 if (require.main === module) {
-    attachAddresses(".deployments/rinkeby/rinkeby-1655160961206000.json").then((res: ContractArgs) => {
+    attachAddresses(".deployments/ropsten/ropsten-1655227095773000.json").then((res: ContractArgs) => {
         let {
             factory,
             originationController,
