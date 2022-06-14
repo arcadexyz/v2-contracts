@@ -12,29 +12,29 @@ import {
     REPAYER_ROLE as DEFAULT_REPAYER_ROLE,
 } from "./constants";
 
-const jsonContracts: {[key: string]: string}= {
+const jsonContracts: { [key: string]: string } = {
     CallWhitelist: "whitelist",
     AssetVault: "assetVault",
     VaultFactory: "factory",
     FeeController: "feeController",
-    BorrowerNote:  "borrowerNote",
-    LenderNote:  "lenderNote",
+    BorrowerNote: "borrowerNote",
+    LenderNote: "lenderNote",
     LoanCore: "loanCore",
     RepaymentController: "repaymentController",
     OriginationController: "originationController",
-}
+};
 
 type ContractArgs = {
-    "whitelist": Contract
-    "assetVault": Contract
-    "factory": Contract
-    "feeController": Contract
-    "borrowerNote": Contract
-    "lenderNote": Contract
-    "loanCore": Contract
-    "repaymentController": Contract
-    "originationController": Contract
-}
+    whitelist: Contract;
+    assetVault: Contract;
+    factory: Contract;
+    feeController: Contract;
+    borrowerNote: Contract;
+    lenderNote: Contract;
+    loanCore: Contract;
+    repaymentController: Contract;
+    originationController: Contract;
+};
 
 export async function main(
     factory: Contract,
@@ -49,14 +49,14 @@ export async function main(
     const signers: SignerWithAddress[] = await hre.ethers.getSigners();
     const [deployer, admin, adminMultiSig] = signers;
 
-    console.log("Deployer address:", deployer.address)
+    console.log("Deployer address:", deployer.address);
     // Get deployer balance
     const provider = ethers.provider;
-    const balance = await provider.getBalance(deployer.address)
-    console.log("Deployer balance:", balance.toString())
+    const balance = await provider.getBalance(deployer.address);
+    console.log("Deployer balance:", balance.toString());
 
-    console.log("Admin address:", admin.address)
-    console.log("Admin MultiSig address:", adminMultiSig.address)
+    console.log("Admin address:", admin.address);
+    console.log("Admin MultiSig address:", adminMultiSig.address);
 
     // Define roles
     const ADMIN_ROLE = DEFAULT_ADMIN_ROLE;
@@ -97,43 +97,56 @@ export async function main(
     // giving to user to call PromissoryNote functions directly
     for (const note of [borrowerNote, lenderNote]) {
         await note.connect(deployer).initialize(loanCore.address, {
-        gasLimit: 300000
-    });
+            gasLimit: 300000,
+        });
     }
 
-
-const updateOwner = await loanCore.grantRole(DEFAULT_ADMIN_ROLE, admin.address, {
-        gasLimit: 300000
+    // change loancore's owner from deployer to admin
+    const updateOwner = await loanCore.grantRole(DEFAULT_ADMIN_ROLE, admin.address, {
+        gasLimit: 300000,
     });
-    await updateOwner.wait();
 
+    await updateOwner.wait();
     console.log(`loanCore has granted admin role: ${ADMIN_ROLE} to address: ${ADMIN_ADDRESS}`);
 
-
     // grant LoanCore admin fee claimer permissions
-    const updateLoanCoreFeeClaimer = await loanCore.connect(admin).grantRole(FEE_CLAIMER_ROLE, admin.address, {
-        gasLimit: 300000
-    })
+    const updateLoanCoreFeeClaimer = await loanCore.grantRole(FEE_CLAIMER_ROLE, admin.address, {
+        gasLimit: 300000,
+    });
 
     await updateLoanCoreFeeClaimer.wait();
     console.log(`loanCore has granted fee claimer role: ${FEE_CLAIMER_ROLE} to address: ${ADMIN_ADDRESS}`);
 
+    //     // grant LoanCore the admin role to enable authorizeUpgrade onlyRole(DEFAULT_ADMIN_ROLE)
+    // //     const updateLoanCoreAdmin = await loanCore.connect(admin).grantRole(ADMIN_ROLE, ADMIN_ADDRESS);
+    // //     await updateLoanCoreAdmin.wait();
 
-    // grant VaultFactory the admin role to enable authorizeUpgrade onlyRole(DEFAULT_ADMIN_ROLE)
-    const updateVaultFactoryAdmin = await factory.connect(admin).grantRole(ADMIN_ROLE, ADMIN_ADDRESS);
-    await updateVaultFactoryAdmin.wait();
-    console.log(`vaultFactory has granted admin role: ${ADMIN_ROLE} to address: ${ADMIN_ADDRESS}`);
+    // //     console.log(`loanCore has granted admin role: ${ADMIN_ROLE} to address: ${ADMIN_ADDRESS}`);
 
-    // grant originationContoller the owner role to enable authorizeUpgrade onlyOwner
-    const updateOriginationControllerAdmin = await loanCore.connect(admin).grantRole(ADMIN_ROLE, ADMIN_ADDRESS);
-    await updateOriginationControllerAdmin.wait();
-    console.log(`originationController has granted admin role: ${ADMIN_ROLE} to address: ${ADMIN_ADDRESS}`);
+    //     // grant VaultFactory the admin role to enable authorizeUpgrade onlyRole(DEFAULT_ADMIN_ROLE)
+    //     const updateVaultFactoryAdmin = await factory.grantRole(ADMIN_ROLE, ADMIN_ADDRESS, {
+    //         gasLimit: 300000
+    //     });
+    //     await updateVaultFactoryAdmin.wait();
+
+    //     console.log(`vaultFactory has granted admin role: ${ADMIN_ROLE} to address: ${ADMIN_ADDRESS}`);
+
+    //     // grant originationContoller the owner role to enable authorizeUpgrade onlyOwner
+    // //     const updateOriginationControllerAdmin = await loanCore.connect(admin).grantRole(ADMIN_ROLE, ADMIN_ADDRESS, {
+    // //         gasLimit: 300000
+    // //     });
+    // //     await updateOriginationControllerAdmin.wait();
+
+    // //     console.log(`originationController has granted admin role: ${ADMIN_ROLE} to address: ${ADMIN_ADDRESS}`);
 
     // grant originationContoller the originator role
     const updateOriginationControllerRole = await loanCore
         .connect(admin)
-        .grantRole(ORIGINATOR_ROLE, ORIGINATION_CONTROLLER_ADDRESS);
+        .grantRole(ORIGINATOR_ROLE, ORIGINATION_CONTROLLER_ADDRESS, {
+            gasLimit: 300000,
+        });
     await updateOriginationControllerRole.wait();
+
     console.log(
         `originationController has granted originator role: ${ORIGINATOR_ROLE} to address: ${ORIGINATION_CONTROLLER_ADDRESS}`,
     );
@@ -141,7 +154,9 @@ const updateOwner = await loanCore.grantRole(DEFAULT_ADMIN_ROLE, admin.address, 
     // grant repaymentContoller the REPAYER_ROLE
     const updateRepaymentControllerAdmin = await loanCore
         .connect(admin)
-        .grantRole(REPAYER_ROLE, REPAYMENT_CONTROLLER_ADDRESS);
+        .grantRole(REPAYER_ROLE, REPAYMENT_CONTROLLER_ADDRESS, {
+            gasLimit: 300000,
+        });
     await updateRepaymentControllerAdmin.wait();
 
     console.log(`loanCore has granted repayer role: ${REPAYER_ROLE} to address: ${REPAYMENT_CONTROLLER_ADDRESS}`);
@@ -149,23 +164,21 @@ const updateOwner = await loanCore.grantRole(DEFAULT_ADMIN_ROLE, admin.address, 
 
     // renounce ownership from deployer
     const renounceAdmin = await loanCore.renounceRole(ADMIN_ROLE, await deployer.address, {
-        gasLimit: 300000
+        gasLimit: 300000,
     });
     await renounceAdmin.wait();
 
     console.log(`loanCore has renounced admin role.`);
 
-    const renounceOriginationControllerAdmin = await loanCore
-        .renounceRole(ADMIN_ROLE, await deployer.address, {
-        gasLimit: 300000
+    const renounceOriginationControllerAdmin = await loanCore.renounceRole(ADMIN_ROLE, await deployer.address, {
+        gasLimit: 300000,
     });
     await renounceOriginationControllerAdmin.wait();
 
     console.log(`originationController has renounced originator role.`);
 
-    const renounceVaultFactoryAdmin = await factory
-        .renounceRole(ADMIN_ROLE, await deployer.address, {
-        gasLimit: 300000
+    const renounceVaultFactoryAdmin = await factory.renounceRole(ADMIN_ROLE, await deployer.address, {
+        gasLimit: 300000,
     });
     await renounceVaultFactoryAdmin.wait();
 
@@ -197,32 +210,48 @@ const updateOwner = await loanCore.grantRole(DEFAULT_ADMIN_ROLE, admin.address, 
 async function attachAddresses(jsonFile: string): Promise<any> {
     let readData = fs.readFileSync(jsonFile);
     let jsonData = JSON.parse(readData);
-    let contracts: {[key: string]: Contract} = {}
-    for await(let key of Object.keys(jsonData)) {
-        if (!(key in jsonContracts)) continue
-        const argKey: string = jsonContracts[key]
-        console.log(`Key: ${key}, address: ${jsonData[key]['contractAddress']}`)
-        let contract: Contract
-        if (key === "BorrowerNote" || key === "LenderNote"){
-            contract = await ethers.getContractAt("PromissoryNote", jsonData[key]['contractAddress']);
-
+    let contracts: { [key: string]: Contract } = {};
+    for await (let key of Object.keys(jsonData)) {
+        if (!(key in jsonContracts)) continue;
+        const argKey: string = jsonContracts[key];
+        console.log(`Key: ${key}, address: ${jsonData[key]["contractAddress"]}`);
+        let contract: Contract;
+        if (key === "BorrowerNote" || key === "LenderNote") {
+            contract = await ethers.getContractAt("PromissoryNote", jsonData[key]["contractAddress"]);
         } else {
-            contract = await ethers.getContractAt(key, jsonData[key]['contractAddress']);
+            contract = await ethers.getContractAt(key, jsonData[key]["contractAddress"]);
         }
-        contracts[argKey] = contract
+        contracts[argKey] = contract;
     }
-    return contracts
+    return contracts;
 }
 
-
 if (require.main === module) {
-    attachAddresses('.deployments/rinkeby/rinkeby-1655160961206000.json').then((res: ContractArgs) => {
-        let {factory, originationController, borrowerNote, repaymentController, lenderNote, loanCore, feeController, whitelist} = res
-        main(factory, originationController, borrowerNote, repaymentController, lenderNote, loanCore, feeController, whitelist)
-        .then(() => process.exit(0))
-        .catch((error: Error) => {
-            console.error(error);
-            process.exit(1);
-        });
-    })
+    attachAddresses(".deployments/rinkeby/rinkeby-1655160961206000.json").then((res: ContractArgs) => {
+        let {
+            factory,
+            originationController,
+            borrowerNote,
+            repaymentController,
+            lenderNote,
+            loanCore,
+            feeController,
+            whitelist,
+        } = res;
+        main(
+            factory,
+            originationController,
+            borrowerNote,
+            repaymentController,
+            lenderNote,
+            loanCore,
+            feeController,
+            whitelist,
+        )
+            .then(() => process.exit(0))
+            .catch((error: Error) => {
+                console.error(error);
+                process.exit(1);
+            });
+    });
 }

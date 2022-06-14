@@ -29,6 +29,8 @@ export async function main(
     contractInfo["AssetVault"] = {
         contractAddress: assetVaultAddress,
 
+        contractImplementationAddress: "",
+
         constructorArgs: [],
     };
 

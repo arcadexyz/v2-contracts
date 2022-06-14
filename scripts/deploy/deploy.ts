@@ -1,14 +1,9 @@
 import hre, { ethers, upgrades } from "hardhat";
-import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
 
 import { main as writeJson } from "../utils/verify/writeJson";
-import { main as setupRoles } from "../utils/setup-roles";
 import { SECTION_SEPARATOR, SUBSECTION_SEPARATOR } from "../utils/bootstrap-tools";
 
-import {
-    ORIGINATOR_ROLE as DEFAULT_ORIGINATOR_ROLE,
-    REPAYER_ROLE as DEFAULT_REPAYER_ROLE,
-} from "../utils/constants";
+import { ORIGINATOR_ROLE as DEFAULT_ORIGINATOR_ROLE, REPAYER_ROLE as DEFAULT_REPAYER_ROLE } from "../utils/constants";
 
 import {
     AssetVault,
@@ -20,13 +15,13 @@ import {
     CallWhitelist,
     VaultFactory,
 } from "../../typechain";
-import { BigNumber } from "ethers";
 
 export interface deploymentData {
     [contractName: string]: contractData | PromissoryNoteTypeBn | PromissoryNoteTypeLn;
 }
 export interface contractData {
     contractAddress: string;
+    contractImplementationAddress: string;
     constructorArgs: any[];
 }
 
@@ -84,8 +79,8 @@ export async function main(
         [assetVault.address, whitelist.address],
         {
             kind: "uups",
-            initializer: "initialize(address, address)"
-        }
+            initializer: "initialize(address, address)",
+        },
     );
 
     const vaultFactoryProxyAddress = vaultFactory.address;
@@ -100,8 +95,8 @@ export async function main(
     console.log("FeeController deployed to: ", feeControllerAddress);
     console.log(SUBSECTION_SEPARATOR);
 
-    const bNoteName = "Arcade.xyz BorrowerNote"
-    const bNoteSymbol = "aBN"
+    const bNoteName = "Arcade.xyz BorrowerNote";
+    const bNoteSymbol = "aBN";
     const PromissoryNoteFactory = await ethers.getContractFactory("PromissoryNote");
     const borrowerNote = <PromissoryNote>await PromissoryNoteFactory.deploy(bNoteName, bNoteSymbol);
     await borrowerNote.deployed();
@@ -109,10 +104,9 @@ export async function main(
     const borrowerNoteAddress = borrowerNote.address;
     console.log("BorrowerNote deployed to:", borrowerNote.address);
 
-    const lNoteName = "Arcade.xyz LenderNote"
-    const lNoteSymbol = "aLN"
-    const lenderNote = <PromissoryNote>await PromissoryNoteFactory.deploy(lNoteName, lNoteSymbol
-    );
+    const lNoteName = "Arcade.xyz LenderNote";
+    const lNoteSymbol = "aLN";
+    const lenderNote = <PromissoryNote>await PromissoryNoteFactory.deploy(lNoteName, lNoteSymbol);
     await lenderNote.deployed();
 
     const lenderNoteAddress = lenderNote.address;
