@@ -34,13 +34,16 @@ describe("FeeController", () => {
         describe("setOriginationFee", () => {
             it("reverts if sender does not have admin role", async () => {
                 const { feeController, other } = await loadFixture(fixture);
-                await expect(feeController.connect(other).setOriginationFee(1234)).to.be.revertedWith("Ownable: caller is not the owner");
+                await expect(feeController.connect(other).setOriginationFee(1234)).to.be.revertedWith(
+                    "Ownable: caller is not the owner",
+                );
             });
 
             it("reverts if new fee is over the maximum", async () => {
                 const { feeController, user } = await loadFixture(fixture);
-                await expect(feeController.connect(user).setOriginationFee(10_000))
-                    .to.be.revertedWith("FC_FeeTooLarge");
+                await expect(feeController.connect(user).setOriginationFee(10_000)).to.be.revertedWith(
+                    "FC_FeeTooLarge",
+                );
             });
 
             it("sets origination fee", async () => {
@@ -72,13 +75,14 @@ describe("FeeController", () => {
         describe("setRolloverFee", () => {
             it("reverts if sender does not have admin role", async () => {
                 const { feeController, other } = await loadFixture(fixture);
-                await expect(feeController.connect(other).setRolloverFee(1234)).to.be.revertedWith("Ownable: caller is not the owner");
+                await expect(feeController.connect(other).setRolloverFee(1234)).to.be.revertedWith(
+                    "Ownable: caller is not the owner",
+                );
             });
 
             it("reverts if new fee is over the maximum", async () => {
                 const { feeController, user } = await loadFixture(fixture);
-                await expect(feeController.connect(user).setRolloverFee(10_000))
-                    .to.be.revertedWith("FC_FeeTooLarge");
+                await expect(feeController.connect(user).setRolloverFee(10_000)).to.be.revertedWith("FC_FeeTooLarge");
             });
 
             it("sets origination fee", async () => {

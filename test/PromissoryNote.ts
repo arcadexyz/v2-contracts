@@ -116,9 +116,7 @@ describe("PromissoryNote", () => {
         await loanCore.connect(signers[0]).grantRole(REPAYER_ROLE, await repayer.getAddress());
 
         const repaymentController = <RepaymentController>(
-            await deploy("RepaymentController", signers[0], [
-                loanCore.address
-            ])
+            await deploy("RepaymentController", signers[0], [loanCore.address])
         );
         await repaymentController.deployed();
         const updateRepaymentControllerPermissions = await loanCore.grantRole(

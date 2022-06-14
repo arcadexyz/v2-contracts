@@ -5,16 +5,29 @@ import { contractData } from "./deploy/deploy";
 
 import { SECTION_SEPARATOR, SUBSECTION_SEPARATOR } from "./utils/bootstrap-tools";
 
-async function verifyArtifacts(contractName: string, contractAddress: string, constructorArgs: any[]) {
+async function verifyArtifacts(
+    contractName: string,
+    contractAddress: string,
+    contractImplementationAddress: string,
+    constructorArgs: any[],
+) {
     console.log(`${contractName}: ${contractAddress}`);
     console.log(SUBSECTION_SEPARATOR);
 
+    let address;
+
+    if (contractImplementationAddress === "") {
+        address = contractAddress;
+    } else {
+        address = contractImplementationAddress;
+    }
+
     await hre.run("verify:verify", {
-        address: contractAddress,
+        address,
         constructorArguments: constructorArgs,
     });
 
-    console.log(`${contractName}: ${contractAddress}`, "has been verified.");
+    console.log(`${contractName}: ${address}`, "has been verified.");
     console.log(SECTION_SEPARATOR);
 }
 
@@ -36,7 +49,12 @@ export async function main(): Promise<void> {
     // loop through jsonData to run verifyArtifacts function
     for (const property in jsonData) {
         let dataFromJson = <contractData>jsonData[property];
-        await verifyArtifacts(property, dataFromJson.contractAddress, dataFromJson.constructorArgs);
+        await verifyArtifacts(
+            property,
+            dataFromJson.contractAddress,
+            dataFromJson.contractImplementationAddress,
+            dataFromJson.constructorArgs,
+        );
     }
 }
 

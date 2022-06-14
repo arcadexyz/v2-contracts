@@ -1,16 +1,9 @@
 import hre, { ethers, upgrades } from "hardhat";
-import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
 
 import { main as writeJson } from "../utils/verify/writeJson";
-import { main as setupRoles } from "../utils/setup-roles";
 import { SECTION_SEPARATOR, SUBSECTION_SEPARATOR } from "../utils/bootstrap-tools";
 
-import {
-    ORIGINATOR_ROLE as DEFAULT_ORIGINATOR_ROLE,
-    REPAYER_ROLE as DEFAULT_REPAYER_ROLE,
-    WRAPPED_PUNKS as DEFAULT_WRAPPED_PUNKS,
-    CRYPTO_PUNKS as DEFAULT_CRYPTO_PUNKS,
-} from "../utils/constants";
+import { ORIGINATOR_ROLE as DEFAULT_ORIGINATOR_ROLE, REPAYER_ROLE as DEFAULT_REPAYER_ROLE } from "../utils/constants";
 
 import {
     AssetVault,
@@ -28,6 +21,7 @@ export interface deploymentData {
 }
 export interface contractData {
     contractAddress: string;
+    contractImplementationAddress: string;
     constructorArgs: any[];
 }
 
@@ -56,8 +50,6 @@ export interface DeployedResources {
 export async function main(
     ORIGINATOR_ROLE = DEFAULT_ORIGINATOR_ROLE,
     REPAYER_ROLE = DEFAULT_REPAYER_ROLE,
-    WRAPPED_PUNKS = DEFAULT_WRAPPED_PUNKS,
-    CRYPTO_PUNKS = DEFAULT_CRYPTO_PUNKS,
 ): Promise<DeployedResources> {
     // Hardhat always runs the compile task when running scripts through it.
     // If this runs in a standalone fashion you may want to call compile manually
@@ -103,8 +95,8 @@ export async function main(
     console.log("FeeController deployed to: ", feeControllerAddress);
     console.log(SUBSECTION_SEPARATOR);
 
-    const bNoteName = "Arcade.xyz BorrowerNote"
-    const bNoteSymbol = "aBN"
+    const bNoteName = "Arcade.xyz BorrowerNote";
+    const bNoteSymbol = "aBN";
     const PromissoryNoteFactory = await ethers.getContractFactory("PromissoryNote");
     const borrowerNote = <PromissoryNote>await PromissoryNoteFactory.deploy(bNoteName, bNoteSymbol);
     await borrowerNote.deployed();
@@ -112,8 +104,8 @@ export async function main(
     const borrowerNoteAddress = borrowerNote.address;
     console.log("BorrowerNote deployed to:", borrowerNote.address);
 
-    const lNoteName = "Arcade.xyz LenderNote"
-    const lNoteSymbol = "aLN"
+    const lNoteName = "Arcade.xyz LenderNote";
+    const lNoteSymbol = "aLN";
     const lenderNote = <PromissoryNote>await PromissoryNoteFactory.deploy(lNoteName, lNoteSymbol);
     await lenderNote.deployed();
 
@@ -157,13 +149,6 @@ export async function main(
 
     console.log(SUBSECTION_SEPARATOR);
 
-    // const PunkRouterFactory = await ethers.getContractFactory("PunkRouter");
-    // const punkRouter = <PunkRouter>await PunkRouterFactory.deploy(WRAPPED_PUNKS, CRYPTO_PUNKS);
-    // await punkRouter.deployed();
-
-    // console.log("PunkRouter deployed to:", punkRouter.address);
-    console.log(SECTION_SEPARATOR);
-
     console.log("Writing to deployments json file...");
     await writeJson(
         assetVaultAddress,
@@ -182,18 +167,6 @@ export async function main(
     );
 
     console.log(SECTION_SEPARATOR);
-
-       await setupRoles(
-        vaultFactory,
-        originationController,
-        borrowerNote,
-        repaymentController,
-        lenderNote,
-        loanCore,
-        feeController,
-        whitelist,
-    );
-
 
     return {
         assetVault,
