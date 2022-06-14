@@ -101,9 +101,7 @@ describe("Rollovers", () => {
         const mockERC20 = <MockERC20>await deploy("MockERC20", admin, ["Mock ERC20", "MOCK"]);
         const mockERC721 = <MockERC721>await deploy("MockERC721", admin, ["Mock ERC721", "MOCK"]);
 
-        const repaymentController = <RepaymentController>(
-            await deploy("RepaymentController", admin, [loanCore.address])
-        );
+        const repaymentController = <RepaymentController>await deploy("RepaymentController", admin, [loanCore.address]);
         await repaymentController.deployed();
         const updateRepaymentControllerPermissions = await loanCore.grantRole(
             REPAYER_ROLE,

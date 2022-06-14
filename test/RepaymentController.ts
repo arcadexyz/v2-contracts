@@ -104,9 +104,7 @@ const fixture = async (): Promise<TestContext> => {
     );
     await originationController.deployed();
 
-    const repaymentController = <RepaymentController>(
-        await deploy("RepaymentController", admin, [loanCore.address])
-    );
+    const repaymentController = <RepaymentController>await deploy("RepaymentController", admin, [loanCore.address]);
 
     await repaymentController.deployed();
     const updateRepaymentControllerPermissions = await loanCore.grantRole(REPAYER_ROLE, repaymentController.address);

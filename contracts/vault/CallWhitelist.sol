@@ -38,7 +38,8 @@ contract CallWhitelist is Ownable, ICallWhitelist {
     bytes4 private constant ERC20_ERC721_TRANSFER_FROM = IERC20.transferFrom.selector;
 
     bytes4 private constant ERC721_SAFE_TRANSFER_FROM = bytes4(keccak256("safeTransferFrom(address,address,uint256)"));
-    bytes4 private constant ERC721_SAFE_TRANSFER_FROM_DATA = bytes4(keccak256("safeTransferFrom(address,address,uint256,bytes)"));
+    bytes4 private constant ERC721_SAFE_TRANSFER_FROM_DATA =
+        bytes4(keccak256("safeTransferFrom(address,address,uint256,bytes)"));
     bytes4 private constant ERC721_ERC1155_SET_APPROVAL = IERC721.setApprovalForAll.selector;
 
     bytes4 private constant ERC1155_SAFE_TRANSFER_FROM = IERC1155.safeTransferFrom.selector;

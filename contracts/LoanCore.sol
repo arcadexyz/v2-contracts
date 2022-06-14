@@ -20,15 +20,7 @@ import "./interfaces/ILoanCore.sol";
 import "./InstallmentsCalc.sol";
 import "./PromissoryNote.sol";
 import "./vault/OwnableERC721.sol";
-import {
-    LC_ZeroAddress,
-    LC_ReusedNote,
-    LC_CollateralInUse,
-    LC_InvalidState,
-    LC_NotExpired,
-    LC_NonceUsed,
-    LC_LoanNotDefaulted
-} from "./errors/Lending.sol";
+import { LC_ZeroAddress, LC_ReusedNote, LC_CollateralInUse, LC_InvalidState, LC_NotExpired, LC_NonceUsed, LC_LoanNotDefaulted } from "./errors/Lending.sol";
 
 /**
  * @title LoanCore
@@ -253,8 +245,7 @@ contract LoanCore is
             if (dueDate > block.timestamp) revert LC_NotExpired(dueDate);
 
             // perform claim...
-        }
-        else {
+        } else {
             // verify installment loan type, not legacy loan (safety check)
             if (data.terms.numInstallments == 0) revert LC_NotExpired(dueDate);
             // verify greater than 40% total installments have been missed
