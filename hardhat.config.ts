@@ -154,10 +154,7 @@ const config: HardhatUserConfig = {
             },
             {
                 version: "0.4.12",
-            },
-            {
-                version: "0.8.2",
-            },
+            }
         ],
     },
     typechain: {
