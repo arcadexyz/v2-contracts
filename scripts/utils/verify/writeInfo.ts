@@ -21,6 +21,8 @@ export async function main(
     contractInfo["CallWhitelist"] = {
         contractAddress: whitelistAddress,
 
+        contractImplementationAddress: "",
+
         constructorArgs: [],
     };
 
@@ -33,13 +35,17 @@ export async function main(
     const factoryProxyAddress = vaultFactoryAddress;
     const factoryImplAddress = await upgrades.erc1967.getImplementationAddress(factoryProxyAddress);
     contractInfo["VaultFactory"] = {
-        contractAddress: factoryImplAddress,
+        contractAddress: vaultFactoryAddress,
+
+        contractImplementationAddress: factoryImplAddress,
 
         constructorArgs: [],
     };
 
     contractInfo["FeeController"] = {
         contractAddress: feeControllerAddress,
+
+        contractImplementationAddress: "",
 
         constructorArgs: [],
     };
@@ -61,7 +67,9 @@ export async function main(
     const loanCoreProxyAddress = loanCoreAddress;
     const loanCoreImplAddress = await upgrades.erc1967.getImplementationAddress(loanCoreProxyAddress);
     contractInfo["LoanCore"] = {
-        contractAddress: loanCoreImplAddress,
+        contractAddress: loanCoreAddress,
+
+        contractImplementationAddress: loanCoreImplAddress,
 
         constructorArgs: [],
     };
@@ -69,13 +77,17 @@ export async function main(
     contractInfo["RepaymentController"] = {
         contractAddress: repaymentContAddress,
 
+        contractImplementationAddress: "",
+
         constructorArgs: [loanCoreProxyAddress, borrowerNoteAddress, lenderNoteAddress],
     };
 
     const originationContProxyAddress = originationContAddress;
     const originationContImplAddress = await upgrades.erc1967.getImplementationAddress(originationContProxyAddress);
     contractInfo["OriginationController"] = {
-        contractAddress: originationContImplAddress,
+        contractAddress: originationContAddress,
+
+        contractImplementationAddress: originationContImplAddress,
 
         constructorArgs: [],
     };

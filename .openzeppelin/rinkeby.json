@@ -294,8 +294,8 @@
   ],
   "impls": {
     "52674a9014b88a94e0fa72b23856de2f49819428033756f1e81cbc826d629444": {
-      "address": "0x76391cd8e269f2e8fDcf893E7F5E5781B2Fe2514",
-      "txHash": "0x3d136ecbd8c5d6065481a83e97fa2a13dee042dfb39e959d0cb9cf541ee32ae1",
+      "address": "0xf48bbCC7f8b62f257a06cE6844E16b6C2761Ceec",
+      "txHash": "0x5e070a01c33fdf1611ca87eb4c73d2cfbd545e6bbbdee60cf42e54a4428fba38",
       "layout": {
         "storage": [
           {
@@ -613,9 +613,9 @@
         }
       }
     },
-    "45f7082dc8376ab135368e3f759bbd8642423aaed0195389ecccdffe15290b3a": {
-      "address": "0xa7BD28ED07C1314f3aFF8fcD2a3a4dDBDDEe18B0",
-      "txHash": "0xf288c10380d6d9607577a67f1a0e8c487b882f390bf0f7786b2be426f01a6d38",
+    "d9f11f10b4559352ce2399a4d612f881a956026257bd23ca64eadbc459c5b0a0": {
+      "address": "0x1f39FB1514c2cb392ef62B453F17a0afd3789796",
+      "txHash": "0x1103e01c7a7725537f0c21e1e1a8f8899cca54d605bc382d22929e2739483f52",
       "layout": {
         "storage": [
           {
@@ -702,25 +702,25 @@
             "label": "borrowerNote",
             "offset": 0,
             "slot": "301",
-            "type": "t_contract(IPromissoryNote)19374",
+            "type": "t_contract(IPromissoryNote)19306",
             "contract": "LoanCore",
-            "src": "contracts/LoanCore.sol:60"
+            "src": "contracts/LoanCore.sol:74"
           },
           {
             "label": "lenderNote",
             "offset": 0,
             "slot": "302",
-            "type": "t_contract(IPromissoryNote)19374",
+            "type": "t_contract(IPromissoryNote)19306",
             "contract": "LoanCore",
-            "src": "contracts/LoanCore.sol:61"
+            "src": "contracts/LoanCore.sol:75"
           },
           {
             "label": "feeController",
             "offset": 0,
             "slot": "303",
-            "type": "t_contract(IFeeController)18752",
+            "type": "t_contract(IFeeController)18684",
             "contract": "LoanCore",
-            "src": "contracts/LoanCore.sol:62"
+            "src": "contracts/LoanCore.sol:76"
           },
           {
             "label": "loanIdTracker",
@@ -728,15 +728,15 @@
             "slot": "304",
             "type": "t_struct(Counter)4088_storage",
             "contract": "LoanCore",
-            "src": "contracts/LoanCore.sol:66"
+            "src": "contracts/LoanCore.sol:80"
           },
           {
             "label": "loans",
             "offset": 0,
             "slot": "305",
-            "type": "t_mapping(t_uint256,t_struct(LoanData)19555_storage)",
+            "type": "t_mapping(t_uint256,t_struct(LoanData)19487_storage)",
             "contract": "LoanCore",
-            "src": "contracts/LoanCore.sol:67"
+            "src": "contracts/LoanCore.sol:81"
           },
           {
             "label": "collateralInUse",
@@ -744,7 +744,7 @@
             "slot": "306",
             "type": "t_mapping(t_bytes32,t_bool)",
             "contract": "LoanCore",
-            "src": "contracts/LoanCore.sol:69"
+            "src": "contracts/LoanCore.sol:83"
           },
           {
             "label": "usedNonces",
@@ -752,7 +752,7 @@
             "slot": "307",
             "type": "t_mapping(t_address,t_mapping(t_uint160,t_bool))",
             "contract": "LoanCore",
-            "src": "contracts/LoanCore.sol:70"
+            "src": "contracts/LoanCore.sol:84"
           }
         ],
         "types": {
@@ -776,15 +776,15 @@
             "label": "bytes32",
             "numberOfBytes": "32"
           },
-          "t_contract(IFeeController)18752": {
+          "t_contract(IFeeController)18684": {
             "label": "contract IFeeController",
             "numberOfBytes": "20"
           },
-          "t_contract(IPromissoryNote)19374": {
+          "t_contract(IPromissoryNote)19306": {
             "label": "contract IPromissoryNote",
             "numberOfBytes": "20"
           },
-          "t_enum(LoanState)19487": {
+          "t_enum(LoanState)19419": {
             "label": "enum LoanLibrary.LoanState",
             "members": [
               "DUMMY_DO_NOT_USE",
@@ -814,7 +814,7 @@
             "label": "mapping(uint160 => bool)",
             "numberOfBytes": "32"
           },
-          "t_mapping(t_uint256,t_struct(LoanData)19555_storage)": {
+          "t_mapping(t_uint256,t_struct(LoanData)19487_storage)": {
             "label": "mapping(uint256 => struct LoanLibrary.LoanData)",
             "numberOfBytes": "32"
           },
@@ -830,12 +830,12 @@
             ],
             "numberOfBytes": "32"
           },
-          "t_struct(LoanData)19555_storage": {
+          "t_struct(LoanData)19487_storage": {
             "label": "struct LoanLibrary.LoanData",
             "members": [
               {
                 "label": "state",
-                "type": "t_enum(LoanState)19487",
+                "type": "t_enum(LoanState)19419",
                 "offset": 0,
                 "slot": "0"
               },
@@ -853,7 +853,7 @@
               },
               {
                 "label": "terms",
-                "type": "t_struct(LoanTerms)19509_storage",
+                "type": "t_struct(LoanTerms)19441_storage",
                 "offset": 0,
                 "slot": "1"
               },
@@ -878,7 +878,7 @@
             ],
             "numberOfBytes": "288"
           },
-          "t_struct(LoanTerms)19509_storage": {
+          "t_struct(LoanTerms)19441_storage": {
             "label": "struct LoanLibrary.LoanTerms",
             "members": [
               {
@@ -969,9 +969,9 @@
         }
       }
     },
-    "bcc737bbb84a553231dd7d3c14ce2eee703c89866385f34176442a2610c5ba15": {
-      "address": "0xA0AbC037640d393bd664Ddb43A35f151Ee6412F6",
-      "txHash": "0x03c86f14cac5de70d99e451b3231df23c591b8562c2f296c931488ca27cb52ef",
+    "8312d332c2a256ead7aac7eb0e95bc53a8a612ae40a32ee44fcc921aeba0588a": {
+      "address": "0x48a9328Bdc8C2533939AD961aEB4Ba8e206C8d38",
+      "txHash": "0x032d7cf379d87987386990b9b9094a2388d2119d6db08ef19d3778ab55fa2325",
       "layout": {
         "storage": [
           {
@@ -1076,7 +1076,7 @@
             "slot": "303",
             "type": "t_address",
             "contract": "OriginationController",
-            "src": "contracts/OriginationController.sol:70"
+            "src": "contracts/OriginationController.sol:88"
           },
           {
             "label": "_signerApprovals",
@@ -1084,7 +1084,7 @@
             "slot": "304",
             "type": "t_mapping(t_address,t_mapping(t_address,t_bool))",
             "contract": "OriginationController",
-            "src": "contracts/OriginationController.sol:75"
+            "src": "contracts/OriginationController.sol:93"
           },
           {
             "label": "allowedVerifiers",
@@ -1092,7 +1092,7 @@
             "slot": "305",
             "type": "t_mapping(t_address,t_bool)",
             "contract": "OriginationController",
-            "src": "contracts/OriginationController.sol:77"
+            "src": "contracts/OriginationController.sol:95"
           }
         ],
         "types": {

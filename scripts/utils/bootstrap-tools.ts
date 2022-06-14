@@ -22,7 +22,6 @@ export async function vaultAssetsAndMakeLoans(
     loanCore: Contract,
     feeController: Contract,
     whitelist: Contract,
-    punkRouter: Contract,
     punks: MockERC721Metadata,
     usd: MockERC20,
     beats: MockERC1155Metadata,
@@ -34,7 +33,6 @@ export async function vaultAssetsAndMakeLoans(
     console.log("But let's set up roles and permissions first...\n");
     // setup the role privileges
     await setupRoles(
-        signers,
         factory,
         originationController,
         borrowerNote,
@@ -43,7 +41,6 @@ export async function vaultAssetsAndMakeLoans(
         loanCore,
         feeController,
         whitelist,
-        punkRouter,
     );
 
     // Connect the first signer with the

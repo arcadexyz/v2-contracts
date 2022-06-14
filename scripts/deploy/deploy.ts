@@ -8,8 +8,6 @@ import { SECTION_SEPARATOR, SUBSECTION_SEPARATOR } from "../utils/bootstrap-tool
 import {
     ORIGINATOR_ROLE as DEFAULT_ORIGINATOR_ROLE,
     REPAYER_ROLE as DEFAULT_REPAYER_ROLE,
-    WRAPPED_PUNKS as DEFAULT_WRAPPED_PUNKS,
-    CRYPTO_PUNKS as DEFAULT_CRYPTO_PUNKS,
 } from "../utils/constants";
 
 import {
@@ -22,6 +20,7 @@ import {
     CallWhitelist,
     VaultFactory,
 } from "../../typechain";
+import { BigNumber } from "ethers";
 
 export interface deploymentData {
     [contractName: string]: contractData | PromissoryNoteTypeBn | PromissoryNoteTypeLn;
@@ -56,8 +55,6 @@ export interface DeployedResources {
 export async function main(
     ORIGINATOR_ROLE = DEFAULT_ORIGINATOR_ROLE,
     REPAYER_ROLE = DEFAULT_REPAYER_ROLE,
-    WRAPPED_PUNKS = DEFAULT_WRAPPED_PUNKS,
-    CRYPTO_PUNKS = DEFAULT_CRYPTO_PUNKS,
 ): Promise<DeployedResources> {
     // Hardhat always runs the compile task when running scripts through it.
     // If this runs in a standalone fashion you may want to call compile manually
@@ -87,8 +84,8 @@ export async function main(
         [assetVault.address, whitelist.address],
         {
             kind: "uups",
-            initializer: "initialize(address, address)",
-        },
+            initializer: "initialize(address, address)"
+        }
     );
 
     const vaultFactoryProxyAddress = vaultFactory.address;
@@ -114,7 +111,8 @@ export async function main(
 
     const lNoteName = "Arcade.xyz LenderNote"
     const lNoteSymbol = "aLN"
-    const lenderNote = <PromissoryNote>await PromissoryNoteFactory.deploy(lNoteName, lNoteSymbol);
+    const lenderNote = <PromissoryNote>await PromissoryNoteFactory.deploy(lNoteName, lNoteSymbol
+    );
     await lenderNote.deployed();
 
     const lenderNoteAddress = lenderNote.address;
@@ -157,13 +155,6 @@ export async function main(
 
     console.log(SUBSECTION_SEPARATOR);
 
-    // const PunkRouterFactory = await ethers.getContractFactory("PunkRouter");
-    // const punkRouter = <PunkRouter>await PunkRouterFactory.deploy(WRAPPED_PUNKS, CRYPTO_PUNKS);
-    // await punkRouter.deployed();
-
-    // console.log("PunkRouter deployed to:", punkRouter.address);
-    console.log(SECTION_SEPARATOR);
-
     console.log("Writing to deployments json file...");
     await writeJson(
         assetVaultAddress,
@@ -182,18 +173,6 @@ export async function main(
     );
 
     console.log(SECTION_SEPARATOR);
-
-       await setupRoles(
-        vaultFactory,
-        originationController,
-        borrowerNote,
-        repaymentController,
-        lenderNote,
-        loanCore,
-        feeController,
-        whitelist,
-    );
-
 
     return {
         assetVault,

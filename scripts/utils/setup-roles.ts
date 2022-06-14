@@ -148,21 +148,25 @@ const updateOwner = await loanCore.grantRole(DEFAULT_ADMIN_ROLE, admin.address, 
     console.log(SECTION_SEPARATOR);
 
     // renounce ownership from deployer
-    const renounceAdmin = await loanCore.connect(admin).renounceRole(ADMIN_ROLE, await deployer.getAddress());
+    const renounceAdmin = await loanCore.renounceRole(ADMIN_ROLE, await deployer.address, {
+        gasLimit: 300000
+    });
     await renounceAdmin.wait();
 
     console.log(`loanCore has renounced admin role.`);
 
     const renounceOriginationControllerAdmin = await loanCore
-        .connect(admin)
-        .renounceRole(ADMIN_ROLE, await deployer.getAddress());
+        .renounceRole(ADMIN_ROLE, await deployer.address, {
+        gasLimit: 300000
+    });
     await renounceOriginationControllerAdmin.wait();
 
     console.log(`originationController has renounced originator role.`);
 
     const renounceVaultFactoryAdmin = await factory
-        .connect(admin)
-        .renounceRole(ADMIN_ROLE, await deployer.getAddress());
+        .renounceRole(ADMIN_ROLE, await deployer.address, {
+        gasLimit: 300000
+    });
     await renounceVaultFactoryAdmin.wait();
 
     console.log(`vaultFactory has renounced admin role.`);
@@ -212,7 +216,7 @@ async function attachAddresses(jsonFile: string): Promise<any> {
 
 
 if (require.main === module) {
-    attachAddresses('.deployments/rinkeby/rinkeby-1655155945127000.json').then((res: ContractArgs) => {
+    attachAddresses('.deployments/rinkeby/rinkeby-1655160961206000.json').then((res: ContractArgs) => {
         let {factory, originationController, borrowerNote, repaymentController, lenderNote, loanCore, feeController, whitelist} = res
         main(factory, originationController, borrowerNote, repaymentController, lenderNote, loanCore, feeController, whitelist)
         .then(() => process.exit(0))
