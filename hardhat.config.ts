@@ -102,7 +102,7 @@ function createMainnetConfig(): NetworkUserConfig {
 
 const optimizerEnabled = process.env.DISABLE_OPTIMIZER ? false : true;
 
-const config: HardhatUserConfig = {
+export const config: HardhatUserConfig = {
     defaultNetwork: "hardhat",
     gasReporter: {
         currency: "USD",

@@ -1,7 +1,10 @@
 const fs = require("fs");
-import hre, { upgrades, ethers } from "hardhat";
+import hre, { ethers } from "hardhat";
 import { Contract } from "ethers";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
+
+// This is imported to extend into this file: import "@nomiclabs/hardhat-ethers";
+import { config } from "../../hardhat.config";
 
 import { SECTION_SEPARATOR } from "./bootstrap-tools";
 
@@ -47,7 +50,7 @@ export async function main(
     whitelist: Contract,
 ): Promise<void> {
     const signers: SignerWithAddress[] = await hre.ethers.getSigners();
-    const [deployer, admin, adminMultiSig] = signers;
+    const [deployer] = signers;
 
     console.log("Deployer address:", deployer.address);
     // Get deployer balance
@@ -55,8 +58,9 @@ export async function main(
     const balance = await provider.getBalance(deployer.address);
     console.log("Deployer balance:", balance.toString());
 
-    console.log("Admin address:", admin.address);
-    console.log("Admin MultiSig address:", adminMultiSig.address);
+    // Set admin address
+    const ADMIN_ADDRESS = process.env.ADMIN_MULTISIG;
+    console.log("Admin address:", ADMIN_ADDRESS);
 
     // Define roles
     const ADMIN_ROLE = DEFAULT_ADMIN_ROLE;
@@ -64,7 +68,6 @@ export async function main(
     const ORIGINATOR_ROLE = DEFAULT_ORIGINATOR_ROLE;
     const REPAYER_ROLE = DEFAULT_REPAYER_ROLE;
 
-    const ADMIN_ADDRESS = admin.address;
     const VAULT_FACTORY_ADDRESS = factory.address;
     const LENDER_NOTE_ADDRESS = lenderNote.address;
     const BORROWER_NOTE_ADDRESS = borrowerNote.address;
@@ -78,7 +81,7 @@ export async function main(
         throw new Error("Must specify LOAN_CORE_ADDRESS in environment!");
     }
 
-    if (!admin) {
+    if (!ADMIN_ADDRESS) {
         throw new Error("Must specify ADMIN_ADDRESS in environment!");
     }
 
@@ -99,34 +102,47 @@ export async function main(
     // giving to user to call PromissoryNote functions directly
     for (const note of [borrowerNote, lenderNote]) {
         await note.connect(deployer).initialize(loanCore.address, {
-            gasLimit,
+            gasLimit
         });
     }
 
-    // change loancore's owner from deployer to admin
-    const updateOwner = await loanCore.grantRole(DEFAULT_ADMIN_ROLE, admin.address, {
-        gasLimit,
+    // grant LoanCore the admin role to enable authorizeUpgrade onlyRole(DEFAULT_ADMIN_ROLE)
+    const updateLoanCoreAdmin = await loanCore.grantRole(ADMIN_ROLE, ADMIN_ADDRESS, {
+        gasLimit
     });
+    await updateLoanCoreAdmin.wait();
 
-    await updateOwner.wait();
     console.log(`loanCore has granted admin role: ${ADMIN_ROLE} to address: ${ADMIN_ADDRESS}`);
 
     // grant LoanCore admin fee claimer permissions
-    const updateLoanCoreFeeClaimer = await loanCore.grantRole(FEE_CLAIMER_ROLE, admin.address, {
-        gasLimit,
+    const updateLoanCoreFeeClaimer = await loanCore.grantRole(FEE_CLAIMER_ROLE, ADMIN_ADDRESS, {
+        gasLimit
     });
-
     await updateLoanCoreFeeClaimer.wait();
+
     console.log(`loanCore has granted fee claimer role: ${FEE_CLAIMER_ROLE} to address: ${ADMIN_ADDRESS}`);
 
-    const gasPrice = ethers.utils.parseUnits("100", "gwei");
+    // grant VaultFactory the admin role to enable authorizeUpgrade onlyRole(DEFAULT_ADMIN_ROLE)
+    const updateVaultFactoryAdmin = await factory.grantRole(ADMIN_ROLE, ADMIN_ADDRESS, {
+        gasLimit
+    });
+    await updateVaultFactoryAdmin.wait();
+
+    console.log(`vaultFactory has granted admin role: ${ADMIN_ROLE} to address: ${ADMIN_ADDRESS}`);
+
+    // grant originationContoller the owner role to enable authorizeUpgrade onlyOwner
+    const updateOriginationControllerAdmin = await loanCore.connect(deployer).grantRole(ADMIN_ROLE, ADMIN_ADDRESS, {
+        gasLimit
+    });
+    await updateOriginationControllerAdmin.wait();
+
+    console.log(`originationController has granted admin role: ${ADMIN_ROLE} to address: ${ADMIN_ADDRESS}`);
 
     // grant originationContoller the originator role
     const updateOriginationControllerRole = await loanCore
-        .connect(admin)
+        .connect(deployer)
         .grantRole(ORIGINATOR_ROLE, ORIGINATION_CONTROLLER_ADDRESS, {
-            gasPrice,
-            gasLimit,
+            gasLimit
         });
     await updateOriginationControllerRole.wait();
 
@@ -136,9 +152,9 @@ export async function main(
 
     // grant repaymentContoller the REPAYER_ROLE
     const updateRepaymentControllerAdmin = await loanCore
-        .connect(admin)
+        .connect(deployer)
         .grantRole(REPAYER_ROLE, REPAYMENT_CONTROLLER_ADDRESS, {
-            gasLimit,
+            gasLimit
         });
     await updateRepaymentControllerAdmin.wait();
 
@@ -147,21 +163,21 @@ export async function main(
 
     // renounce ownership from deployer
     const renounceAdmin = await loanCore.renounceRole(ADMIN_ROLE, await deployer.address, {
-        gasLimit,
+        gasLimit
     });
     await renounceAdmin.wait();
 
     console.log(`loanCore has renounced admin role.`);
 
     const renounceOriginationControllerAdmin = await loanCore.renounceRole(ADMIN_ROLE, await deployer.address, {
-        gasLimit,
+        gasLimit
     });
     await renounceOriginationControllerAdmin.wait();
 
     console.log(`originationController has renounced originator role.`);
 
     const renounceVaultFactoryAdmin = await factory.renounceRole(ADMIN_ROLE, await deployer.address, {
-        gasLimit,
+        gasLimit
     });
     await renounceVaultFactoryAdmin.wait();
 
@@ -171,20 +187,20 @@ export async function main(
     if (FEE_CONTROLLER_ADDRESS) {
         // set FeeController admin
         const feeController = await ethers.getContractAt("FeeController", FEE_CONTROLLER_ADDRESS);
-        const updateFeeControllerAdmin = await feeController.transferOwnership(adminMultiSig.address);
+        const updateFeeControllerAdmin = await feeController.transferOwnership(ADMIN_ADDRESS);
         await updateFeeControllerAdmin.wait();
     }
 
-    console.log(`feeController has transferred ownership to address: ${adminMultiSig.address}`);
+    console.log(`feeController has transferred ownership to address: ${ADMIN_ADDRESS}`);
 
     if (CALL_WHITELIST_ADDRESS) {
         // set CallWhiteList admin
         const whitelist = await ethers.getContractAt("CallWhitelist", CALL_WHITELIST_ADDRESS);
-        const updateWhitelistAdmin = await whitelist.transferOwnership(adminMultiSig.address);
+        const updateWhitelistAdmin = await whitelist.transferOwnership(ADMIN_ADDRESS);
         await updateWhitelistAdmin.wait();
     }
 
-    console.log(`whitelist has transferred ownership to address: ${adminMultiSig.address}`);
+    console.log(`whitelist has transferred ownership to address: ${ADMIN_ADDRESS}`);
 
     console.log(SECTION_SEPARATOR);
     console.log("Transferred all ownership.\n");
@@ -210,7 +226,13 @@ async function attachAddresses(jsonFile: string): Promise<any> {
 }
 
 if (require.main === module) {
-    attachAddresses(".deployments/ropsten/ropsten-1655227095773000.json").then((res: ContractArgs) => {
+    // retrieve command line args array
+    const args = process.argv.slice(2);
+
+    // assemble args to access the relevant deplyment json in .deployment
+    const file = `./.deployments/${args[0]}/${args[0]}-${args[1]}.json`;
+
+    attachAddresses(file).then((res: ContractArgs) => {
         let {
             factory,
             originationController,
