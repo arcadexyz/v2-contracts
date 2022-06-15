@@ -1,14 +1,17 @@
 
-import { deployAssets } from "./utils/deploy-assets";
+import { ethers } from "hardhat";
+
+import { deployNFTs } from "./utils/deploy-assets";
 import { mintAndDistribute } from "./utils/mint-distribute-assets";
 import { SECTION_SEPARATOR } from "./utils/constants";
+
 
 export async function main(): Promise<void> {
 
     console.log(SECTION_SEPARATOR);
     console.log("Deploying resources...\n");
     // Mint some NFTs
-    const { punks, art, beats, weth, pawnToken, usd } = await deployAssets();
+    const { punks, art, beats, weth, pawnToken, usd } = await deployNFTs();
 
     console.log(SECTION_SEPARATOR);
     console.log("Minting and Distributing assets...\n");

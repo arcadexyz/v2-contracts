@@ -12,9 +12,13 @@ interface DeployedNFT {
     usd: MockERC20;
 }
 
+<<<<<<< HEAD
 export async function deployAssets(): Promise<DeployedNFT> {
     // Deploy some ERC721s and ERC1155s
     console.log(SECTION_SEPARATOR);
+=======
+export async function deployNFTs(): Promise<DeployedNFT> {
+>>>>>>> 81cc979 (fix(bootstrap-state): removed new protocol deployment + added nonce to bootstrap-state-no-loans.ts)
     console.log("Deploying NFTs:\n");
     const erc721Factory = await ethers.getContractFactory("MockERC721Metadata");
     const erc1155Factory = await ethers.getContractFactory("MockERC1155Metadata");
