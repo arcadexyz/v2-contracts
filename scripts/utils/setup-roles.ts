@@ -68,9 +68,6 @@ export async function main(
     const ORIGINATOR_ROLE = DEFAULT_ORIGINATOR_ROLE;
     const REPAYER_ROLE = DEFAULT_REPAYER_ROLE;
 
-    const VAULT_FACTORY_ADDRESS = factory.address;
-    const LENDER_NOTE_ADDRESS = lenderNote.address;
-    const BORROWER_NOTE_ADDRESS = borrowerNote.address;
     const ORIGINATION_CONTROLLER_ADDRESS = originationController.address;
     const LOAN_CORE_ADDRESS = loanCore.address;
     const FEE_CONTROLLER_ADDRESS = feeController.address;
@@ -91,59 +88,39 @@ export async function main(
 
     console.log(SECTION_SEPARATOR);
 
-    loanCore = await ethers.getContractAt("LoanCore", LOAN_CORE_ADDRESS);
-    factory = await ethers.getContractAt("VaultFactory", VAULT_FACTORY_ADDRESS);
-    lenderNote = await ethers.getContractAt("PromissoryNote", LENDER_NOTE_ADDRESS);
-    borrowerNote = await ethers.getContractAt("PromissoryNote", BORROWER_NOTE_ADDRESS);
-
-    const gasLimit = 300000;
-
     // grant correct permissions for promissory note
     // giving to user to call PromissoryNote functions directly
     for (const note of [borrowerNote, lenderNote]) {
-        await note.connect(deployer).initialize(loanCore.address, {
-            gasLimit
-        });
+        await note.connect(deployer).initialize("0xB6Bd97421564030a5018DD6d0Fc4a362b8228B82");
     }
 
     // grant LoanCore the admin role to enable authorizeUpgrade onlyRole(DEFAULT_ADMIN_ROLE)
-    const updateLoanCoreAdmin = await loanCore.grantRole(ADMIN_ROLE, ADMIN_ADDRESS, {
-        gasLimit
-    });
+    const updateLoanCoreAdmin = await loanCore.grantRole(ADMIN_ROLE, ADMIN_ADDRESS);
     await updateLoanCoreAdmin.wait();
 
     console.log(`loanCore has granted admin role: ${ADMIN_ROLE} to address: ${ADMIN_ADDRESS}`);
 
     // grant LoanCore admin fee claimer permissions
-    const updateLoanCoreFeeClaimer = await loanCore.grantRole(FEE_CLAIMER_ROLE, ADMIN_ADDRESS, {
-        gasLimit
-    });
+    const updateLoanCoreFeeClaimer = await loanCore.grantRole(FEE_CLAIMER_ROLE, ADMIN_ADDRESS);
     await updateLoanCoreFeeClaimer.wait();
 
     console.log(`loanCore has granted fee claimer role: ${FEE_CLAIMER_ROLE} to address: ${ADMIN_ADDRESS}`);
 
     // grant VaultFactory the admin role to enable authorizeUpgrade onlyRole(DEFAULT_ADMIN_ROLE)
-    const updateVaultFactoryAdmin = await factory.grantRole(ADMIN_ROLE, ADMIN_ADDRESS, {
-        gasLimit
-    });
+    const updateVaultFactoryAdmin = await factory.grantRole(ADMIN_ROLE, ADMIN_ADDRESS);
     await updateVaultFactoryAdmin.wait();
 
     console.log(`vaultFactory has granted admin role: ${ADMIN_ROLE} to address: ${ADMIN_ADDRESS}`);
 
     // grant originationContoller the owner role to enable authorizeUpgrade onlyOwner
-    const updateOriginationControllerAdmin = await loanCore.connect(deployer).grantRole(ADMIN_ROLE, ADMIN_ADDRESS, {
-        gasLimit
-    });
+    const updateOriginationControllerAdmin = await loanCore.grantRole(ADMIN_ROLE, ADMIN_ADDRESS);
     await updateOriginationControllerAdmin.wait();
 
     console.log(`originationController has granted admin role: ${ADMIN_ROLE} to address: ${ADMIN_ADDRESS}`);
 
     // grant originationContoller the originator role
     const updateOriginationControllerRole = await loanCore
-        .connect(deployer)
-        .grantRole(ORIGINATOR_ROLE, ORIGINATION_CONTROLLER_ADDRESS, {
-            gasLimit
-        });
+        .grantRole(ORIGINATOR_ROLE, ORIGINATION_CONTROLLER_ADDRESS);
     await updateOriginationControllerRole.wait();
 
     console.log(
@@ -152,33 +129,24 @@ export async function main(
 
     // grant repaymentContoller the REPAYER_ROLE
     const updateRepaymentControllerAdmin = await loanCore
-        .connect(deployer)
-        .grantRole(REPAYER_ROLE, REPAYMENT_CONTROLLER_ADDRESS, {
-            gasLimit
-        });
+        .grantRole(REPAYER_ROLE, REPAYMENT_CONTROLLER_ADDRESS);
     await updateRepaymentControllerAdmin.wait();
 
     console.log(`loanCore has granted repayer role: ${REPAYER_ROLE} to address: ${REPAYMENT_CONTROLLER_ADDRESS}`);
     console.log(SECTION_SEPARATOR);
 
     // renounce ownership from deployer
-    const renounceAdmin = await loanCore.renounceRole(ADMIN_ROLE, await deployer.address, {
-        gasLimit
-    });
+    const renounceAdmin = await loanCore.renounceRole(ADMIN_ROLE, await deployer.address);
     await renounceAdmin.wait();
 
     console.log(`loanCore has renounced admin role.`);
 
-    const renounceOriginationControllerAdmin = await loanCore.renounceRole(ADMIN_ROLE, await deployer.address, {
-        gasLimit
-    });
+    const renounceOriginationControllerAdmin = await loanCore.renounceRole(ADMIN_ROLE, deployer.address);
     await renounceOriginationControllerAdmin.wait();
 
     console.log(`originationController has renounced originator role.`);
 
-    const renounceVaultFactoryAdmin = await factory.renounceRole(ADMIN_ROLE, await deployer.address, {
-        gasLimit
-    });
+    const renounceVaultFactoryAdmin = await factory.renounceRole(ADMIN_ROLE, deployer.address);
     await renounceVaultFactoryAdmin.wait();
 
     console.log(`vaultFactory has renounced admin role.`);
