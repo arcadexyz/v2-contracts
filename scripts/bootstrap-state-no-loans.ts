@@ -2,10 +2,10 @@
 
 import { ethers } from "hardhat";
 
-import { main as deploy } from "./deploy/deploy";
 import { deployNFTs } from "./utils/deploy-assets";
 import { mintAndDistribute } from "./utils/mint-distribute-assets";
 import { SECTION_SEPARATOR } from "./utils/bootstrap-tools";
+
 
 export async function main(): Promise<void> {
     // Bootstrap five accounts only.
@@ -15,13 +15,7 @@ export async function main(): Promise<void> {
 
     console.log(SECTION_SEPARATOR);
     console.log("Deploying resources...\n");
-
-    // Deploy the smart contracts
-    const { loanCore } = await deploy();
-    console.log(SECTION_SEPARATOR);
-
     // Mint some NFTs
-    console.log(SECTION_SEPARATOR);
     const { punks, art, beats, weth, pawnToken, usd } = await deployNFTs();
 
     // Distribute NFTs and ERC20s
