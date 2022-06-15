@@ -14,7 +14,7 @@ interface DeployedNFT {
 }
 
 export async function deployNFTs(): Promise<DeployedNFT> {
-    console.log("Deploying NFTs...\n");
+    console.log("Deploying NFTs:\n");
     const erc721Factory = await ethers.getContractFactory("MockERC721Metadata");
     const erc1155Factory = await ethers.getContractFactory("MockERC1155Metadata");
 
@@ -29,7 +29,7 @@ export async function deployNFTs(): Promise<DeployedNFT> {
 
     // Deploy some ERC20s
     console.log(SECTION_SEPARATOR);
-    console.log("Deploying Tokens...\n");
+    console.log("Deploying Tokens:\n");
     const erc20Factory = await ethers.getContractFactory("ERC20PresetMinterPauser");
     const erc20WithDecimalsFactory = await ethers.getContractFactory("MockERC20WithDecimals");
 
