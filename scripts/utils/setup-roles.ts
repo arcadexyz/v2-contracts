@@ -91,7 +91,7 @@ export async function main(
     // grant correct permissions for promissory note
     // giving to user to call PromissoryNote functions directly
     for (const note of [borrowerNote, lenderNote]) {
-        await note.connect(deployer).initialize("0xB6Bd97421564030a5018DD6d0Fc4a362b8228B82");
+        await note.initialize(LOAN_CORE_ADDRESS);
     }
 
     // grant LoanCore the admin role to enable authorizeUpgrade onlyRole(DEFAULT_ADMIN_ROLE)
