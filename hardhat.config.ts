@@ -28,6 +28,7 @@ const chainIds = {
     mainnet: 1,
     rinkeby: 4,
     ropsten: 3,
+    sepolia: 11155111,
 };
 
 // Ensure that we have all the environment variables we need.
@@ -102,7 +103,7 @@ function createMainnetConfig(): NetworkUserConfig {
 
 const optimizerEnabled = process.env.DISABLE_OPTIMIZER ? false : true;
 
-const config: HardhatUserConfig = {
+export const config: HardhatUserConfig = {
     defaultNetwork: "hardhat",
     gasReporter: {
         currency: "USD",
@@ -119,6 +120,7 @@ const config: HardhatUserConfig = {
         kovan: createTestnetConfig("kovan"),
         rinkeby: createTestnetConfig("rinkeby"),
         ropsten: createTestnetConfig("ropsten"),
+        sepolia: createTestnetConfig("sepolia"),
         localhost: {
             accounts: {
                 mnemonic,

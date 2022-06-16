@@ -91,7 +91,8 @@
         "typechain": "hardhat typechain",
         "bootstrap-with-loans": "npx hardhat --network localhost run scripts/bootstrap-state-with-loans.ts",
         "bootstrap-no-loans": "npx hardhat --network localhost run scripts/bootstrap-state-no-loans.ts",
-        "verify-contracts": "ts-node scripts/verify-contracts.ts"
+        "verify-contracts": "ts-node scripts/verify-contracts.ts",
+        "bootstrap-state-with-loans": "ts-node scripts/bootstrap-state-with-loans.ts"
     },
     "dependencies": {
         "@openzeppelin/contracts-upgradeable": "4.5.2",
