@@ -13,6 +13,10 @@ import { createVault } from "./create-vault";
 import { SECTION_SEPARATOR } from "./constants";
 
 export async function vaultAssetsAndMakeLoans(
+<<<<<<< HEAD:scripts/utils/vault-assets-make-loans.ts
+=======
+    signers: SignerWithAddress[],
+>>>>>>> 3b13180 (fix(bootstrap-state): bootstrap with loans using cli specified protocol in deployments json):scripts/utils/bootstrap-tools.ts
     FACTORY_ADDRESS: string,
     originationController: Contract,
     borrowerNote: Contract,
@@ -26,6 +30,13 @@ export async function vaultAssetsAndMakeLoans(
 ): Promise<void> {
 
     console.log(SECTION_SEPARATOR);
+<<<<<<< HEAD:scripts/utils/vault-assets-make-loans.ts
+=======
+
+   // Attach address to vaultfactory contract
+    const VaultFactory = await ethers.getContractFactory("VaultFactory");
+    const factory = <VaultFactory>await VaultFactory.attach(FACTORY_ADDRESS);
+>>>>>>> 3b13180 (fix(bootstrap-state): bootstrap with loans using cli specified protocol in deployments json):scripts/utils/bootstrap-tools.ts
 
     // Bootstrap five accounts, skip the first account, since the
     // first signer will be the deployer account in hardhat.config.

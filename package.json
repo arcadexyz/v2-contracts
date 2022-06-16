@@ -101,12 +101,8 @@
     },
     "dependencies": {
         "@openzeppelin/contracts-upgradeable": "4.5.2",
-<<<<<<< HEAD
-        "@openzeppelin/hardhat-upgrades": "^1.17.0"
-=======
         "@openzeppelin/hardhat-upgrades": "^1.17.0",
         "bip39": "^3.0.4",
         "path": "^0.12.7"
->>>>>>> 7053144 (feat(generate.ts) now using path package.)
     }
 }

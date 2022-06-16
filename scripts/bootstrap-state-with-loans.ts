@@ -1,4 +1,5 @@
 /* eslint no-unused-vars: 0 */
+<<<<<<< HEAD
 import fs from "fs";
 import { ethers } from "hardhat";
 import { Contract } from "ethers";
@@ -31,6 +32,74 @@ type ContractArgs = {
     repaymentController: Contract;
     originationController: Contract;
 };
+=======
+const fs = require("fs");
+import hre, { ethers } from "hardhat";
+import { Contract } from "ethers";
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
+
+import { SUBSECTION_SEPARATOR, SECTION_SEPARATOR, vaultAssetsAndMakeLoans } from "./utils/bootstrap-tools";
+import { mintAndDistribute } from "./utils/mint-distribute-assets";
+import { deployNFTs } from "./utils/deploy-assets";
+import { config } from "../hardhat.config";
+
+const jsonContracts: { [key: string]: string } = {
+    CallWhitelist: "whitelist",
+    AssetVault: "assetVault",
+    VaultFactory: "factory",
+    FeeController: "feeController",
+    BorrowerNote: "borrowerNote",
+    LenderNote: "lenderNote",
+    LoanCore: "loanCore",
+    RepaymentController: "repaymentController",
+    OriginationController: "originationController",
+};
+type ContractArgs = {
+    whitelist: Contract;
+    assetVault: Contract;
+    factory: Contract;
+    feeController: Contract;
+    borrowerNote: Contract;
+    lenderNote: Contract;
+    loanCore: Contract;
+    repaymentController: Contract;
+    originationController: Contract;
+};
+
+export async function main(
+    factory: Contract,
+    originationController: Contract,
+    borrowerNote: Contract,
+    repaymentController: Contract,
+    lenderNote: Contract,
+    loanCore: Contract,
+    feeController: Contract,
+    whitelist: Contract,
+): Promise<void> {
+    // Bootstrap five accounts only.
+    // Skip the first account, since the
+    // first signer will be the deployer.
+    let signers: SignerWithAddress[] = await hre.ethers.getSigners();
+    signers = (await ethers.getSigners()).slice(0, 6);
+    const deployer = signers[0];
+
+    console.log("Deployer address:", deployer.address);
+    // Get deployer balance
+    const provider = ethers.provider;
+    const balance = await provider.getBalance(deployer.address);
+    console.log("Deployer balance:", balance.toString());
+
+    // Set admin address
+    const ADMIN_ADDRESS = process.env.ADMIN_MULTISIG;
+    console.log("Admin address:", ADMIN_ADDRESS);
+
+    const FACTORY_ADDRESS = factory.address;
+    const ORIGINATION_CONTROLLER_ADDRESS = originationController.address;
+    const LOAN_CORE_ADDRESS = loanCore.address;
+    const FEE_CONTROLLER_ADDRESS = feeController.address;
+    const REPAYMENT_CONTROLLER_ADDRESS = repaymentController.address;
+    const CALL_WHITELIST_ADDRESS = whitelist.address;
+>>>>>>> 3b13180 (fix(bootstrap-state): bootstrap with loans using cli specified protocol in deployments json)
 
 export async function main(
     factory: Contract,
@@ -44,6 +113,7 @@ export async function main(
     signers = (await ethers.getSigners()).slice(0, 6);
     const deployer = signers[0];
 
+<<<<<<< HEAD
     // Get deployer balance
     console.log("Deployer address:", deployer.address);
     const provider = ethers.provider;
@@ -54,6 +124,10 @@ export async function main(
     console.log(SECTION_SEPARATOR);
     console.log("Deploying resources...\n");
     const { punks, art, beats, weth, pawnToken, usd } = await deployAssets();
+=======
+    // Mint some NFTs
+    const { punks, art, beats, weth, pawnToken, usd } = await deployNFTs();
+>>>>>>> 3b13180 (fix(bootstrap-state): bootstrap with loans using cli specified protocol in deployments json)
 
     // Distribute NFTs and ERC20s
     console.log(SUBSECTION_SEPARATOR);
@@ -65,10 +139,21 @@ export async function main(
     console.log("Vaulting assets...\n");
     const FACTORY_ADDRESS = factory.address;
     await vaultAssetsAndMakeLoans(
+<<<<<<< HEAD
+=======
+        signers,
+>>>>>>> 3b13180 (fix(bootstrap-state): bootstrap with loans using cli specified protocol in deployments json)
         FACTORY_ADDRESS,
         originationController,
         borrowerNote,
         repaymentController,
+<<<<<<< HEAD
+=======
+        lenderNote,
+        loanCore,
+        feeController,
+        whitelist,
+>>>>>>> 3b13180 (fix(bootstrap-state): bootstrap with loans using cli specified protocol in deployments json)
         punks,
         usd,
         beats,
@@ -87,7 +172,11 @@ export async function main(
 
 async function attachAddresses(jsonFile: string): Promise<any> {
     let readData = fs.readFileSync(jsonFile);
+<<<<<<< HEAD
     let jsonData = JSON.parse(readData.toString());
+=======
+    let jsonData = JSON.parse(readData);
+>>>>>>> 3b13180 (fix(bootstrap-state): bootstrap with loans using cli specified protocol in deployments json)
     let contracts: { [key: string]: Contract } = {};
     for await (let key of Object.keys(jsonData)) {
         if (!(key in jsonContracts)) continue;
@@ -102,6 +191,7 @@ async function attachAddresses(jsonFile: string): Promise<any> {
         contracts[argKey] = contract;
     }
     return contracts;
+<<<<<<< HEAD
 }
 
 if (require.main === module) {
@@ -123,6 +213,43 @@ if (require.main === module) {
             originationController,
             borrowerNote,
             repaymentController
+        )
+            .then(() => process.exit(0))
+            .catch((error: Error) => {
+                console.error(error);
+            });
+    });
+=======
+>>>>>>> 3b13180 (fix(bootstrap-state): bootstrap with loans using cli specified protocol in deployments json)
+}
+
+if (require.main === module) {
+    // retrieve command line args array
+    const args = process.argv.slice(2);
+
+    // assemble args to access the relevant deplyment json in .deployment
+    const file = `./.deployments/${args[0]}/${args[0]}-${args[1]}.json`;
+
+    attachAddresses(file).then((res: ContractArgs) => {
+        let {
+            factory,
+            originationController,
+            borrowerNote,
+            repaymentController,
+            lenderNote,
+            loanCore,
+            feeController,
+            whitelist,
+        } = res;
+        main(
+            factory,
+            originationController,
+            borrowerNote,
+            repaymentController,
+            lenderNote,
+            loanCore,
+            feeController,
+            whitelist,
         )
             .then(() => process.exit(0))
             .catch((error: Error) => {
