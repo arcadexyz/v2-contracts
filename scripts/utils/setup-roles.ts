@@ -126,14 +126,14 @@ export async function main(
     console.log(SUBSECTION_SEPARATOR);
 
     // borrowerNote grants the admin role to the admin address
-    const promissoryNoteAdminBn = await borrowerNote.connect(LOAN_CORE_ADDRESS).grantRole(ADMIN_ROLE, ADMIN_ADDRESS);
+    const promissoryNoteAdminBn = await loanCore.grantRole(ADMIN_ROLE, ADMIN_ADDRESS);
     await promissoryNoteAdminBn.wait();
 
     console.log(`borrowerNote has granted admin role: ${ADMIN_ROLE} to address: ${ADMIN_ADDRESS}`);
     console.log(SUBSECTION_SEPARATOR);
 
     // lenderNote grants the admin role to the admin address
-    const promissoryNoteAdminLn = await lenderNote.connect(LOAN_CORE_ADDRESS).grantRole(ADMIN_ROLE, ADMIN_ADDRESS);
+    const promissoryNoteAdminLn = await loanCore.grantRole(ADMIN_ROLE, ADMIN_ADDRESS);
     await promissoryNoteAdminLn.wait();
 
     console.log(`lenderNote has granted admin role: ${ADMIN_ROLE} to address: ${ADMIN_ADDRESS}`);
@@ -176,14 +176,14 @@ export async function main(
     console.log(SUBSECTION_SEPARATOR);
 
     // renounce ownership from loanCore
-    const renounceBorrowerNoteAdmin = await borrowerNote.renounceRole(ADMIN_ROLE, LOAN_CORE_ADDRESS);
+    const renounceBorrowerNoteAdmin = await loanCore.renounceRole(ADMIN_ROLE, deployer.address);
     await renounceBorrowerNoteAdmin.wait();
 
     console.log(`borrowerNote has renounced admin role.`);
-    console.log(SECTION_SEPARATOR);
+    console.log(SUBSECTION_SEPARATOR);
 
     // renounce ownership from loanCore
-    const renounceLenderNoteAdmin = await lenderNote.renounceRole(ADMIN_ROLE, LOAN_CORE_ADDRESS);
+    const renounceLenderNoteAdmin = await loanCore.renounceRole(ADMIN_ROLE, deployer.address);
     await renounceLenderNoteAdmin.wait();
 
     console.log(`lenderNote has renounced admin role.`);
