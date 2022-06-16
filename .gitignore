@@ -10,6 +10,7 @@ dist/
 lib/
 node_modules/
 typechain/
+generated/
 
 # OpenZeppelin
 .openzeppelin/unknown-*.json
@@ -31,5 +32,3 @@ yarn-error.log*
 gas_report.log
 .env
 cargs.js
-
-

@@ -96,6 +96,9 @@
     },
     "dependencies": {
         "@openzeppelin/contracts-upgradeable": "4.5.2",
-        "@openzeppelin/hardhat-upgrades": "^1.17.0"
+        "@openzeppelin/hardhat-upgrades": "^1.17.0",
+        "@types/bip39": "^3.0.0",
+        "bip39": "^3.0.4",
+        "fs": "^0.0.1-security"
     }
 }
