@@ -40,7 +40,7 @@ import {
     OC_SignatureIsExpired,
     OC_RolloverCurrencyMismatch,
     OC_RolloverCollateralMismatch
-    } from "./errors/Lending.sol";
+} from "./errors/Lending.sol";
 
 /**
  * @title OriginationController
