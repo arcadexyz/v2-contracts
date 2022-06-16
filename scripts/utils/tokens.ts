@@ -13,7 +13,6 @@ export async function mintTokens(
     weth: MockERC20,
     pawnToken: MockERC20,
     usd: MockERC20,
-    nonce: any,
 ): Promise<void> {
     await weth.mint(target, ethers.utils.parseEther(wethAmount.toString()));
     await pawnToken.mint(target, ethers.utils.parseEther(pawnAmount.toString()));

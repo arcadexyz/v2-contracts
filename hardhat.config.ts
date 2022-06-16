@@ -10,6 +10,8 @@ import "@openzeppelin/hardhat-upgrades";
 import "hardhat-contract-sizer";
 
 import "./tasks/accounts";
+import "./tasks/generate";
+import "./tasks/fund-generated-accounts.ts";
 import "./tasks/clean";
 
 import { resolve } from "path";

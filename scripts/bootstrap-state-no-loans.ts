@@ -1,27 +1,43 @@
-/* eslint no-unused-vars: 0 */
-
-import { ethers } from "hardhat";
-
+import fs from 'fs';
+import hre, { ethers } from "hardhat";
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
 import { deployNFTs } from "./utils/deploy-assets";
 import { mintAndDistribute } from "./utils/mint-distribute-assets";
 import { SECTION_SEPARATOR } from "./utils/bootstrap-tools";
 
+const generatedFolder = './generated/';
+const childAddress:string[] = [];
+const addressArray: SignerWithAddress[] = [];
 
 export async function main(): Promise<void> {
-    // Bootstrap five accounts only.
-    // Skip the first account, since the
-    // first signer will be the deployer.
-    const [, ...signers] = (await ethers.getSigners()).slice(0, 6);
-
     console.log(SECTION_SEPARATOR);
     console.log("Deploying resources...\n");
     // Mint some NFTs
     const { punks, art, beats, weth, pawnToken, usd } = await deployNFTs();
 
-    // Distribute NFTs and ERC20s
+    // create signers array
+    // get file names from generated folder
+    fs.readdirSync(generatedFolder).forEach(file => {
+        // slice .txt from end of filename string
+        let addr = file.split(".txt")[0]
+        // add to local array
+        childAddress.push(addr);
+    });
+    // create signers from accounts
+    for(let i=0; i < childAddress.length; i++) {
+        // read file to get the mnemonic
+        let mnemonic = fs.readFileSync("./generated/" + childAddress[i]+".txt", "utf8")
+
+        const network = hre.network;
+        const provider = new hre.ethers.providers.AlchemyProvider(network.name)
+        let wallet = hre.ethers.Wallet.fromMnemonic(mnemonic);
+        let signer = wallet.connect(provider);
+        addressArray.push(signer)
+    }
+    // Use signers to distribute NFTs and mint ERC20s
     console.log(SECTION_SEPARATOR);
-    console.log("Distributing assets...\n");
-    await mintAndDistribute(signers, weth, pawnToken, usd, punks, art, beats);
+    console.log("Minting and Distributing assets...\n");
+    await mintAndDistribute(addressArray, weth, pawnToken, usd, punks, art, beats);
 }
 
 // We recommend this pattern to be able to use async/await everywhere

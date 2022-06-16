@@ -10,8 +10,7 @@ export async function mintNFTs(
     [numPunks, numArts, numBeats0, numBeats1]: [number, number, number, number],
     punks: MockERC721Metadata,
     art: MockERC721Metadata,
-    beats: MockERC1155Metadata,
-    nonce: any
+    beats: MockERC1155Metadata
 ): Promise<void> {
     let j = 1;
 
