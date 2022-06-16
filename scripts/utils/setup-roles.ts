@@ -6,7 +6,7 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 // This is imported to extend into this file: import "@nomiclabs/hardhat-ethers";
 import { config } from "../../hardhat.config";
 
-import { SECTION_SEPARATOR } from "./bootstrap-tools";
+import { SUBSECTION_SEPARATOR, SECTION_SEPARATOR } from "./bootstrap-tools";
 
 import {
     ORIGINATOR_ROLE as DEFAULT_ORIGINATOR_ROLE,
@@ -94,38 +94,59 @@ export async function main(
         await note.initialize(LOAN_CORE_ADDRESS);
     }
 
+    console.log(`borrowerNote and lenderNote have initalized loanCore at address: ${LOAN_CORE_ADDRESS}`);
+    console.log(SUBSECTION_SEPARATOR);
+
     // grant LoanCore the admin role to enable authorizeUpgrade onlyRole(DEFAULT_ADMIN_ROLE)
     const updateLoanCoreAdmin = await loanCore.grantRole(ADMIN_ROLE, ADMIN_ADDRESS);
     await updateLoanCoreAdmin.wait();
 
     console.log(`loanCore has granted admin role: ${ADMIN_ROLE} to address: ${ADMIN_ADDRESS}`);
+    console.log(SUBSECTION_SEPARATOR);
 
     // grant LoanCore admin fee claimer permissions
     const updateLoanCoreFeeClaimer = await loanCore.grantRole(FEE_CLAIMER_ROLE, ADMIN_ADDRESS);
     await updateLoanCoreFeeClaimer.wait();
 
     console.log(`loanCore has granted fee claimer role: ${FEE_CLAIMER_ROLE} to address: ${ADMIN_ADDRESS}`);
+    console.log(SUBSECTION_SEPARATOR);
 
     // grant VaultFactory the admin role to enable authorizeUpgrade onlyRole(DEFAULT_ADMIN_ROLE)
     const updateVaultFactoryAdmin = await factory.grantRole(ADMIN_ROLE, ADMIN_ADDRESS);
     await updateVaultFactoryAdmin.wait();
 
     console.log(`vaultFactory has granted admin role: ${ADMIN_ROLE} to address: ${ADMIN_ADDRESS}`);
+    console.log(SUBSECTION_SEPARATOR);
 
     // grant originationContoller the owner role to enable authorizeUpgrade onlyOwner
     const updateOriginationControllerAdmin = await loanCore.grantRole(ADMIN_ROLE, ADMIN_ADDRESS);
     await updateOriginationControllerAdmin.wait();
 
     console.log(`originationController has granted admin role: ${ADMIN_ROLE} to address: ${ADMIN_ADDRESS}`);
+    console.log(SUBSECTION_SEPARATOR);
+
+    // borrowerNote grants the admin role to the admin address
+    const promissoryNoteAdminBn = await borrowerNote.grantRole(ADMIN_ROLE, ADMIN_ADDRESS);
+    await promissoryNoteAdminBn.wait();
+
+    console.log(`borrowerNote has granted admin role: ${ADMIN_ROLE} to address: ${ADMIN_ADDRESS}`);
+    console.log(SUBSECTION_SEPARATOR);
+
+    // lenderNote grants the admin role to the admin address
+    const promissoryNoteAdminLn = await lenderNote.grantRole(ADMIN_ROLE, ADMIN_ADDRESS);
+    await promissoryNoteAdminLn.wait();
+
+    console.log(`lenderNote has granted admin role: ${ADMIN_ROLE} to address: ${ADMIN_ADDRESS}`);
+    console.log(SUBSECTION_SEPARATOR);
 
     // grant originationContoller the originator role
-    const updateOriginationControllerRole = await loanCore
-        .grantRole(ORIGINATOR_ROLE, ORIGINATION_CONTROLLER_ADDRESS);
+    const updateOriginationControllerRole = await loanCore.grantRole(ORIGINATOR_ROLE, ORIGINATION_CONTROLLER_ADDRESS);
     await updateOriginationControllerRole.wait();
 
     console.log(
         `originationController has granted originator role: ${ORIGINATOR_ROLE} to address: ${ORIGINATION_CONTROLLER_ADDRESS}`,
     );
+    console.log(SUBSECTION_SEPARATOR);
 
     // grant repaymentContoller the REPAYER_ROLE
     const updateRepaymentControllerAdmin = await loanCore
@@ -140,16 +161,30 @@ export async function main(
     await renounceAdmin.wait();
 
     console.log(`loanCore has renounced admin role.`);
+    console.log(SUBSECTION_SEPARATOR);
 
     const renounceOriginationControllerAdmin = await loanCore.renounceRole(ADMIN_ROLE, deployer.address);
     await renounceOriginationControllerAdmin.wait();
 
     console.log(`originationController has renounced originator role.`);
+    console.log(SUBSECTION_SEPARATOR);
 
     const renounceVaultFactoryAdmin = await factory.renounceRole(ADMIN_ROLE, deployer.address);
     await renounceVaultFactoryAdmin.wait();
 
     console.log(`vaultFactory has renounced admin role.`);
+    console.log(SUBSECTION_SEPARATOR);
+
+    const renounceBorrowerNoteAdmin = await borrowerNote.renounceRole(ADMIN_ROLE, deployer.address);
+    await renounceBorrowerNoteAdmin.wait();
+
+    console.log(`borrowerNote has renounced admin role.`);
+    console.log(SECTION_SEPARATOR);
+
+    const renounceLenderNoteAdmin = await lenderNote.renounceRole(ADMIN_ROLE, deployer.address);
+    await renounceLenderNoteAdmin.wait();
+
+    console.log(`lenderNote has renounced admin role.`);
     console.log(SECTION_SEPARATOR);
 
     if (FEE_CONTROLLER_ADDRESS) {
@@ -160,6 +195,7 @@ export async function main(
     }
 
     console.log(`feeController has transferred ownership to address: ${ADMIN_ADDRESS}`);
+    console.log(SUBSECTION_SEPARATOR);
 
     if (CALL_WHITELIST_ADDRESS) {
         // set CallWhiteList admin
@@ -169,8 +205,8 @@ export async function main(
     }
 
     console.log(`whitelist has transferred ownership to address: ${ADMIN_ADDRESS}`);
-
     console.log(SECTION_SEPARATOR);
+
     console.log("Transferred all ownership.\n");
 }
 
