@@ -95,7 +95,11 @@
         "bootstrap-with-loans": "npx hardhat --network localhost run scripts/bootstrap-state-with-loans.ts",
         "bootstrap-no-loans": "npx hardhat --network localhost run scripts/bootstrap-state-no-loans.ts",
         "verify-contracts": "ts-node scripts/verify-contracts.ts",
+<<<<<<< HEAD
         "setup-roles": "ts-node scripts/utils/setup-roles.ts"
+=======
+        "bootstrap-state-with-loans": "ts-node scripts/bootstrap-state-with-loans.ts"
+>>>>>>> 3b13180 (fix(bootstrap-state): bootstrap with loans using cli specified protocol in deployments json)
     },
     "dependencies": {
         "@openzeppelin/contracts-upgradeable": "4.5.2",

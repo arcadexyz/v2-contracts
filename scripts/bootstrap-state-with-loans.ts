@@ -1,40 +1,79 @@
 /* eslint no-unused-vars: 0 */
+const fs = require("fs");
+import hre, { ethers } from "hardhat";
+import { Contract } from "ethers";
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
-import { ethers } from "hardhat";
-
-import { main as deploy } from "./deploy/deploy";
-import { SECTION_SEPARATOR, vaultAssetsAndMakeLoans } from "./utils/bootstrap-tools";
+import { SUBSECTION_SEPARATOR, SECTION_SEPARATOR, vaultAssetsAndMakeLoans } from "./utils/bootstrap-tools";
 import { mintAndDistribute } from "./utils/mint-distribute-assets";
 import { deployNFTs } from "./utils/deploy-assets";
+import { config } from "../hardhat.config";
 
-export async function main(): Promise<void> {
+const jsonContracts: { [key: string]: string } = {
+    CallWhitelist: "whitelist",
+    AssetVault: "assetVault",
+    VaultFactory: "factory",
+    FeeController: "feeController",
+    BorrowerNote: "borrowerNote",
+    LenderNote: "lenderNote",
+    LoanCore: "loanCore",
+    RepaymentController: "repaymentController",
+    OriginationController: "originationController",
+};
+type ContractArgs = {
+    whitelist: Contract;
+    assetVault: Contract;
+    factory: Contract;
+    feeController: Contract;
+    borrowerNote: Contract;
+    lenderNote: Contract;
+    loanCore: Contract;
+    repaymentController: Contract;
+    originationController: Contract;
+};
+
+export async function main(
+    factory: Contract,
+    originationController: Contract,
+    borrowerNote: Contract,
+    repaymentController: Contract,
+    lenderNote: Contract,
+    loanCore: Contract,
+    feeController: Contract,
+    whitelist: Contract,
+): Promise<void> {
     // Bootstrap five accounts only.
     // Skip the first account, since the
     // first signer will be the deployer.
-    const [, ...signers] = (await ethers.getSigners()).slice(1, 7);
+    let signers: SignerWithAddress[] = await hre.ethers.getSigners();
+    signers = (await ethers.getSigners()).slice(0, 6);
+    const deployer = signers[0];
+
+    console.log("Deployer address:", deployer.address);
+    // Get deployer balance
+    const provider = ethers.provider;
+    const balance = await provider.getBalance(deployer.address);
+    console.log("Deployer balance:", balance.toString());
+
+    // Set admin address
+    const ADMIN_ADDRESS = process.env.ADMIN_MULTISIG;
+    console.log("Admin address:", ADMIN_ADDRESS);
+
+    const FACTORY_ADDRESS = factory.address;
+    const ORIGINATION_CONTROLLER_ADDRESS = originationController.address;
+    const LOAN_CORE_ADDRESS = loanCore.address;
+    const FEE_CONTROLLER_ADDRESS = feeController.address;
+    const REPAYMENT_CONTROLLER_ADDRESS = repaymentController.address;
+    const CALL_WHITELIST_ADDRESS = whitelist.address;
 
     console.log(SECTION_SEPARATOR);
     console.log("Deploying resources...\n");
 
-    // Deploy the smart contracts
-    const {
-        vaultFactory,
-        originationController,
-        borrowerNote,
-        repaymentController,
-        punkRouter,
-        lenderNote,
-        loanCore,
-        feeController,
-        whitelist,
-    } = await deploy();
-
     // Mint some NFTs
-    console.log(SECTION_SEPARATOR);
     const { punks, art, beats, weth, pawnToken, usd } = await deployNFTs();
 
     // Distribute NFTs and ERC20s
-    console.log(SECTION_SEPARATOR);
+    console.log(SUBSECTION_SEPARATOR);
     console.log("Distributing assets...\n");
     await mintAndDistribute(signers, weth, pawnToken, usd, punks, art, beats);
 
@@ -43,7 +82,7 @@ export async function main(): Promise<void> {
     console.log("Vaulting assets...\n");
     await vaultAssetsAndMakeLoans(
         signers,
-        vaultFactory,
+        FACTORY_ADDRESS,
         originationController,
         borrowerNote,
         repaymentController,
@@ -51,7 +90,6 @@ export async function main(): Promise<void> {
         loanCore,
         feeController,
         whitelist,
-        punkRouter,
         punks,
         usd,
         beats,
@@ -68,13 +106,56 @@ export async function main(): Promise<void> {
     // 4 has 1 bundle, an unused bundle, one open lend and one open borrow
 }
 
-// We recommend this pattern to be able to use async/await everywhere
-// and properly handle errors.
+async function attachAddresses(jsonFile: string): Promise<any> {
+    let readData = fs.readFileSync(jsonFile);
+    let jsonData = JSON.parse(readData);
+    let contracts: { [key: string]: Contract } = {};
+    for await (let key of Object.keys(jsonData)) {
+        if (!(key in jsonContracts)) continue;
+        const argKey: string = jsonContracts[key];
+        console.log(`Key: ${key}, address: ${jsonData[key]["contractAddress"]}`);
+        let contract: Contract;
+        if (key === "BorrowerNote" || key === "LenderNote") {
+            contract = await ethers.getContractAt("PromissoryNote", jsonData[key]["contractAddress"]);
+        } else {
+            contract = await ethers.getContractAt(key, jsonData[key]["contractAddress"]);
+        }
+        contracts[argKey] = contract;
+    }
+    return contracts;
+}
+
 if (require.main === module) {
-    main()
-        .then(() => process.exit(0))
-        .catch((error: Error) => {
-            console.error(error);
-            process.exit(1);
-        });
+    // retrieve command line args array
+    const args = process.argv.slice(2);
+
+    // assemble args to access the relevant deplyment json in .deployment
+    const file = `./.deployments/${args[0]}/${args[0]}-${args[1]}.json`;
+
+    attachAddresses(file).then((res: ContractArgs) => {
+        let {
+            factory,
+            originationController,
+            borrowerNote,
+            repaymentController,
+            lenderNote,
+            loanCore,
+            feeController,
+            whitelist,
+        } = res;
+        main(
+            factory,
+            originationController,
+            borrowerNote,
+            repaymentController,
+            lenderNote,
+            loanCore,
+            feeController,
+            whitelist,
+        )
+            .then(() => process.exit(0))
+            .catch((error: Error) => {
+                console.error(error);
+            });
+    });
 }

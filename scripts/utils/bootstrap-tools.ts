@@ -14,7 +14,7 @@ export const SUBSECTION_SEPARATOR = "-".repeat(10);
 
 export async function vaultAssetsAndMakeLoans(
     signers: SignerWithAddress[],
-    factory: VaultFactory,
+    FACTORY_ADDRESS: string,
     originationController: Contract,
     borrowerNote: Contract,
     repaymentController: Contract,
@@ -30,18 +30,10 @@ export async function vaultAssetsAndMakeLoans(
     pawnToken: MockERC20,
 ): Promise<void> {
     console.log(SECTION_SEPARATOR);
-    console.log("But let's set up roles and permissions first...\n");
-    // setup the role privileges
-    await setupRoles(
-        factory,
-        originationController,
-        borrowerNote,
-        repaymentController,
-        lenderNote,
-        loanCore,
-        feeController,
-        whitelist,
-    );
+
+   // Attach address to vaultfactory contract
+    const VaultFactory = await ethers.getContractFactory("VaultFactory");
+    const factory = <VaultFactory>await VaultFactory.attach(FACTORY_ADDRESS);
 
     // Connect the first signer with the
     const signer1 = signers[1];

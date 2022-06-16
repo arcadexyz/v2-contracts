@@ -29,6 +29,7 @@ const chainIds = {
     mainnet: 1,
     rinkeby: 4,
     ropsten: 3,
+    sepolia: 11155111,
 };
 
 // Ensure that we have all the environment variables we need.
@@ -121,6 +122,7 @@ export const config: HardhatUserConfig = {
         kovan: createTestnetConfig("kovan"),
         rinkeby: createTestnetConfig("rinkeby"),
         ropsten: createTestnetConfig("ropsten"),
+        sepolia: createTestnetConfig("sepolia"),
         localhost: {
             accounts: {
                 mnemonic,
