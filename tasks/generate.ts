@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import fs from "fs";
 import path from "path";
 import { ethers } from "ethers";
@@ -20,4 +21,22 @@ task('generate', 'Create a mnemonic for deploying contracts to a public network'
     fs.writeFileSync(path.join(generatedFolderPath, `${wallet.address}.txt`), mnemonic.toString());
     console.log("Mnemonic for address(" + `${wallet.address}` + ") saved to the 'generated' folder")
   }
+=======
+import fs from 'fs';
+import { ethers } from "ethers";
+import { mnemonicToSeed, generateMnemonic } from 'bip39';
+import { task } from 'hardhat/config';
+
+const mnemonicPath = "../generated";
+
+task('generate', 'Create a mnemonic for deploys or testing', async (_, _hre) => {
+  const mnemonic = generateMnemonic();
+  console.log('Generated Mnemonic: ', mnemonic);
+  const seed = await mnemonicToSeed(mnemonic);
+  const wallet = new ethers.Wallet(seed);
+  console.log('An Associated Address: ', wallet.address);
+
+  fs.writeFileSync(`./generated/${wallet.address}.txt`, mnemonic.toString());
+  fs.writeFileSync(mnemonicPath, mnemonic.toString());
+>>>>>>> 3d8a8ef (generate and fund child wallet scripts done)
 });

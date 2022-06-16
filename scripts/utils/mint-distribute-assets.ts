@@ -17,9 +17,6 @@ import { SUBSECTION_SEPARATOR } from "./bootstrap-tools";
 
 dotenvConfig({ path: resolve(__dirname, "../../.env") });
 
-// nonce debug toggle
-const DEBUG_NONCE = false;
-
 export async function mintAndDistribute(
     weth: MockERC20,
     pawnToken: MockERC20,
@@ -28,6 +25,7 @@ export async function mintAndDistribute(
     art: MockERC721Metadata,
     beats: MockERC1155Metadata,
 ): Promise<void> {
+<<<<<<< HEAD
 <<<<<<< HEAD
     // Bootstrap five accounts, skip the first account, since the
     // first signer will be the deployer account in hardhat.config.
@@ -45,37 +43,24 @@ export async function mintAndDistribute(
     // get deployer accounts current transaction count to create the nonce
     // upgradeable contracts using deployProxy do have a custom nonce added to them
     let nonce_counter = await ethers.provider.getTransactionCount(deployerAddr);
+=======
+>>>>>>> 3d8a8ef (generate and fund child wallet scripts done)
 
     // Give a bunch of everything to signer[0]
-    nonce_counter++;
-    if (DEBUG_NONCE) console.log("CURRENT NONCE:", nonce_counter);
-    await mintTokens(signers[0].address, [1000, 500000, 2000000], weth, pawnToken, usd, { nonce: nonce_counter });
-    nonce_counter++;
-    if (DEBUG_NONCE) console.log("CURRENT NONCE:", nonce_counter);
-    await mintNFTs(signers[0].address, [20, 20, 20, 20], punks, art, beats, { nonce: nonce_counter });
+    await mintTokens(signers[0].address, [1000, 500000, 2000000], weth, pawnToken, usd);
+    await mintNFTs(signers[0].address, [20, 20, 20, 20], punks, art, beats);
 
-    // Give a mix to signers[1] through signers[5]
-    nonce_counter++;
-    if (DEBUG_NONCE) console.log("CURRENT NONCE:", nonce_counter);
-    await mintTokens(signers[1].address, [0, 2000, 10000], weth, pawnToken, usd, { nonce: nonce_counter });
-    nonce_counter++;
-    if (DEBUG_NONCE) console.log("CURRENT NONCE:", nonce_counter);
-    await mintNFTs(signers[1].address, [5, 0, 2, 1], punks, art, beats, { nonce: nonce_counter });
+    // Give a mix to signers[1] through signers[4]
+    await mintTokens(signers[1].address, [0, 2000, 10000], weth, pawnToken, usd);
+    await mintNFTs(signers[1].address, [5, 0, 2, 1], punks, art, beats);
 
-    nonce_counter++;
-    if (DEBUG_NONCE) console.log("CURRENT NONCE:", nonce_counter);
-    await mintTokens(signers[2].address, [450, 350.5, 5000], weth, pawnToken, usd, { nonce: nonce_counter });
-    nonce_counter++;
-    if (DEBUG_NONCE) console.log("CURRENT NONCE:", nonce_counter);
-    await mintNFTs(signers[2].address, [0, 0, 1, 0], punks, art, beats, { nonce: nonce_counter });
+    await mintTokens(signers[2].address, [450, 350.5, 5000], weth, pawnToken, usd);
+    await mintNFTs(signers[2].address, [0, 0, 1, 0], punks, art, beats);
 
-    nonce_counter++;
-    if (DEBUG_NONCE) console.log("CURRENT NONCE:", nonce_counter);
-    await mintTokens(signers[3].address, [2, 50000, 7777], weth, pawnToken, usd, { nonce: nonce_counter });
-    nonce_counter++;
-    if (DEBUG_NONCE) console.log("CURRENT NONCE:", nonce_counter);
-    await mintNFTs(signers[3].address, [10, 3, 7, 0], punks, art, beats, { nonce: nonce_counter });
+    await mintTokens(signers[3].address, [2, 50000, 7777], weth, pawnToken, usd);
+    await mintNFTs(signers[3].address, [10, 3, 7, 0], punks, art, beats, );
 
+<<<<<<< HEAD
     nonce_counter++;
     if (DEBUG_NONCE) console.log("CURRENT NONCE:", nonce_counter);
     await mintTokens(signers[4].address, [50, 2222.2, 12.1], weth, pawnToken, usd, { nonce: nonce_counter });
@@ -107,6 +92,10 @@ export async function mintAndDistribute(
     await mintNFTs(signers[5].address, [1, 5, 1, 5], punks, art, beats);
     console.log("5). " + signers[5].address + " minted tokens and NFTs")
     console.log(SUBSECTION_SEPARATOR);
+=======
+    await mintTokens(signers[4].address, [50, 2222.2, 12.1], weth, pawnToken, usd);
+    await mintNFTs(signers[4].address, [1, 12, 1, 6], punks, art, beats);
+>>>>>>> 3d8a8ef (generate and fund child wallet scripts done)
 
     // log the current balances of signers 1-5
     console.log("Initial balances:");
