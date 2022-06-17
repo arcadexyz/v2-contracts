@@ -1,13 +1,13 @@
 /* eslint no-unused-vars: 0 */
-const fs = require("fs");
-import hre, { ethers } from "hardhat";
+import fs from "fs";
+import { ethers } from "hardhat";
 import { Contract } from "ethers";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-
-import { SUBSECTION_SEPARATOR, SECTION_SEPARATOR, vaultAssetsAndMakeLoans } from "./utils/bootstrap-tools";
+import { vaultAssetsAndMakeLoans } from "./utils/vault-assets-make-loans"
+import { SUBSECTION_SEPARATOR, SECTION_SEPARATOR } from "./utils/constants";
 import { mintAndDistribute } from "./utils/mint-distribute-assets";
-import { deployNFTs } from "./utils/deploy-assets";
-import { config } from "../hardhat.config";
+import { deployAssets } from "./utils/deploy-assets";
+import { config } from "./../hardhat.config";
 
 const jsonContracts: { [key: string]: string } = {
     CallWhitelist: "whitelist",
@@ -37,59 +37,38 @@ export async function main(
     originationController: Contract,
     borrowerNote: Contract,
     repaymentController: Contract,
-    lenderNote: Contract,
-    loanCore: Contract,
-    feeController: Contract,
-    whitelist: Contract,
 ): Promise<void> {
-    // Bootstrap five accounts only.
-    // Skip the first account, since the
-    // first signer will be the deployer.
-    let signers: SignerWithAddress[] = await hre.ethers.getSigners();
+    // Bootstrap five accounts, skip the first account, since the
+    // first signer will be the deployer account in hardhat.config.
+    let signers: SignerWithAddress[] = await ethers.getSigners();
     signers = (await ethers.getSigners()).slice(0, 6);
     const deployer = signers[0];
 
-    console.log("Deployer address:", deployer.address);
     // Get deployer balance
+    console.log("Deployer address:", deployer.address);
     const provider = ethers.provider;
     const balance = await provider.getBalance(deployer.address);
     console.log("Deployer balance:", balance.toString());
 
-    // Set admin address
-    const ADMIN_ADDRESS = process.env.ADMIN_MULTISIG;
-    console.log("Admin address:", ADMIN_ADDRESS);
-
-    const FACTORY_ADDRESS = factory.address;
-    const ORIGINATION_CONTROLLER_ADDRESS = originationController.address;
-    const LOAN_CORE_ADDRESS = loanCore.address;
-    const FEE_CONTROLLER_ADDRESS = feeController.address;
-    const REPAYMENT_CONTROLLER_ADDRESS = repaymentController.address;
-    const CALL_WHITELIST_ADDRESS = whitelist.address;
-
+    // Mint some NFTs
     console.log(SECTION_SEPARATOR);
     console.log("Deploying resources...\n");
-
-    // Mint some NFTs
-    const { punks, art, beats, weth, pawnToken, usd } = await deployNFTs();
+    const { punks, art, beats, weth, pawnToken, usd } = await deployAssets();
 
     // Distribute NFTs and ERC20s
     console.log(SUBSECTION_SEPARATOR);
     console.log("Distributing assets...\n");
-    await mintAndDistribute(signers, weth, pawnToken, usd, punks, art, beats);
+    await mintAndDistribute(weth, pawnToken, usd, punks, art, beats);
 
     // Vault some assets
     console.log(SECTION_SEPARATOR);
     console.log("Vaulting assets...\n");
+    const FACTORY_ADDRESS = factory.address;
     await vaultAssetsAndMakeLoans(
-        signers,
         FACTORY_ADDRESS,
         originationController,
         borrowerNote,
         repaymentController,
-        lenderNote,
-        loanCore,
-        feeController,
-        whitelist,
         punks,
         usd,
         beats,
@@ -108,7 +87,7 @@ export async function main(
 
 async function attachAddresses(jsonFile: string): Promise<any> {
     let readData = fs.readFileSync(jsonFile);
-    let jsonData = JSON.parse(readData);
+    let jsonData = JSON.parse(readData.toString());
     let contracts: { [key: string]: Contract } = {};
     for await (let key of Object.keys(jsonData)) {
         if (!(key in jsonContracts)) continue;
@@ -137,21 +116,13 @@ if (require.main === module) {
             factory,
             originationController,
             borrowerNote,
-            repaymentController,
-            lenderNote,
-            loanCore,
-            feeController,
-            whitelist,
+            repaymentController
         } = res;
         main(
             factory,
             originationController,
             borrowerNote,
-            repaymentController,
-            lenderNote,
-            loanCore,
-            feeController,
-            whitelist,
+            repaymentController
         )
             .then(() => process.exit(0))
             .catch((error: Error) => {

@@ -1,27 +1,17 @@
-import { ethers } from "hardhat";
+import hre, { ethers } from "hardhat";
 import { Contract, BigNumber } from "ethers";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
-
 import { LoanTerms } from "../../test/utils/types";
 import { createLoanTermsSignature } from "../../test/utils/eip712";
-import { main as setupRoles } from "./setup-roles";
-
 import { MockERC1155Metadata, MockERC20, MockERC721Metadata, VaultFactory } from "../../typechain";
-import { createVault } from "./vault";
-
-export const SECTION_SEPARATOR = "\n" + "=".repeat(80) + "\n";
-export const SUBSECTION_SEPARATOR = "-".repeat(10);
+import { createVault } from "./create-vault";
+import { SECTION_SEPARATOR } from "./constants";
 
 export async function vaultAssetsAndMakeLoans(
-    signers: SignerWithAddress[],
     FACTORY_ADDRESS: string,
     originationController: Contract,
     borrowerNote: Contract,
     repaymentController: Contract,
-    lenderNote: Contract,
-    loanCore: Contract,
-    feeController: Contract,
-    whitelist: Contract,
     punks: MockERC721Metadata,
     usd: MockERC20,
     beats: MockERC1155Metadata,
@@ -29,17 +19,24 @@ export async function vaultAssetsAndMakeLoans(
     art: MockERC721Metadata,
     pawnToken: MockERC20,
 ): Promise<void> {
+
     console.log(SECTION_SEPARATOR);
 
-   // Attach address to vaultfactory contract
-    const VaultFactory = await ethers.getContractFactory("VaultFactory");
-    const factory = <VaultFactory>await VaultFactory.attach(FACTORY_ADDRESS);
+    // Bootstrap five accounts, skip the first account, since the
+    // first signer will be the deployer account in hardhat.config.
+    let signers: SignerWithAddress[] = await hre.ethers.getSigners();
+    signers = (await ethers.getSigners()).slice(0, 6);
 
-    // Connect the first signer with the
+    // Attach address to VaultFactory contract
+    const VaultFactory = await ethers.getContractFactory("VaultFactory");
+    const factory = <VaultFactory> VaultFactory.attach(FACTORY_ADDRESS);
+
+    // Connect the first signer to create a vault
     const signer1 = signers[1];
     const signer1Address = await signers[1].getAddress();
     // Create vault 1
     const av1A = await createVault(factory, signer1); // this is the Vault Id
+
     // Deposit 1 punk and 1000 usd to user's first vault:
     // First get signer1 punks to deposit into vault 1
     const av1Punk1Id = await punks.tokenOfOwnerByIndex(signer1Address, 0);
@@ -47,7 +44,7 @@ export async function vaultAssetsAndMakeLoans(
     await punks.connect(signer1).approve(av1A.address, av1Punk1Id);
     await punks.connect(signer1).transferFrom(signer1Address, av1A.address, av1Punk1Id.toNumber());
 
-    // Next get signer1 1000 usd to vault 1
+    // Next signer1 transfers 1000 usd to vault 1
     await usd.connect(signer1).approve(av1A.address, ethers.utils.parseUnits("1000", 6));
     await usd.connect(signer1).transfer(av1A.address, ethers.utils.parseUnits("1000", 6));
     console.log(`(Vault 1A) Signer ${signer1.address} created a vault with 1 PawnFiPunk and 1000 PUSD`);

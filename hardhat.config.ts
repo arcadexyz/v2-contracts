@@ -50,7 +50,7 @@ if (forkMainnet && !process.env.ALCHEMY_API_KEY) {
     alchemyApiKey = process.env.ALCHEMY_API_KEY;
 }
 
-// create testnet network
+// create public testnet config
 function createTestnetConfig(network: keyof typeof chainIds): NetworkUserConfig {
     const url = `https://eth-${network}.alchemyapi.io/v2/${alchemyApiKey}`;
     return {
@@ -65,7 +65,7 @@ function createTestnetConfig(network: keyof typeof chainIds): NetworkUserConfig 
     };
 }
 
-// create local network config
+// create local hardhat network config
 function createHardhatConfig(): HardhatNetworkUserConfig {
     const config = {
         accounts: {
@@ -93,6 +93,7 @@ function createHardhatConfig(): HardhatNetworkUserConfig {
     return config;
 }
 
+// create mainnet confid
 function createMainnetConfig(): NetworkUserConfig {
     return {
         accounts: {

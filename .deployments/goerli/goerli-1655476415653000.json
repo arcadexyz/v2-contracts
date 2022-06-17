@@ -1,54 +1,54 @@
 {
   "CallWhitelist": {
-    "contractAddress": "0xD0F1399763cC4b0cE7096D7918E8EC3a95048606",
+    "contractAddress": "0x7a0f823fBefD73fDA3301e44aEFCDd75035DCA8b",
     "contractImplementationAddress": "",
     "constructorArgs": []
   },
   "AssetVault": {
-    "contractAddress": "0xef190F1e753956086232845B6d1001860ebDdDc2",
+    "contractAddress": "0x4D7D3937244bf4593d787574BB5B8eE4eD8E213B",
     "contractImplementationAddress": "",
     "constructorArgs": []
   },
   "VaultFactory": {
-    "contractAddress": "0x971016FAC42cF68E84230d910158Be0Ee1cAb51A",
+    "contractAddress": "0xa2c9F43281A5C07fbcE4C5019a5CbFF2EFefdB69",
     "contractImplementationAddress": "0xf22Ee03dBB7EAb4f1393f9f7fa286ED411681995",
     "constructorArgs": []
   },
   "FeeController": {
-    "contractAddress": "0x97E7a9c1BB4fc27cE43b79bDdcB07926c89Ff9dd",
+    "contractAddress": "0x79BA114a64eE3b66511AaE368907d3cEC3a4cC91",
     "contractImplementationAddress": "",
     "constructorArgs": []
   },
   "BorrowerNote": {
-    "contractAddress": "0x8B4507a116b60CFb2aA6589962BD978bb9AB49fd",
+    "contractAddress": "0x4991cD3407702bA17C3ff7277De8034130f1dF5D",
     "constructorArgs": [
       "Arcade.xyz BorrowerNote",
       "aBN"
     ]
   },
   "LenderNote": {
-    "contractAddress": "0xAF3ADBef747A24d2Af6ba2A83ff880b92607E006",
+    "contractAddress": "0x0cB9D56cD90E98BcC4033d185a5E8d72Bf33bD8D",
     "constructorArgs": [
       "Arcade.xyz LenderNote",
       "aLN"
     ]
   },
   "LoanCore": {
-    "contractAddress": "0xC2C5fe5879052Baec14ca125811De276bCcf57C6",
+    "contractAddress": "0xd67545e845E90e20021faF3d9d1203dB6f951CFB",
     "contractImplementationAddress": "0xACA435423Ac5500Dd5000cEcAC7701464A345C4B",
     "constructorArgs": []
   },
   "RepaymentController": {
-    "contractAddress": "0x640aa9Dc46c2B10A350AB10c66F239628deEdf7E",
+    "contractAddress": "0x09d0CF7356fE0976b151FABE05eB287533273B04",
     "contractImplementationAddress": "",
     "constructorArgs": [
-      "0xC2C5fe5879052Baec14ca125811De276bCcf57C6",
-      "0x8B4507a116b60CFb2aA6589962BD978bb9AB49fd",
-      "0xAF3ADBef747A24d2Af6ba2A83ff880b92607E006"
+      "0xd67545e845E90e20021faF3d9d1203dB6f951CFB",
+      "0x4991cD3407702bA17C3ff7277De8034130f1dF5D",
+      "0x0cB9D56cD90E98BcC4033d185a5E8d72Bf33bD8D"
     ]
   },
   "OriginationController": {
-    "contractAddress": "0x9ADbCFc9AD1650F85DfFF1EFaAAC457a76b4Cb39",
+    "contractAddress": "0x5C2E9C9765453C2b4eAc48e06F2D5f214808Fc4f",
     "contractImplementationAddress": "0x6757a8D1AB5B09C354D2B031E86C6C7c87FC0524",
     "constructorArgs": []
   }
