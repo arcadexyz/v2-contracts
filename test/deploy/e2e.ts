@@ -1,14 +1,15 @@
-import fs from "fs";
-import path from "path";
 import { execSync } from "child_process";
 import { expect } from "chai";
+import { ethers } from "hardhat";
 
 import {
     NETWORK,
-    getLatestDeployment,
-    expectDeployedProxy
+    getLatestDeployment
 } from "./utils";
 
+import {
+    VaultFactory
+} from "../../typechain";
 
 /**
  * Note: Against normal conventions, these tests are interdependent and meant
@@ -41,7 +42,15 @@ describe("Deployment", () => {
             expect(deployment["VaultFactory"].constructorArgs.length).to.eq(0);
 
             // Make sure VaultFactory initialized correctly
-            await expectDeployedProxy(deployment["VaultFactory"].contractAddress);
+            const vaultFactoryFactory = await ethers.getContractFactory("VaultFactory");
+            const factoryProxy = <VaultFactory>await vaultFactoryFactory.attach(deployment["VaultFactory"].contractAddress);
+            const factoryImpl = <VaultFactory>await vaultFactoryFactory.attach(deployment["VaultFactory"].contractImplementationAddress);
+
+            // Proxy initialized, impl not
+            expect(await factoryProxy.getTemplate()).to.eq(deployment["AssetVault"].contractAddress);
+            expect(await factoryProxy.whitelist()).to.eq(deployment["CallWhitelist"].contractAddress);
+            expect(await factoryImpl.template()).to.be.undefined;
+            expect(await factoryImpl.whitelist()).to.be.undefined;
 
             expect(deployment["FeeController"]).to.exist;
             expect(deployment["FeeController"].contractAddress).to.exist;

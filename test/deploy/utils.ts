@@ -33,12 +33,3 @@ export const getLatestDeployment = (): Record<string, any> => {
 
     return deployment;
 }
-
-export const expectDeployedProxy = async (proxyAddress: string): Promise<void> => {
-    const proxy = await ethers.getContractAt("ERC1967UpgradeUpgradeable", proxyAddress);
-    const implSlot = await proxy.proxiableUUID();
-
-    console.log("Slot", implSlot);
-
-    expect(implSlot).to.not.be.undefined;
-}
