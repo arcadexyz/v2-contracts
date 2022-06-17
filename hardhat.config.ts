@@ -49,8 +49,8 @@ if (forkMainnet && !process.env.ALCHEMY_API_KEY) {
 
 // create testnet network
 function createTestnetConfig(network: keyof typeof chainIds): NetworkUserConfig {
-    // const url = `https://eth-${network}.alchemyapi.io/v2/${alchemyApiKey}`;
-    const url = `https://rpc.tenderly.co/fork/de2d17bd-ffc1-4838-b8b6-1b7949b8b1f9`;
+    const url = `https://eth-${network}.alchemyapi.io/v2/${alchemyApiKey}`;
+    // const url = `https://rpc.tenderly.co/fork/de2d17bd-ffc1-4838-b8b6-1b7949b8b1f9`;
     return {
         accounts: {
             count: 10,

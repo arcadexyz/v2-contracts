@@ -44,7 +44,7 @@ export async function main(
     await whitelist.deployed();
 
     const whitelistAddress = whitelist.address;
-    console.log("CallWhiteList deployed to:", whitelistAddress);
+    console.log("CallWhitelist deployed to:", whitelistAddress);
     console.log(SUBSECTION_SEPARATOR);
 
     const AssetVaultFactory = await ethers.getContractFactory("AssetVault");

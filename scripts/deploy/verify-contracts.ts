@@ -1,26 +1,23 @@
-const fs = require("fs");
+import fs from "fs";
 import hre from "hardhat";
+import { BigNumberish } from "ethers";
 
-import { contractData } from "./deploy";
+import { ContractData } from "./write-json";
 
 import { SECTION_SEPARATOR, SUBSECTION_SEPARATOR } from "../utils/bootstrap-tools";
 
 async function verifyArtifacts(
     contractName: string,
     contractAddress: string,
-    contractImplementationAddress: string,
-    constructorArgs: any[],
+    contractImplementationAddress: string | undefined,
+    constructorArgs: BigNumberish[],
 ) {
     console.log(`${contractName}: ${contractAddress}`);
     console.log(SUBSECTION_SEPARATOR);
 
-    let address;
+    const address = contractImplementationAddress || contractAddress;
 
-    if (contractImplementationAddress === "") {
-        address = contractAddress;
-    } else {
-        address = contractImplementationAddress;
-    }
+    // TODO: Verify proxy?
 
     await hre.run("verify:verify", {
         address,
@@ -34,21 +31,16 @@ async function verifyArtifacts(
 // get data from deployments json to run verify artifacts
 export async function main(): Promise<void> {
     // retrieve command line args array
-    const args = process.argv.slice(2);
+    const [,,file] = process.argv;
 
-    // assemble args to access the relevant deplyment json in .deployment
-    const file = `./.deployments/${args[0]}/${args[0]}-${args[1]}.json`;
-
-    console.log("deployment file being verified: ", file);
-    console.log(SUBSECTION_SEPARATOR);
-
-    // read deplyment json to get contract addresses and constructor arguments
-    let readData = fs.readFileSync(file);
-    let jsonData = JSON.parse(readData);
+    // read deployment json to get contract addresses and constructor arguments
+    const readData = fs.readFileSync(file, 'utf-8');
+    const jsonData = JSON.parse(readData);
 
     // loop through jsonData to run verifyArtifacts function
     for (const property in jsonData) {
-        let dataFromJson = <contractData>jsonData[property];
+        const dataFromJson = <ContractData>jsonData[property];
+
         await verifyArtifacts(
             property,
             dataFromJson.contractAddress,

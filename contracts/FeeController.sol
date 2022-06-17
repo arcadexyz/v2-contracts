@@ -19,7 +19,7 @@ import { FC_FeeTooLarge } from "./errors/Lending.sol";
  * who get a discount, e.g.). Since LoanCore can change the fee controller reference,
  * any changes to this contract can be newly deployed on-chain and adopted.
  */
-contract FeeController is AccessControlEnumerable, IFeeController, Ownable {
+contract FeeController is IFeeController, Ownable {
     // ============================================ STATE ==============================================
 
     /// @dev Global maximum fees, preventing attacks by owners

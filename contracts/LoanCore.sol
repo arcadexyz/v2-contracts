@@ -5,7 +5,7 @@ pragma solidity ^0.8.11;
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
@@ -46,7 +46,7 @@ contract LoanCore is
     ILoanCore,
     Initializable,
     InstallmentsCalc,
-    AccessControlUpgradeable,
+    AccessControlEnumerableUpgradeable,
     PausableUpgradeable,
     ICallDelegator,
     UUPSUpgradeable
@@ -107,10 +107,14 @@ contract LoanCore is
         if (address(_borrowerNote) == address(_lenderNote)) revert LC_ReusedNote();
 
         // only those with FEE_CLAIMER_ROLE can update or grant FEE_CLAIMER_ROLE
-        __AccessControl_init();
+        __AccessControlEnumerable_init();
         __UUPSUpgradeable_init_unchained();
 
         _setupRole(ADMIN_ROLE, _msgSender());
+        _setRoleAdmin(ADMIN_ROLE, ADMIN_ROLE);
+        _setRoleAdmin(ORIGINATOR_ROLE, ADMIN_ROLE);
+        _setRoleAdmin(REPAYER_ROLE, ADMIN_ROLE);
+
         _setupRole(FEE_CLAIMER_ROLE, _msgSender());
         _setRoleAdmin(FEE_CLAIMER_ROLE, FEE_CLAIMER_ROLE);
 

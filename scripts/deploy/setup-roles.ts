@@ -49,22 +49,14 @@ export async function main(
     const signers: SignerWithAddress[] = await hre.ethers.getSigners();
     const [deployer] = signers;
 
-    console.log("Deployer address:", deployer.address);
-    // Get deployer balance
-    const provider = ethers.provider;
-    const balance = await provider.getBalance(deployer.address);
-    console.log("Deployer balance:", balance.toString());
-
     // Set admin address
-    const ADMIN_ADDRESS = process.env.ADMIN_MULTISIG;
+    const ADMIN_ADDRESS = process.env.ADMIN;
     console.log("Admin address:", ADMIN_ADDRESS);
 
     // Define roles
     const ORIGINATION_CONTROLLER_ADDRESS = originationController.address;
     const LOAN_CORE_ADDRESS = loanCore.address;
-    const FEE_CONTROLLER_ADDRESS = feeController.address;
     const REPAYMENT_CONTROLLER_ADDRESS = repaymentController.address;
-    const CALL_WHITELIST_ADDRESS = whitelist.address;
 
     console.log(SECTION_SEPARATOR);
 
@@ -75,7 +67,7 @@ export async function main(
     await updateWhitelistAdmin.wait();
 
     console.log(`CallWhitelist: ownership transferred to ${ADMIN_ADDRESS}`);
-    console.log(SECTION_SEPARATOR);
+    console.log(SUBSECTION_SEPARATOR);
 
     // ============= VaultFactory ==============
 
@@ -148,6 +140,9 @@ export async function main(
     const renounceAdmin = await loanCore.renounceRole(ADMIN_ROLE, deployer.address);
     await renounceAdmin.wait();
 
+    const renounceFeeClaimer = await loanCore.renounceRole(FEE_CLAIMER_ROLE, deployer.address);
+    await renounceFeeClaimer.wait();
+
     console.log("LoanCore: deployer has renounced admin role");
     console.log(SUBSECTION_SEPARATOR);
 
@@ -195,7 +190,9 @@ async function attachAddresses(jsonFile: string): Promise<ContractArgs> {
 
 if (require.main === module) {
     // retrieve command line args array
-    const [,,file] = process.argv.slice(2);
+    const [,,file] = process.argv;
+
+    console.log("File:", file);
 
     // assemble args to access the relevant deplyment json in .deployment
     void attachAddresses(file).then((res: ContractArgs) => {
