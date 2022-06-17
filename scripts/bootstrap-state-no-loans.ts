@@ -1,4 +1,5 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 
 import { ethers } from "hardhat";
 
@@ -10,12 +11,15 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-wit
 import { deployNFTs } from "./utils/deploy-assets";
 import { mintAndDistribute } from "./utils/mint-distribute-assets";
 import { SECTION_SEPARATOR } from "./utils/constants";
+=======
+>>>>>>> 4cc543b (fix(bootstrap scripts): made standalone, added tx.wait(), works with all testnets)
 
-const generatedFolder = './generated/';
-const childAddress:string[] = [];
-const addressArray: SignerWithAddress[] = [];
+import { deployAssets } from "./utils/deploy-assets";
+import { mintAndDistribute } from "./utils/mint-distribute-assets";
+import { SECTION_SEPARATOR } from "./utils/constants";
 
 export async function main(): Promise<void> {
+<<<<<<< HEAD
 <<<<<<< HEAD
 
 =======
@@ -43,18 +47,23 @@ export async function main(): Promise<void> {
     for(let i=0; i < childAddress.length; i++) {
         // read file to get the mnemonic
         let mnemonic = fs.readFileSync("./generated/" + childAddress[i]+".txt", "utf8")
+=======
 
-        const network = hre.network;
-        const provider = new hre.ethers.providers.AlchemyProvider(network.name)
-        let wallet = hre.ethers.Wallet.fromMnemonic(mnemonic);
-        let signer = wallet.connect(provider);
-        addressArray.push(signer)
-    }
-    // Use signers to distribute NFTs and mint ERC20s
+    console.log(SECTION_SEPARATOR);
+    console.log("Deploying resources...\n");
+    // Mint some NFTs
+    const { punks, art, beats, weth, pawnToken, usd } = await deployAssets();
+>>>>>>> 4cc543b (fix(bootstrap scripts): made standalone, added tx.wait(), works with all testnets)
+
     console.log(SECTION_SEPARATOR);
     console.log("Minting and Distributing assets...\n");
+<<<<<<< HEAD
     await mintAndDistribute(addressArray, weth, pawnToken, usd, punks, art, beats);
 >>>>>>> 3d8a8ef (generate and fund child wallet scripts done)
+=======
+    // Distribute NFTs and mint ERC20s
+    await mintAndDistribute(weth, pawnToken, usd, punks, art, beats);
+>>>>>>> 4cc543b (fix(bootstrap scripts): made standalone, added tx.wait(), works with all testnets)
 }
 
 // We recommend this pattern to be able to use async/await everywhere

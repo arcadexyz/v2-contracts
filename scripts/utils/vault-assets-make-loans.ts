@@ -3,20 +3,16 @@ import { Contract, BigNumber } from "ethers";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
 import { LoanTerms } from "../../test/utils/types";
 import { createLoanTermsSignature } from "../../test/utils/eip712";
-<<<<<<< HEAD:scripts/utils/bootstrap-tools.ts
-import { main as setupRoles } from "../deploy/setup-roles";
-
 =======
->>>>>>> 4cc543b (fix(bootstrap scripts): made standalone, added tx.wait(), works with all testnets):scripts/utils/vault-assets-make-loans.ts
+>>>>>>> 4cc543b (fix(bootstrap scripts): made standalone, added tx.wait(), works with all testnets):scripts/utils/bootstrap-tools.ts
 import { MockERC1155Metadata, MockERC20, MockERC721Metadata, VaultFactory } from "../../typechain";
 import { createVault } from "./create-vault";
 import { SECTION_SEPARATOR } from "./constants";
 
 export async function vaultAssetsAndMakeLoans(
-<<<<<<< HEAD:scripts/utils/vault-assets-make-loans.ts
-=======
     signers: SignerWithAddress[],
->>>>>>> 3b13180 (fix(bootstrap-state): bootstrap with loans using cli specified protocol in deployments json):scripts/utils/bootstrap-tools.ts
+=======
+>>>>>>> 4cc543b (fix(bootstrap scripts): made standalone, added tx.wait(), works with all testnets):scripts/utils/bootstrap-tools.ts
     FACTORY_ADDRESS: string,
     originationController: Contract,
     borrowerNote: Contract,
@@ -30,13 +26,16 @@ export async function vaultAssetsAndMakeLoans(
 ): Promise<void> {
 
     console.log(SECTION_SEPARATOR);
-<<<<<<< HEAD:scripts/utils/vault-assets-make-loans.ts
-=======
 
-   // Attach address to vaultfactory contract
+    // Bootstrap five accounts, skip the first account, since the
+    // first signer will be the deployer account in hardhat.config.
+    let signers: SignerWithAddress[] = await hre.ethers.getSigners();
+    signers = (await ethers.getSigners()).slice(0, 6);
+
+    // Attach address to VaultFactory contract
     const VaultFactory = await ethers.getContractFactory("VaultFactory");
+<<<<<<< HEAD:scripts/utils/vault-assets-make-loans.ts
     const factory = <VaultFactory>await VaultFactory.attach(FACTORY_ADDRESS);
->>>>>>> 3b13180 (fix(bootstrap-state): bootstrap with loans using cli specified protocol in deployments json):scripts/utils/bootstrap-tools.ts
 
     // Bootstrap five accounts, skip the first account, since the
     // first signer will be the deployer account in hardhat.config.
@@ -47,6 +46,10 @@ export async function vaultAssetsAndMakeLoans(
     const VaultFactory = await ethers.getContractFactory("VaultFactory");
     const factory = <VaultFactory> VaultFactory.attach(FACTORY_ADDRESS);
 
+=======
+    const factory = <VaultFactory> VaultFactory.attach(FACTORY_ADDRESS);
+
+>>>>>>> 4cc543b (fix(bootstrap scripts): made standalone, added tx.wait(), works with all testnets):scripts/utils/bootstrap-tools.ts
     // Connect the first signer to create a vault
     const signer1 = signers[1];
     const signer1Address = await signers[1].getAddress();
