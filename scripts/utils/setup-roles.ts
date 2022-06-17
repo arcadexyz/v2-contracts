@@ -14,6 +14,7 @@ import {
     FEE_CLAIMER_ROLE as DEFAULT_FEE_CLAIMER_ROLE,
     REPAYER_ROLE as DEFAULT_REPAYER_ROLE,
 } from "./constants";
+import { PromissoryNote } from "../../typechain";
 
 const jsonContracts: { [key: string]: string } = {
     CallWhitelist: "whitelist",
@@ -119,21 +120,21 @@ export async function main(
     console.log(SUBSECTION_SEPARATOR);
 
     // grant originationContoller the owner role to enable authorizeUpgrade onlyOwner
-    const updateOriginationControllerAdmin = await loanCore.grantRole(ADMIN_ROLE, ADMIN_ADDRESS);
+    const updateOriginationControllerAdmin = await originationController.transferOwnership(ADMIN_ADDRESS);
     await updateOriginationControllerAdmin.wait();
 
-    console.log(`originationController has granted admin role: ${ADMIN_ROLE} to address: ${ADMIN_ADDRESS}`);
+    console.log(`originationController has transferred ownership to address: ${ADMIN_ADDRESS}`);
     console.log(SUBSECTION_SEPARATOR);
 
     // borrowerNote grants the admin role to the admin address
-    const promissoryNoteAdminBn = await loanCore.grantRole(ADMIN_ROLE, ADMIN_ADDRESS);
+    const promissoryNoteAdminBn = await borrowerNote.grantRole(ADMIN_ROLE, ADMIN_ADDRESS);
     await promissoryNoteAdminBn.wait();
 
     console.log(`borrowerNote has granted admin role: ${ADMIN_ROLE} to address: ${ADMIN_ADDRESS}`);
     console.log(SUBSECTION_SEPARATOR);
 
     // lenderNote grants the admin role to the admin address
-    const promissoryNoteAdminLn = await loanCore.grantRole(ADMIN_ROLE, ADMIN_ADDRESS);
+    const promissoryNoteAdminLn = await lenderNote.grantRole(ADMIN_ROLE, ADMIN_ADDRESS);
     await promissoryNoteAdminLn.wait();
 
     console.log(`lenderNote has granted admin role: ${ADMIN_ROLE} to address: ${ADMIN_ADDRESS}`);
@@ -163,7 +164,7 @@ export async function main(
     console.log(`loanCore has renounced admin role.`);
     console.log(SUBSECTION_SEPARATOR);
 
-    const renounceOriginationControllerAdmin = await loanCore.renounceRole(ADMIN_ROLE, deployer.address);
+    const renounceOriginationControllerAdmin = await originationController.renounceOwnership();
     await renounceOriginationControllerAdmin.wait();
 
     console.log(`originationController has renounced originator role.`);
@@ -176,14 +177,14 @@ export async function main(
     console.log(SUBSECTION_SEPARATOR);
 
     // renounce ownership from loanCore
-    const renounceBorrowerNoteAdmin = await loanCore.renounceRole(ADMIN_ROLE, deployer.address);
+    const renounceBorrowerNoteAdmin = await borrowerNote.renounceRole(ADMIN_ROLE, deployer.address);
     await renounceBorrowerNoteAdmin.wait();
 
     console.log(`borrowerNote has renounced admin role.`);
     console.log(SUBSECTION_SEPARATOR);
 
     // renounce ownership from loanCore
-    const renounceLenderNoteAdmin = await loanCore.renounceRole(ADMIN_ROLE, deployer.address);
+    const renounceLenderNoteAdmin = await lenderNote.renounceRole(ADMIN_ROLE, deployer.address);
     await renounceLenderNoteAdmin.wait();
 
     console.log(`lenderNote has renounced admin role.`);
