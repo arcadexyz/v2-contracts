@@ -58,6 +58,7 @@ contract LoanCore is
 
     // =================== Constants =====================
 
+    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     bytes32 public constant ORIGINATOR_ROLE = keccak256("ORIGINATOR_ROLE");
     bytes32 public constant REPAYER_ROLE = keccak256("REPAYER_ROLE");
     bytes32 public constant FEE_CLAIMER_ROLE = keccak256("FEE_CLAIMER_ROLE");
@@ -109,7 +110,7 @@ contract LoanCore is
         __AccessControl_init();
         __UUPSUpgradeable_init_unchained();
 
-        _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
+        _setupRole(ADMIN_ROLE, _msgSender());
         _setupRole(FEE_CLAIMER_ROLE, _msgSender());
         _setRoleAdmin(FEE_CLAIMER_ROLE, FEE_CLAIMER_ROLE);
 
@@ -132,7 +133,7 @@ contract LoanCore is
      *
      * @param newImplementation     The address of the upgraded verion of this contract.
      */
-    function _authorizeUpgrade(address newImplementation) internal override onlyRole(DEFAULT_ADMIN_ROLE) {}
+    function _authorizeUpgrade(address newImplementation) internal override onlyRole(ADMIN_ROLE) {}
 
     // ====================================== LIFECYCLE OPERATIONS ======================================
 
@@ -550,7 +551,7 @@ contract LoanCore is
      *         Should only be used in case of emergency. Can only be called
      *         by contract owner.
      */
-    function pause() external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function pause() external onlyRole(ADMIN_ROLE) {
         _pause();
     }
 
@@ -559,7 +560,7 @@ contract LoanCore is
      *         Can be used after pausing due to emergency or during contract
      *         upgrade. Can only be called by contract owner.
      */
-    function unpause() external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function unpause() external onlyRole(ADMIN_ROLE) {
         _unpause();
     }
 

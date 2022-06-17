@@ -107,7 +107,7 @@ describe("Deployment", function() {
         const ocProxy = <OriginationController>await ocFactory.attach(deployment["OriginationController"].contractAddress);
         const ocImpl = <OriginationController>await ocFactory.attach(deployment["OriginationController"].contractImplementationAddress);
 
-        expect (await ocProxy.loanCore()).to.eq(deployment["LoanCore"].contractAddress);
+        expect(await ocProxy.loanCore()).to.eq(deployment["LoanCore"].contractAddress);
         expect(await ocImpl.loanCore()).to.eq(ZERO_ADDRESS);
     });
 

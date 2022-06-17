@@ -41,6 +41,8 @@ abstract contract ERC721PermitUpgradeable is
 
     // ============================================ STATE ==============================================
 
+    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
+
     // solhint-disable-next-line var-name-mixedcase
     bytes32 private constant _PERMIT_TYPEHASH =
         keccak256("Permit(address owner,address spender,uint256 tokenId,uint256 nonce,uint256 deadline)");
@@ -61,7 +63,7 @@ abstract contract ERC721PermitUpgradeable is
         __EIP712_init(name, "1");
         __AccessControl_init();
         __UUPSUpgradeable_init();
-        _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
+        _setupRole(ADMIN_ROLE, _msgSender());
     }
 
     // ======================================= UPGRADE AUTHORIZATION ========================================
@@ -72,7 +74,7 @@ abstract contract ERC721PermitUpgradeable is
      * @param newImplementation           The address of the upgraded verion of this contract.
      */
 
-    function _authorizeUpgrade(address newImplementation) internal virtual override onlyRole(DEFAULT_ADMIN_ROLE) {}
+    function _authorizeUpgrade(address newImplementation) internal virtual override onlyRole(ADMIN_ROLE) {}
 
     // ==================================== ERC721PERMIT OPERATIONS ======================================
 

@@ -7,7 +7,7 @@ export const NETWORK = hre.network.name;
 export const ROOT_DIR = path.join(__dirname, "../../");
 export const DEPLOYMENTS_DIR = path.join(ROOT_DIR, ".deployments", NETWORK);
 
-export const getLatestDeployment = (): Record<string, any> => {
+export const getLatestDeploymentFile = (): string => {
     // Make sure JSON file exists
     const files = fs.readdirSync(DEPLOYMENTS_DIR);
     expect(files.length).to.be.gt(0);
@@ -28,7 +28,11 @@ export const getLatestDeployment = (): Record<string, any> => {
         ctime: fs.statSync(path.join(DEPLOYMENTS_DIR, files[0])).ctime
     });
 
-    const fileData = fs.readFileSync(path.join(DEPLOYMENTS_DIR, filename), 'utf-8');
+    return path.join(DEPLOYMENTS_DIR, filename);
+}
+
+export const getLatestDeployment = (): Record<string, any> => {
+    const fileData = fs.readFileSync(getLatestDeploymentFile(), 'utf-8');
     const deployment = JSON.parse(fileData);
 
     return deployment;
