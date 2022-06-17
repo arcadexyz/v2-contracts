@@ -1,9 +1,9 @@
 const fs = require("fs");
 import hre from "hardhat";
 
-import { contractData } from "./deploy/deploy";
+import { contractData } from "./deploy";
 
-import { SECTION_SEPARATOR, SUBSECTION_SEPARATOR } from "./utils/bootstrap-tools";
+import { SECTION_SEPARATOR, SUBSECTION_SEPARATOR } from "../utils/bootstrap-tools";
 
 async function verifyArtifacts(
     contractName: string,

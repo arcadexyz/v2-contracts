@@ -36,9 +36,9 @@ contract VaultFactory is ERC721EnumerableUpgradeable, ERC721PermitUpgradeable, I
     // ============================================ STATE ==============================================
 
     /// @dev The template contract for asset vaults.
-    address public override template;
+    address public template;
     /// @dev The CallWhitelist contract definining the calling restrictions for vaults.
-    address public override whitelist;
+    address public whitelist;
 
     // ========================================== CONSTRUCTOR ===========================================
 
@@ -49,10 +49,6 @@ contract VaultFactory is ERC721EnumerableUpgradeable, ERC721PermitUpgradeable, I
      */
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
-
-    function getTemplate() external view returns (address) {
-        return template;
-    }
 
     // ========================================== INITIALIZER ===========================================
 

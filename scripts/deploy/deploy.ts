@@ -1,6 +1,6 @@
 import hre, { ethers, upgrades } from "hardhat";
 
-import { main as writeJson } from "../utils/verify/writeJson";
+import { writeJson } from "./write-json";
 import { SECTION_SEPARATOR, SUBSECTION_SEPARATOR } from "../utils/bootstrap-tools";
 
 import { ORIGINATOR_ROLE as DEFAULT_ORIGINATOR_ROLE, REPAYER_ROLE as DEFAULT_REPAYER_ROLE } from "../utils/constants";
@@ -15,25 +15,6 @@ import {
     CallWhitelist,
     VaultFactory,
 } from "../../typechain";
-
-export interface deploymentData {
-    [contractName: string]: contractData | PromissoryNoteTypeBn | PromissoryNoteTypeLn;
-}
-export interface contractData {
-    contractAddress: string;
-    contractImplementationAddress: string;
-    constructorArgs: any[];
-}
-
-export interface PromissoryNoteTypeBn {
-    contractAddress: string;
-    constructorArgs: any[];
-}
-
-export interface PromissoryNoteTypeLn {
-    contractAddress: string;
-    constructorArgs: any[];
-}
 
 export interface DeployedResources {
     assetVault: AssetVault;
@@ -152,6 +133,7 @@ export async function main(
     console.log(SUBSECTION_SEPARATOR);
 
     console.log("Writing to deployments json file...");
+
     await writeJson(
         assetVaultAddress,
         feeControllerAddress,

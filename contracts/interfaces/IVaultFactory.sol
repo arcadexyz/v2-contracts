@@ -9,10 +9,6 @@ interface IVaultFactory {
 
     // ================ View Functions ================
 
-    function template() external view returns (address);
-
-    function whitelist() external view returns (address);
-
     function isInstance(address instance) external view returns (bool validity);
 
     function instanceCount() external view returns (uint256);

@@ -1,4 +1,4 @@
-const fs = require("fs");
+import fs from "fs"
 import hre, { ethers } from "hardhat";
 import { Contract } from "ethers";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
@@ -6,14 +6,14 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 // This is imported to extend into this file: import "@nomiclabs/hardhat-ethers";
 import { config } from "../../hardhat.config";
 
-import { SUBSECTION_SEPARATOR, SECTION_SEPARATOR } from "./bootstrap-tools";
+import { SUBSECTION_SEPARATOR, SECTION_SEPARATOR } from "../utils/bootstrap-tools";
 
 import {
-    ORIGINATOR_ROLE as DEFAULT_ORIGINATOR_ROLE,
-    ADMIN_ROLE as DEFAULT_ADMIN_ROLE,
-    FEE_CLAIMER_ROLE as DEFAULT_FEE_CLAIMER_ROLE,
-    REPAYER_ROLE as DEFAULT_REPAYER_ROLE,
-} from "./constants";
+    ORIGINATOR_ROLE,
+    ADMIN_ROLE,
+    FEE_CLAIMER_ROLE,
+    REPAYER_ROLE,
+} from "../utils/constants";
 
 const jsonContracts: { [key: string]: string } = {
     CallWhitelist: "whitelist",
@@ -63,11 +63,6 @@ export async function main(
     console.log("Admin address:", ADMIN_ADDRESS);
 
     // Define roles
-    const ADMIN_ROLE = DEFAULT_ADMIN_ROLE;
-    const FEE_CLAIMER_ROLE = DEFAULT_FEE_CLAIMER_ROLE;
-    const ORIGINATOR_ROLE = DEFAULT_ORIGINATOR_ROLE;
-    const REPAYER_ROLE = DEFAULT_REPAYER_ROLE;
-
     const ORIGINATION_CONTROLLER_ADDRESS = originationController.address;
     const LOAN_CORE_ADDRESS = loanCore.address;
     const FEE_CONTROLLER_ADDRESS = feeController.address;
@@ -212,34 +207,37 @@ export async function main(
     console.log("Transferred all ownership.\n");
 }
 
-async function attachAddresses(jsonFile: string): Promise<any> {
-    let readData = fs.readFileSync(jsonFile);
-    let jsonData = JSON.parse(readData);
-    let contracts: { [key: string]: Contract } = {};
-    for await (let key of Object.keys(jsonData)) {
+async function attachAddresses(jsonFile: string): Promise<ContractArgs> {
+    const readData = fs.readFileSync(jsonFile, 'utf-8');
+    const jsonData = JSON.parse(readData);
+    const contracts: { [key: string]: Contract } = {};
+
+    for await (const key of Object.keys(jsonData)) {
         if (!(key in jsonContracts)) continue;
-        const argKey: string = jsonContracts[key];
+
+        const argKey = jsonContracts[key];
         console.log(`Key: ${key}, address: ${jsonData[key]["contractAddress"]}`);
+
         let contract: Contract;
         if (key === "BorrowerNote" || key === "LenderNote") {
             contract = await ethers.getContractAt("PromissoryNote", jsonData[key]["contractAddress"]);
         } else {
             contract = await ethers.getContractAt(key, jsonData[key]["contractAddress"]);
         }
+
         contracts[argKey] = contract;
     }
-    return contracts;
+
+    return contracts as ContractArgs;
 }
 
 if (require.main === module) {
     // retrieve command line args array
-    const args = process.argv.slice(2);
+    const [,,file] = process.argv.slice(2);
 
     // assemble args to access the relevant deplyment json in .deployment
-    const file = `./.deployments/${args[0]}/${args[0]}-${args[1]}.json`;
-
-    attachAddresses(file).then((res: ContractArgs) => {
-        let {
+    void attachAddresses(file).then((res: ContractArgs) => {
+        const {
             factory,
             originationController,
             borrowerNote,
@@ -249,6 +247,7 @@ if (require.main === module) {
             feeController,
             whitelist,
         } = res;
+
         main(
             factory,
             originationController,

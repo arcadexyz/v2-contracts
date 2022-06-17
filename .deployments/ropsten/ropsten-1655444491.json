@@ -1,0 +1,53 @@
+{
+  "CallWhitelist": {
+    "contractAddress": "0x86eB882404bFEE5847B5067F70DA498EC8Efdb03",
+    "contractImplementationAddress": "",
+    "constructorArgs": []
+  },
+  "AssetVault": {
+    "contractAddress": "0x0fACDc440d496798e095F87e50a8ed3A5680d133",
+    "contractImplementationAddress": "",
+    "constructorArgs": []
+  },
+  "VaultFactory": {
+    "contractAddress": "0x562803B258CC1b5EcC1398443940E6Ff15f649D2",
+    "contractImplementationAddress": "0x4033F75c5b22ABd4BeDB22A663Eaa5E4a83B4302",
+    "constructorArgs": []
+  },
+  "FeeController": {
+    "contractAddress": "0xd45ce8173262655c1aCbA3b376B1A77e4d7CDc7F",
+    "contractImplementationAddress": "",
+    "constructorArgs": []
+  },
+  "BorrowerNote": {
+    "contractAddress": "0x3a50C25f11Cb96A30BFcBA4DC0c44Da1907Dd935",
+    "constructorArgs": [
+      "Arcade.xyz BorrowerNote",
+      "aBN"
+    ]
+  },
+  "LenderNote": {
+    "contractAddress": "0x4845B43b8F84653dAb594fE7A12E9697B9408A9A",
+    "constructorArgs": [
+      "Arcade.xyz LenderNote",
+      "aLN"
+    ]
+  },
+  "LoanCore": {
+    "contractAddress": "0x251440B8CBcc973A8E7f0B7814EC3ecc6BcfCbc9",
+    "contractImplementationAddress": "0x6e36C5cB1D8eE76F0F07c4DD46DbDcfdE4265DB9",
+    "constructorArgs": []
+  },
+  "RepaymentController": {
+    "contractAddress": "0x5FA8E713a058b2Eef293eF0317E629bA88E9b88c",
+    "contractImplementationAddress": "",
+    "constructorArgs": [
+      "0x251440B8CBcc973A8E7f0B7814EC3ecc6BcfCbc9"
+    ]
+  },
+  "OriginationController": {
+    "contractAddress": "0x567ccb050e793235574f1261C24Ea2304436c117",
+    "contractImplementationAddress": "0x4d8fD5026FA8b49443E5814f1EA3816f97a12ddC",
+    "constructorArgs": []
+  }
+}
