@@ -51,7 +51,7 @@ if (forkMainnet && !process.env.ALCHEMY_API_KEY) {
     alchemyApiKey = process.env.ALCHEMY_API_KEY;
 }
 
-// create testnet network
+// create public testnet config
 function createTestnetConfig(network: keyof typeof chainIds): NetworkUserConfig {
     const url = `https://eth-${network}.alchemyapi.io/v2/${alchemyApiKey}`;
     // const url = `https://rpc.tenderly.co/fork/de2d17bd-ffc1-4838-b8b6-1b7949b8b1f9`;
@@ -67,7 +67,7 @@ function createTestnetConfig(network: keyof typeof chainIds): NetworkUserConfig 
     };
 }
 
-// create local network config
+// create local hardhat network config
 function createHardhatConfig(): HardhatNetworkUserConfig {
     const config = {
         accounts: {
@@ -95,6 +95,7 @@ function createHardhatConfig(): HardhatNetworkUserConfig {
     return config;
 }
 
+// create mainnet confid
 function createMainnetConfig(): NetworkUserConfig {
     return {
         accounts: {

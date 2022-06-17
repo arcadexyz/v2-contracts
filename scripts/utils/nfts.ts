@@ -15,17 +15,19 @@ export async function mintNFTs(
     let j = 1;
 
     for (let i = 0; i < numPunks; i++) {
-        await punks["mint(address,string)"](
+        const punkTx = await punks["mint(address,string)"](
             target,
             `https://s3.amazonaws.com/images.pawn.fi/test-nft-metadata/PawnFiPunks/nft-${j++}.json`,
         );
+        await punkTx.wait();
     }
 
     for (let i = 0; i < numArts; i++) {
-        await art["mint(address,string)"](
+        const artTx = await art["mint(address,string)"](
             target,
             `https://s3.amazonaws.com/images.pawn.fi/test-nft-metadata/PawnArtIo/nft-${j++}.json`,
         );
+        await artTx.wait();
     }
 
     const uris = [
@@ -33,5 +35,6 @@ export async function mintNFTs(
         `https://s3.amazonaws.com/images.pawn.fi/test-nft-metadata/PawnBeats/nft-${j++}.json`,
     ];
 
-    await beats.mintBatch(target, [0, 1], [numBeats0, numBeats1], uris, "0x00");
+    const batchMintTx = await beats.mintBatch(target, [0, 1], [numBeats0, numBeats1], uris, "0x00");
+    await batchMintTx.wait();
 }
