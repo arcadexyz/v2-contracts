@@ -3,8 +3,6 @@ import hre, { ethers, upgrades } from "hardhat";
 import { writeJson } from "./write-json";
 import { SECTION_SEPARATOR, SUBSECTION_SEPARATOR } from "../utils/bootstrap-tools";
 
-import { ORIGINATOR_ROLE as DEFAULT_ORIGINATOR_ROLE, REPAYER_ROLE as DEFAULT_REPAYER_ROLE } from "../utils/constants";
-
 import {
     AssetVault,
     FeeController,
@@ -28,10 +26,7 @@ export interface DeployedResources {
     vaultFactory: VaultFactory;
 }
 
-export async function main(
-    ORIGINATOR_ROLE = DEFAULT_ORIGINATOR_ROLE,
-    REPAYER_ROLE = DEFAULT_REPAYER_ROLE,
-): Promise<DeployedResources> {
+export async function main(): Promise<DeployedResources> {
     // Hardhat always runs the compile task when running scripts through it.
     // If this runs in a standalone fashion you may want to call compile manually
     // to make sure everything is compiled

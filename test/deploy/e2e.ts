@@ -37,7 +37,7 @@ describe("Deployment", function() {
     this.timeout(0);
     this.bail();
 
-    it("deploys the contracts and creates the correct artifacts", async () => {
+    it.skip("deploys the contracts and creates the correct artifacts", async () => {
         // Deploy everything, via command-line
         console.log(); // whitespace
         execSync(`npx hardhat --network ${NETWORK} run scripts/deploy/deploy.ts`, { stdio: 'inherit' });
@@ -201,7 +201,7 @@ describe("Deployment", function() {
         expect(await originationController.getRoleMemberCount(ADMIN_ROLE)).to.eq(1);
     });
 
-    it.only("verifies all contracts on the proper network", async () => {
+    it.skip("verifies all contracts on the proper network", async () => {
         const filename = getLatestDeploymentFile();
 
         // Run setup, via command-line
