@@ -1,12 +1,13 @@
 import { execSync } from "child_process";
 import { expect } from "chai";
-import { ethers } from "hardhat";
+import { ethers, artifacts } from "hardhat";
 import assert from "assert";
 
 import {
     NETWORK,
     getLatestDeploymentFile,
-    getLatestDeployment
+    getLatestDeployment,
+    getVerifiedABI
 } from "./utils";
 
 import {
@@ -37,10 +38,12 @@ describe("Deployment", function() {
     this.timeout(0);
     this.bail();
 
-    it.skip("deploys the contracts and creates the correct artifacts", async () => {
-        // Deploy everything, via command-line
-        console.log(); // whitespace
-        execSync(`npx hardhat --network ${NETWORK} run scripts/deploy/deploy.ts`, { stdio: 'inherit' });
+    it("deploys the contracts and creates the correct artifacts", async () => {
+        if (process.env.EXEC) {
+            // Deploy everything, via command-line
+            console.log(); // whitespace
+            execSync(`npx hardhat --network ${NETWORK} run scripts/deploy/deploy.ts`, { stdio: 'inherit' });
+        }
 
         // Make sure JSON file exists
         const deployment = getLatestDeployment();
@@ -128,9 +131,11 @@ describe("Deployment", function() {
         const deployment = getLatestDeployment();
         const [deployer, admin] = await ethers.getSigners();
 
-        // Run setup, via command-line
-        console.log(); // whitespace
-        execSync(`HARDHAT_NETWORK=${NETWORK} ADMIN=${admin.address} ts-node scripts/deploy/setup-roles.ts ${filename}`, { stdio: 'inherit' });
+        if (process.env.EXEC) {
+            // Run setup, via command-line
+            console.log(); // whitespace
+            execSync(`HARDHAT_NETWORK=${NETWORK} ADMIN=${admin.address} ts-node scripts/deploy/setup-roles.ts ${filename}`, { stdio: 'inherit' });
+        }
 
         // Check role setup contract by contract
         const cwFactory = await ethers.getContractFactory("CallWhitelist");
@@ -201,14 +206,36 @@ describe("Deployment", function() {
         expect(await originationController.getRoleMemberCount(ADMIN_ROLE)).to.eq(1);
     });
 
-    it.skip("verifies all contracts on the proper network", async () => {
+    it("verifies all contracts on the proper network", async () => {
         const filename = getLatestDeploymentFile();
+        const deployment = getLatestDeployment();
 
-        // Run setup, via command-line
-        console.log(); // whitespace
-        execSync(`HARDHAT_NETWORK=${NETWORK} ts-node scripts/deploy/verify-contracts.ts ${filename}`, { stdio: 'inherit' });
+        if (process.env.EXEC) {
+            // Run setup, via command-line
+            console.log(); // whitespace
+            execSync(`HARDHAT_NETWORK=${NETWORK} ts-node scripts/deploy/verify-contracts.ts ${filename}`, { stdio: 'inherit' });
+        }
+
+        const proxyArtifact = await artifacts.readArtifact("ERC1967Proxy");
 
         // For each contract - compare verified ABI against artifact ABI
+        for (let contractName of Object.keys(deployment)) {
+            const contractData = deployment[contractName];
+
+            if (contractName.includes("Note")) contractName = "PromissoryNote";
+            const artifact = await artifacts.readArtifact(contractName);
+
+            const implAddress = contractData.contractImplementationAddress || contractData.contractAddress;
+
+            const verifiedAbi = await getVerifiedABI(implAddress);
+            expect(artifact.abi).to.deep.equal(verifiedAbi);
+
+            if (contractData.contractImplementationAddress) {
+                // Also verify the proxy
+                const verifiedProxyAbi = await getVerifiedABI(contractData.contractAddress);
+                expect(verifiedProxyAbi).to.deep.equal(proxyArtifact.abi);
+            }
+        }
     });
 
     it.skip("can run sample loans")

@@ -18,11 +18,18 @@ async function verifyArtifacts(
     const address = contractImplementationAddress || contractAddress;
 
     // TODO: Verify proxy?
-
-    await hre.run("verify:verify", {
-        address,
-        constructorArguments: constructorArgs,
-    });
+    try {
+        await hre.run("verify:verify", {
+            address,
+            constructorArguments: constructorArgs,
+        });
+    } catch (err) {
+        if (!err.message.match(/already verified/i)) {
+            throw err;
+        } else {
+            console.log("\nContract already verified.");
+        }
+    }
 
     console.log(`${contractName}: ${address}`, "has been verified.");
     console.log(SECTION_SEPARATOR);
