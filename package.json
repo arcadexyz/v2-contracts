@@ -17,7 +17,7 @@
         "@types/chai": "^4.2.13",
         "@types/fs-extra": "^9.0.1",
         "@types/mocha": "^7.0.2",
-        "@types/node": "^14.11.8",
+        "@types/node": "^18.0.0",
         "@typescript-eslint/eslint-plugin": "^3.10.1",
         "@typescript-eslint/parser": "^3.10.1",
         "chai": "^4.2.0",
@@ -77,6 +77,7 @@
         "compile": "hardhat compile",
         "coverage": "hardhat coverage --solcoverjs ./.solcover.js --temp artifacts --testfiles \"./test/**/*.ts\"",
         "gendocs": "solidity-docgen -i ./contracts --solc-module solc-0.8",
+        "generate": "hardhat generate",
         "lint": "yarn run lint:sol && yarn run lint:ts && yarn run prettier:list-different",
         "lint:fix": "yarn run prettier && yarn run lint:sol:fix && yarn run lint:ts:fix",
         "lint:sol": "solhint --config ./.solhint.json --max-warnings 0 \"contracts/**/*.sol\"",
@@ -97,6 +98,7 @@
     "dependencies": {
         "@openzeppelin/contracts-upgradeable": "4.5.2",
         "@openzeppelin/hardhat-upgrades": "^1.17.0",
-        "bip39": "^3.0.4"
+        "bip39": "^3.0.4",
+        "path": "^0.12.7"
     }
 }
