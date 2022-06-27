@@ -1,7 +1,7 @@
 {
     "name": "arcade-contracts",
     "description": "Smart contracts for Arcade.xyz",
-    "version": "1.0.0",
+    "version": "2.0.0",
     "devDependencies": {
         "@aave/protocol-v2": "^1.0.1",
         "@commitlint/cli": "^9.1.2",
@@ -32,7 +32,6 @@
         "fs-extra": "^9.0.1",
         "hardhat": "^2.0.10",
         "hardhat-contract-sizer": "^2.5.1",
-        "hardhat-dependency-compiler": "^1.1.3",
         "hardhat-gas-reporter": "^1.0.4",
         "husky": "^4.3.0",
         "mocha": "^8.1.3",
@@ -40,7 +39,7 @@
         "prettier": "^2.1.2",
         "prettier-plugin-solidity": "^1.0.0-beta.1",
         "shelljs": "^0.8.4",
-        "solc-0.8": "npm:solc@^0.8.5",
+        "solc-0.8": "npm:solc@^0.8.11",
         "solhint": "^3.2.1",
         "solhint-plugin-prettier": "^0.0.5",
         "solidity-coverage": "^0.7.12",
@@ -69,10 +68,7 @@
         "smart-contracts",
         "solidity"
     ],
-    "license": "WTFPL",
-    "publishConfig": {
-        "access": "public"
-    },
+    "license": "MIT",
     "scripts": {
         "clean": "hardhat clean",
         "commit": "git-cz",
@@ -87,7 +83,7 @@
         "lint:ts:fix": "eslint --config ./.eslintrc.yaml --fix --ignore-path ./.eslintignore --ext .js,.ts .",
         "prettier": "prettier --config .prettierrc --write \"**/*.{js,json,md,sol,ts}\"",
         "prettier:list-different": "prettier --config .prettierrc --list-different \"**/*.{js,json,md,sol,ts}\"",
-        "solc-0.8": "npm:solc@^0.8.0",
+        "solc-0.8": "npm:solc@^0.8.11",
         "solidity-docgen": "^0.5.13",
         "test": "hardhat test",
         "test-deploy": "hardhat test test/deploy/e2e.ts",
