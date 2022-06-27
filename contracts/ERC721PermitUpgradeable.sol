@@ -5,7 +5,7 @@ pragma solidity ^0.8.11;
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/cryptography/draft-EIP712Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol";
@@ -33,13 +33,15 @@ import { ERC721P_DeadlineExpired, ERC721P_NotTokenOwner, ERC721P_InvalidSignatur
 abstract contract ERC721PermitUpgradeable is
     ERC721Upgradeable,
     IERC721PermitUpgradeable,
-    AccessControlUpgradeable,
+    AccessControlEnumerableUpgradeable,
     EIP712Upgradeable,
     UUPSUpgradeable
 {
     using CountersUpgradeable for CountersUpgradeable.Counter;
 
     // ============================================ STATE ==============================================
+
+    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
 
     // solhint-disable-next-line var-name-mixedcase
     bytes32 private constant _PERMIT_TYPEHASH =
@@ -59,9 +61,11 @@ abstract contract ERC721PermitUpgradeable is
      */
     function __ERC721PermitUpgradeable_init(string memory name) internal {
         __EIP712_init(name, "1");
-        __AccessControl_init();
+        __AccessControlEnumerable_init();
         __UUPSUpgradeable_init();
-        _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
+
+        _setupRole(ADMIN_ROLE, _msgSender());
+        _setRoleAdmin(ADMIN_ROLE, ADMIN_ROLE);
     }
 
     // ======================================= UPGRADE AUTHORIZATION ========================================
@@ -72,7 +76,7 @@ abstract contract ERC721PermitUpgradeable is
      * @param newImplementation           The address of the upgraded verion of this contract.
      */
 
-    function _authorizeUpgrade(address newImplementation) internal virtual override onlyRole(DEFAULT_ADMIN_ROLE) {}
+    function _authorizeUpgrade(address newImplementation) internal virtual override onlyRole(ADMIN_ROLE) {}
 
     // ==================================== ERC721PERMIT OPERATIONS ======================================
 
@@ -172,7 +176,7 @@ abstract contract ERC721PermitUpgradeable is
         public
         view
         virtual
-        override(AccessControlUpgradeable, ERC721Upgradeable, IERC165Upgradeable)
+        override(AccessControlEnumerableUpgradeable, ERC721Upgradeable, IERC165Upgradeable)
         returns (bool)
     {
         return super.supportsInterface(interfaceId);

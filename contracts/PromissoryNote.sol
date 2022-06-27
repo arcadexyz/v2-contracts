@@ -92,6 +92,7 @@ contract PromissoryNote is
         if (_msgSender() != owner) revert PN_CannotInitialize();
 
         _setupRole(ADMIN_ROLE, loanCore);
+        _setRoleAdmin(ADMIN_ROLE, ADMIN_ROLE);
 
         owner = loanCore;
         initialized = true;

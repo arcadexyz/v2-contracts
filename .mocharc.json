@@ -1,6 +1,7 @@
 {
     "extension": ["ts"],
     "recursive": "test",
+    "ignore": "test/deploy/*",
     "require": ["hardhat/register"],
     "timeout": 20000
 }

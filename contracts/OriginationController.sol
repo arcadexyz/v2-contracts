@@ -4,7 +4,7 @@ pragma solidity ^0.8.11;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/cryptography/draft-EIP712Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
@@ -40,7 +40,7 @@ import {
     OC_SignatureIsExpired,
     OC_RolloverCurrencyMismatch,
     OC_RolloverCollateralMismatch
-    } from "./errors/Lending.sol";
+} from "./errors/Lending.sol";
 
 /**
  * @title OriginationController
@@ -60,7 +60,7 @@ contract OriginationController is
     IOriginationController,
     EIP712Upgradeable,
     ReentrancyGuardUpgradeable,
-    OwnableUpgradeable,
+    AccessControlEnumerableUpgradeable,
     UUPSUpgradeable
 {
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -68,6 +68,8 @@ contract OriginationController is
     // ============================================ STATE ==============================================
 
     // =================== Constants =====================
+
+    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
 
     /// @notice EIP712 type hash for bundle-based signatures.
     bytes32 private constant _TOKEN_ID_TYPEHASH =
@@ -118,8 +120,12 @@ contract OriginationController is
 
     function initialize(address _loanCore) public initializer {
         __EIP712_init("OriginationController", "2");
-        __Ownable_init_unchained();
+        __AccessControlEnumerable_init();
         __UUPSUpgradeable_init_unchained();
+
+        _setupRole(ADMIN_ROLE, _msgSender());
+        _setRoleAdmin(ADMIN_ROLE, ADMIN_ROLE);
+
         if (_loanCore == address(0)) revert OC_ZeroAddress();
 
         loanCore = _loanCore;
@@ -133,7 +139,7 @@ contract OriginationController is
      * @param newImplementation           The address of the upgraded verion of this contract
      */
 
-    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
+    function _authorizeUpgrade(address newImplementation) internal override onlyRole(ADMIN_ROLE) {}
 
     // ==================================== ORIGINATION OPERATIONS ======================================
 
@@ -587,7 +593,7 @@ contract OriginationController is
      * @param verifier              The specified verifier contract, should implement ISignatureVerifier.
      * @param isAllowed             Whether the specified contract should be allowed.
      */
-    function setAllowedVerifier(address verifier, bool isAllowed) public override onlyOwner {
+    function setAllowedVerifier(address verifier, bool isAllowed) public override onlyRole(ADMIN_ROLE) {
         if (verifier == address(0)) revert OC_ZeroAddress();
 
         allowedVerifiers[verifier] = isAllowed;

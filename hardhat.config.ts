@@ -2,6 +2,7 @@ import "@typechain/hardhat";
 import "@nomiclabs/hardhat-waffle";
 import "@nomiclabs/hardhat-etherscan";
 import "hardhat-gas-reporter";
+import "hardhat-dependency-compiler";
 import "solidity-coverage";
 import "@nomiclabs/hardhat-ethers";
 import "@nomiclabs/hardhat-etherscan";
@@ -50,6 +51,7 @@ if (forkMainnet && !process.env.ALCHEMY_API_KEY) {
 // create testnet network
 function createTestnetConfig(network: keyof typeof chainIds): NetworkUserConfig {
     const url = `https://eth-${network}.alchemyapi.io/v2/${alchemyApiKey}`;
+    // const url = `https://rpc.tenderly.co/fork/de2d17bd-ffc1-4838-b8b6-1b7949b8b1f9`;
     return {
         accounts: {
             count: 10,
@@ -159,6 +161,11 @@ export const config: HardhatUserConfig = {
     typechain: {
         outDir: "typechain",
         target: "ethers-v5",
+    },
+    dependencyCompiler: {
+        paths: [
+            "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol",
+        ]
     },
     etherscan: {
         apiKey: process.env.ETHERSCAN_API_KEY,

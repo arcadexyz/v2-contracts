@@ -53,9 +53,9 @@ contract VaultFactory is ERC721EnumerableUpgradeable, ERC721PermitUpgradeable, I
     // ========================================== INITIALIZER ===========================================
 
     function initialize(address _template, address _whitelist) public initializer {
-        __ERC721_init("Asset Wrapper V2", "AW-V2");
-        __ERC721PermitUpgradeable_init("Asset Wrapper V2");
-        _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
+        __ERC721_init("Asset Vault", "AV");
+        __ERC721PermitUpgradeable_init("Asset Vault");
+
         if (_template == address(0)) revert VF_InvalidTemplate(_template);
         template = _template;
         whitelist = _whitelist;
@@ -68,7 +68,7 @@ contract VaultFactory is ERC721EnumerableUpgradeable, ERC721PermitUpgradeable, I
      *
      * @param newImplementation     The address of the upgraded version of this contract.
      */
-    function _authorizeUpgrade(address newImplementation) internal override onlyRole(DEFAULT_ADMIN_ROLE) {}
+    function _authorizeUpgrade(address newImplementation) internal override onlyRole(ADMIN_ROLE) {}
 
     /**
      * @notice Check if the given address is a vault instance created by this factory.
