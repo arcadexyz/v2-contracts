@@ -3,11 +3,14 @@ import { Contract, BigNumber } from "ethers";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
 import { LoanTerms } from "../../test/utils/types";
 import { createLoanTermsSignature } from "../../test/utils/eip712";
+<<<<<<< HEAD:scripts/utils/vault-assets-make-loans.ts
 <<<<<<< HEAD:scripts/utils/bootstrap-tools.ts
 import { main as setupRoles } from "../deploy/setup-roles";
 
 =======
 >>>>>>> 4cc543b (fix(bootstrap scripts): made standalone, added tx.wait(), works with all testnets):scripts/utils/vault-assets-make-loans.ts
+=======
+>>>>>>> 70531448f0bceddd35e32dfe2ed29122584b0e83:scripts/utils/bootstrap-tools.ts
 import { MockERC1155Metadata, MockERC20, MockERC721Metadata, VaultFactory } from "../../typechain";
 import { createVault } from "./create-vault";
 import { SECTION_SEPARATOR } from "./constants";
