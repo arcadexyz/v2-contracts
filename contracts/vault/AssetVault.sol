@@ -71,7 +71,7 @@ contract AssetVault is IAssetVault, OwnableERC721, Initializable, ERC1155Holder,
      * @notice Initializes the contract, used on clone deployments. In practice,
      *         always called by the VaultFactory contract.
      *
-     * @param _whitelist            The contract maintaing the whitelist of allowed
+     * @param _whitelist            The contract maintaining the whitelist of allowed
      *                              arbitrary calls.
      */
     function initialize(address _whitelist) external override initializer {

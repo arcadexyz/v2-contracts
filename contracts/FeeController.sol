@@ -15,7 +15,7 @@ import { FC_FeeTooLarge } from "./errors/Lending.sol";
  * The Fee Controller is used by LoanCore to query for fees for different
  * loan lifecycle interactions (origiations, rollovers, etc). All fees should
  * have setters and getters and be expressed in BPs. In the future, this contract
- * could be extended to support more complext logic (introducing a mapping of users
+ * could be extended to support more complex logic (introducing a mapping of users
  * who get a discount, e.g.). Since LoanCore can change the fee controller reference,
  * any changes to this contract can be newly deployed on-chain and adopted.
  */

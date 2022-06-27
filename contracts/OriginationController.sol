@@ -7,7 +7,6 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/cryptography/draft-EIP712Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
@@ -121,6 +120,10 @@ contract OriginationController is
     function initialize(address _loanCore) public initializer {
         __EIP712_init("OriginationController", "2");
         __AccessControlEnumerable_init();
+        __UUPSUpgradeable_init_unchained();
+        __ReentrancyGuard_init_unchained();
+        __Context_init_unchained();
+        __AccessControlEnumerable_init_unchained();
         __UUPSUpgradeable_init_unchained();
 
         _setupRole(ADMIN_ROLE, _msgSender());

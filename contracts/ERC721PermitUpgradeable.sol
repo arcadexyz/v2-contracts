@@ -60,7 +60,7 @@ abstract contract ERC721PermitUpgradeable is
      * @param name                  The name of the signing domain.
      */
     function __ERC721PermitUpgradeable_init(string memory name) internal {
-        __EIP712_init(name, "1");
+        __EIP712_init_unchained(name, "1");
         __AccessControlEnumerable_init();
         __UUPSUpgradeable_init();
 

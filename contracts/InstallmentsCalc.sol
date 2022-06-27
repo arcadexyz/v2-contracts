@@ -31,6 +31,7 @@ abstract contract InstallmentsCalc is IInstallmentsCalc {
 
     /**
      * @notice Calculate the interest due over a full term.
+     *
      * @dev Interest and principal must be entered with 18 units of
      *      precision from the basis point unit (e.g. 1e18 == 0.01%)
      *
@@ -48,12 +49,13 @@ abstract contract InstallmentsCalc is IInstallmentsCalc {
 
     /**
      * @notice Calculates and returns the current installment period relative to the loan's startDate,
-     *         durationSecs, and numInstallments. Using these three paremeters and the blocks current timestamp
+     *         durationSecs, and numInstallments. Using these three parameters and the blocks current timestamp
      *         we are able to determine the current timeframe relative to the total number of installments.
      *
      * @dev Get current installment using the startDate, duration, and current time.
-     *      NOTE!!! DurationSecs must be greater than 10 seconds (10%10 = 0).
-     *              Also verify the _timestampMultiplier value for what is determined on the max and min loan durations.
+     *      In the section titled 'Get Timestamp Multiplier' DurationSecs must be greater
+     *      than 10 seconds (10%10 = 0) and less than 1e18 seconds, this checked in
+     *      _validateLoanTerms function in Origination Controller.
      *
      * @param startDate                    The start date of the loan as a timestamp.
      * @param durationSecs                 The duration of the loan in seconds.
@@ -136,12 +138,12 @@ abstract contract InstallmentsCalc is IInstallmentsCalc {
     }
 
     /**
-     * @notice Calulates and returns the minimum interest balance on loan, current late fees,
+     * @notice Calculates and returns the minimum interest balance on loan, current late fees,
      *         and the current number of payments missed. If called twice in the same installment
      *         period, will return all zeros the second call.
      *
      * @dev Get minimum installment payment due, any late fees accrued, and
-     *      the number of missed payments since last installment payment.
+     *      the number of missed payments since the last installment payment.
      *
      *      1. Calculate relative time values to determine the number of installment periods missed.
      *      2. Is the repayment late based on the number of installment periods missed?
@@ -178,7 +180,7 @@ abstract contract InstallmentsCalc is IInstallmentsCalc {
         if (numInstallmentsPaid >= _installmentPeriod) {
             // When numInstallmentsPaid is greater than or equal to the _installmentPeriod
             // this indicates that the minimum interest and any late fees for this installment period
-            // have alread been repaid. Any additional amount sent in this installment period goes to principal
+            // have already been repaid. Any additional amount sent in this installment period goes to principal
             return (0, 0, 0);
         }
 

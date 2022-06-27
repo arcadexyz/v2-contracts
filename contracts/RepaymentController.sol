@@ -2,19 +2,6 @@
 
 pragma solidity ^0.8.11;
 
-/** V2 Notes
- * Interest input as a rate/ percent value.
- *
- * _calcAmountsDue - function which returns the current balanceDue(uint256),
- * defaulted(bool), and payableCurrency(address)
- *
- * repayPartMinimum - function for repaying installment payments. The minimum amount payable.
- * Interest and any fees only.
- *
- * repayPart - function for repaying installment payments. The amount must be higher than
- * the minimum amount payable.
- */
-
 import "@openzeppelin/contracts/utils/Context.sol";
 import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";

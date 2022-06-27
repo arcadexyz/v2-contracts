@@ -3,7 +3,6 @@
 pragma solidity ^0.8.11;
 
 import "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC1155/IERC1155Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts/proxy/Clones.sol";
@@ -18,12 +17,12 @@ import { VF_InvalidTemplate, VF_TokenIdOutOfBounds, VF_NoTransferWithdrawEnabled
  * @title VaultFactory
  * @author Non-Fungible Technologies, Inc.
  *
- * The Vault Facotry is used for creating and registering AssetVault contracts, which
+ * The Vault factory is used for creating and registering AssetVault contracts, which
  * is also an ERC721 that maps "ownership" of its tokens to ownership of created
  * vault assets (see OwnableERC721).
  *
  * Each Asset Vault is created via "intializeBundle", and uses a specified template
- * and the OpenZepppelin Clones library to cheaply deploy a new clone pointing to logic
+ * and the OpenZeppelin Clones library to cheaply deploy a new clone pointing to logic
  * in the template. The address the newly created vault is deployed to is converted
  * into a uint256, which ends up being the token ID minted.
  *
@@ -55,6 +54,7 @@ contract VaultFactory is ERC721EnumerableUpgradeable, ERC721PermitUpgradeable, I
     function initialize(address _template, address _whitelist) public initializer {
         __ERC721_init("Asset Vault", "AV");
         __ERC721PermitUpgradeable_init("Asset Vault");
+        __ERC721Enumerable_init_unchained();
 
         if (_template == address(0)) revert VF_InvalidTemplate(_template);
         template = _template;
