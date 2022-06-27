@@ -1,7 +1,6 @@
 import hre, { ethers, upgrades } from "hardhat";
-
 import { writeJson } from "./write-json";
-import { SECTION_SEPARATOR, SUBSECTION_SEPARATOR } from "../utils/bootstrap-tools";
+import { SECTION_SEPARATOR, SUBSECTION_SEPARATOR } from "../utils/constants";
 
 import {
     AssetVault,

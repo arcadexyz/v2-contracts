@@ -1,10 +1,8 @@
 import fs from "fs";
 import hre from "hardhat";
 import { BigNumberish } from "ethers";
-
 import { ContractData } from "./write-json";
-
-import { SECTION_SEPARATOR, SUBSECTION_SEPARATOR } from "../utils/bootstrap-tools";
+import { SECTION_SEPARATOR, SUBSECTION_SEPARATOR } from "../utils/constants";
 
 async function verifyArtifacts(
     contractName: string,

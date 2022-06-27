@@ -1,8 +1,6 @@
 import { ethers } from "hardhat";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
 import { VaultFactory, AssetVault } from "../../typechain";
-import { config } from "../../hardhat.config";
-
 
 type Signer = SignerWithAddress;
 

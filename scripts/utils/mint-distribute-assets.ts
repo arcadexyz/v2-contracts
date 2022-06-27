@@ -1,19 +1,13 @@
 import { ethers } from "hardhat";
 import { resolve } from "path";
 import { config as dotenvConfig } from "dotenv";
-=======
->>>>>>> 4cc543b (fix(bootstrap scripts): made standalone, added tx.wait(), works with all testnets)
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
 import { MockERC1155Metadata, MockERC20, MockERC721Metadata } from "../../typechain";
 import { getBalance, mintTokens } from "./tokens";
 import { mintNFTs } from "./nfts";
-import { SUBSECTION_SEPARATOR } from "./bootstrap-tools";
+import { SUBSECTION_SEPARATOR } from "./constants";
 
 dotenvConfig({ path: resolve(__dirname, "../../.env") });
-=======
-import { SUBSECTION_SEPARATOR } from "./constants";
-import { config } from "./../../hardhat.config";
->>>>>>> 4cc543b (fix(bootstrap scripts): made standalone, added tx.wait(), works with all testnets)
 
 export async function mintAndDistribute(
     weth: MockERC20,
@@ -60,8 +54,6 @@ export async function mintAndDistribute(
     console.log(SUBSECTION_SEPARATOR);
     await mintTokens(signers[4].address, [50, 2222.2, 12.1], weth, pawnToken, usd);
     await mintNFTs(signers[4].address, [1, 12, 1, 6], punks, art, beats);
-=======
->>>>>>> 4cc543b (fix(bootstrap scripts): made standalone, added tx.wait(), works with all testnets)
 
     // log the current balances of signers 1-5
     console.log("Initial balances:");
@@ -75,10 +67,8 @@ export async function mintAndDistribute(
         console.log("PawnArt balance:", await getBalance(art, signerAddr));
         console.log("PawnBeats Edition 0 balance:", await (await (beats.balanceOf(signerAddr, 0))).toString());
         console.log("PawnBeats Edition 1 balance:", await (await (beats.balanceOf(signerAddr, 1))).toString());
-=======
         console.log("PawnBeats Edition 0 balance:", (await beats.balanceOf(signerAddr, 0)).toString());
         console.log("PawnBeats Edition 1 balance:", (await beats.balanceOf(signerAddr, 1)).toString());
->>>>>>> 4cc543b (fix(bootstrap scripts): made standalone, added tx.wait(), works with all testnets)
         console.log("ETH balance:", (await signer.getBalance()).toString());
         console.log("WETH balance:", await getBalance(weth, signerAddr));
         console.log("PAWN balance:", await getBalance(pawnToken, signerAddr));
