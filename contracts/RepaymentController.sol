@@ -72,8 +72,8 @@ contract RepaymentController is IRepaymentController, InstallmentsCalc, Context 
     }
 
     /**
-     * @notice Claim collateral an active loan, referenced by lender note ID (equivalent to loan ID). The loan
-     *         must be passed the due date, or, in the case of an installment, the amount
+     * @notice Claim collateral on an active loan, referenced by lender note ID (equivalent to loan ID).
+     *        The loan must be past the due date, or, in the case of an installment, the amount
      *         overdue must be beyond the liquidation threshold. No funds are collected
      *         from the borrower.
      *
@@ -84,7 +84,7 @@ contract RepaymentController is IRepaymentController, InstallmentsCalc, Context 
         // Implicitly checks if loan is active - if inactive, note will not exist
         address lender = lenderNote.ownerOf(loanId);
         if (lender != msg.sender) revert RC_OnlyLender(msg.sender);
-        // get LoanData for determining how to send the current installment parameter to LoanCore
+        // get LoanData to check the current installment period, then send this value as a parameter to LoanCore.
         LoanLibrary.LoanData memory data = loanCore.getLoan(loanId);
         if (data.terms.numInstallments > 0) {
             // get the current installment period
