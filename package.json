@@ -108,6 +108,7 @@
         "@openzeppelin/hardhat-upgrades": "^1.17.0",
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
         "bip39": "^3.0.4",
         "path": "^0.12.7"
 =======
@@ -118,5 +119,9 @@
 =======
         "bip39": "^3.0.4"
 >>>>>>> 4cc543b (fix(bootstrap scripts): made standalone, added tx.wait(), works with all testnets)
+=======
+        "bip39": "^3.0.4",
+        "path": "^0.12.7"
+>>>>>>> 7053144 (feat(generate.ts) now using path package.)
     }
 }
