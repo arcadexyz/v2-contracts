@@ -127,7 +127,7 @@ contract RepaymentController is IRepaymentController, InstallmentsCalc, Context 
             uint256
         )
     {
-        // load terms from loanId
+        // loan terms from loanId
         LoanLibrary.LoanData memory data = loanCore.getLoan(loanId);
         // get loan from borrower note
         if (data.state == LoanLibrary.LoanState.DUMMY_DO_NOT_USE) revert RC_CannotDereference(loanId);
@@ -161,7 +161,7 @@ contract RepaymentController is IRepaymentController, InstallmentsCalc, Context 
     function repayPartMinimum(uint256 loanId) external override {
         // get current minimum balance due for the installment repayment, based on specific loanId.
         (uint256 minBalanceDue, uint256 lateFees, uint256 numMissedPayments) = getInstallmentMinPayment(loanId);
-        // total amount due, interest amount plus any late fees
+        // total amount due equals interest amount plus any late fees
         uint256 _minAmount = minBalanceDue + lateFees;
         // cannot call repayPartMinimum twice in the same installment period
         if (_minAmount == 0) revert RC_NoPaymentDue();
@@ -198,11 +198,11 @@ contract RepaymentController is IRepaymentController, InstallmentsCalc, Context 
         uint256 _minAmount = minBalanceDue + lateFees;
         // require amount taken from the _msgSender() to be larger than or equal to minBalanceDue
         if (amount < _minAmount) revert RC_RepayPartLTMin(amount, _minAmount);
-        // load data from loanId
+        // loan data from loanId
         LoanLibrary.LoanData memory data = loanCore.getLoan(loanId);
-        // calculate the payment to principal after subtracting (minBalanceDue + lateFees)
+        // calculate the payment toward principal after subtracting (minBalanceDue + lateFees)
         uint256 _totalPaymentToPrincipal = amount - (_minAmount);
-        // gather amount specified in function call params from _msgSender()
+        // collect amount specified in function call params from _msgSender()
         IERC20(data.terms.payableCurrency).safeTransferFrom(_msgSender(), address(this), amount);
         // approve loanCore to take amount
         IERC20(data.terms.payableCurrency).approve(address(loanCore), amount);
@@ -211,7 +211,7 @@ contract RepaymentController is IRepaymentController, InstallmentsCalc, Context 
     }
 
     /**
-     * @notice Called when the user wants to close an installment loan without neededing to deteremine the
+     * @notice Called when the user wants to close an installment loan without needing to determine the
      *         amount to pass to the repayPart function. This is done by paying the remaining principal
      *         and any interest or late fees due.
      *
@@ -223,11 +223,11 @@ contract RepaymentController is IRepaymentController, InstallmentsCalc, Context 
     function closeLoan(uint256 loanId) external override {
         // get current minimum balance due for the installment repayment, based on specific loanId.
         (uint256 minBalanceDue, uint256 lateFees, uint256 numMissedPayments) = getInstallmentMinPayment(loanId);
-        // load data from loanId
+        // loan data from loanId
         LoanLibrary.LoanData memory data = loanCore.getLoan(loanId);
         // total amount to close loan (remaining balance + current interest + late fees)
         uint256 _totalAmount = data.balance + minBalanceDue + lateFees;
-        // gather amount specified in function call params from _msgSender()
+        // collect amount specified in function call params from _msgSender()
         IERC20(data.terms.payableCurrency).safeTransferFrom(_msgSender(), address(this), _totalAmount);
         // approve loanCore to take minBalanceDue
         IERC20(data.terms.payableCurrency).approve(address(loanCore), _totalAmount);
@@ -238,23 +238,21 @@ contract RepaymentController is IRepaymentController, InstallmentsCalc, Context 
     // ========================================= VIEW FUNCTIONS =========================================
 
     /**
-     * @notice Called when the user wants to close an installment loan without needing to determine the
-     *         amount to pass to the repayPart function. This is done by paying the remaining principal
-     *         and any interest or late fees due.
+     * @notice Called when the user wants to determine the remaining balance for closing the loan.
      *
-     * @dev Pay off the current interest and, if applicable any late fees accrued, in addition to any
+     * @dev View the current interest and, if applicable any late fees accrued, in addition to any
      *      remaining principal left on the loan.
      *
      * @param loanId                            LoanId, used to locate terms.
      *
      * @return amountDue                        The total amount due to close the loan, including principal, interest,
      *                                          and late fees.
-     * @return numMissedPayments                The number of overdue installment periods since the last payment.
+     * @return numMissedPayments                The number of missed payments.
      */
     function amountToCloseLoan(uint256 loanId) external view override returns (uint256, uint256) {
         // get current minimum balance due for the installment repayment, based on specific loanId.
         (uint256 minBalanceDue, uint256 lateFees, uint256 numMissedPayments) = getInstallmentMinPayment(loanId);
-        // load data from loanId
+        // loan data from loanId
         LoanLibrary.LoanData memory data = loanCore.getLoan(loanId);
 
         // the required total amount needed to close the loan (remaining balance + current interest + late fees)

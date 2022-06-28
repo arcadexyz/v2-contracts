@@ -107,10 +107,9 @@ contract LoanCore is
         if (address(_borrowerNote) == address(_lenderNote)) revert LC_ReusedNote();
 
         // only those with FEE_CLAIMER_ROLE can update or grant FEE_CLAIMER_ROLE
-        __AccessControlEnumerable_init();
+        __AccessControlEnumerable_init_unchained();
         __UUPSUpgradeable_init_unchained();
         __Pausable_init_unchained();
-        __AccessControlEnumerable_init_unchained();
         __UUPSUpgradeable_init_unchained();
 
         _setupRole(ADMIN_ROLE, _msgSender());
@@ -284,7 +283,7 @@ contract LoanCore is
     }
 
     /**
-     * @notice Rollover a loan, atomically closing one and re-opening a new one with the
+     * @notice Roll over a loan, atomically closing one and re-opening a new one with the
      *         same collateral. Instead of full repayment, only net payments from each
      *         party are required. Each rolled-over loan is marked as complete, and the new
      *         loan is given a new unique ID and notes. At the time of calling, any needed
