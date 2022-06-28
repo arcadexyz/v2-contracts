@@ -227,7 +227,7 @@ describe("OriginationController", () => {
             const MockOriginationController = await hre.ethers.getContractFactory("MockOriginationController", other);
             await expect(
                 hre.upgrades.upgradeProxy(originationController.address, MockOriginationController),
-            ).to.be.revertedWith("AccessControl: account 0x88cde74d0d35369cf2253ef8353581f750b49f1f is missing role 0xa49807205ce4d355092ef5a8a18f56e8913cf4a201fbe287825b095693c21775");
+            ).to.be.revertedWith("Ownable: caller is not the owner");
         });
     });
 
@@ -1531,7 +1531,7 @@ describe("OriginationController", () => {
 
             await expect(
                 originationController.connect(other).setAllowedVerifier(verifier.address, true),
-            ).to.be.revertedWith("AccessControl: account 0x88cde74d0d35369cf2253ef8353581f750b49f1f is missing role 0xa49807205ce4d355092ef5a8a18f56e8913cf4a201fbe287825b095693c21775");
+            ).to.be.revertedWith("Ownable: caller is not the owner");
         });
 
         it("Try to set 0x0000 as address, should revert.", async () => {
@@ -1563,7 +1563,7 @@ describe("OriginationController", () => {
                 originationController
                     .connect(other)
                     .setAllowedVerifierBatch([verifier.address, verifier2.address], [true, true]),
-            ).to.be.revertedWith("AccessControl: account 0x88cde74d0d35369cf2253ef8353581f750b49f1f is missing role 0xa49807205ce4d355092ef5a8a18f56e8913cf4a201fbe287825b095693c21775");
+            ).to.be.revertedWith("Ownable: caller is not the owner");
         });
 
         it("reverts if a batch update's arguments have mismatched length", async () => {
