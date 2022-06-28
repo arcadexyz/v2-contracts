@@ -107,8 +107,9 @@ contract LoanCore is
         if (address(_borrowerNote) == address(_lenderNote)) revert LC_ReusedNote();
 
         // only those with FEE_CLAIMER_ROLE can update or grant FEE_CLAIMER_ROLE
-        __AccessControlEnumerable_init();
+        __AccessControlEnumerable_init_unchained();
         __UUPSUpgradeable_init_unchained();
+        __Pausable_init_unchained();
 
         _setupRole(ADMIN_ROLE, _msgSender());
         _setRoleAdmin(ADMIN_ROLE, ADMIN_ROLE);
@@ -370,7 +371,7 @@ contract LoanCore is
      *         The paymentTotal (_paymentToPrincipal + _paymentToLateFees) is always transferred to the lender.
      *
      * @param _loanId                       The ID of the loan..
-     * @param _currentMissedPayments        Number of payments missed since the last isntallment payment.
+     * @param _currentMissedPayments        Number of payments missed since the last installment payment.
      * @param _paymentToPrincipal           Amount sent in addition to minimum amount due, used to pay down principal.
      * @param _paymentToInterest            Amount due in interest.
      * @param _paymentToLateFees            Amount due in only late fees.
@@ -560,7 +561,7 @@ contract LoanCore is
     }
 
     /**
-     * @notice Unpauses the contract, enabling loan lifecyle operations.
+     * @notice Unpauses the contract, enabling loan lifecycle operations.
      *         Can be used after pausing due to emergency or during contract
      *         upgrade. Can only be called by contract owner.
      */

@@ -7,7 +7,6 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/cryptography/draft-EIP712Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
@@ -47,11 +46,11 @@ import {
  * @author Non-Fungible Technologies, Inc.
  *
  * The Origination Controller is the entry point for all new loans
- * in the Arcade.xyz lending protocol. This contract should have the
- * exclusive responsibility to create new loans in LoanCore. All
- * permissioning, signature verification, and collateral verification
- * takes place in this contract. To originate a loan, the controller
- * also takes custody of both the collateral and loan principal.
+ * in the Arcade.xyz lending protocol. This contract has the exclusive
+ * responsibility of creating new loans in LoanCore. All permissioning,
+ * signature verification, and collateral verification takes place in
+ * this contract. To originate a loan, the controller also takes custody
+ * of both the collateral and loan principal.
  */
 contract OriginationController is
     Initializable,
@@ -110,7 +109,7 @@ contract OriginationController is
 
     /**
      * @notice Creates a new origination controller contract, also initializing
-     * the parent signature verifier.
+     *         the parent signature verifier.
      *
      * @dev For this controller to work, it needs to be granted the ORIGINATOR_ROLE
      *      in loan core after deployment.
@@ -120,8 +119,9 @@ contract OriginationController is
 
     function initialize(address _loanCore) public initializer {
         __EIP712_init("OriginationController", "2");
-        __AccessControlEnumerable_init();
+        __AccessControlEnumerable_init_unchained();
         __UUPSUpgradeable_init_unchained();
+        __ReentrancyGuard_init_unchained();
 
         _setupRole(ADMIN_ROLE, _msgSender());
         _setRoleAdmin(ADMIN_ROLE, ADMIN_ROLE);
@@ -136,7 +136,7 @@ contract OriginationController is
     /**
      * @notice Authorization function to define who should be allowed to upgrade the contract
      *
-     * @param newImplementation           The address of the upgraded verion of this contract
+     * @param newImplementation             The address of the upgraded verion of this contract
      */
 
     function _authorizeUpgrade(address newImplementation) internal override onlyRole(ADMIN_ROLE) {}
@@ -322,10 +322,10 @@ contract OriginationController is
     }
 
     /**
-     * @notice Rolls over an existing loan via Loan Core, using a signature
-     *         for a new loan to create. The lender can be the same lender as
-     *         the loan to be rolled over, or a new lender. The net funding between
-     *         the old and new loan is calculated, with funds withdrawn from relevant
+     * @notice Rolls over an existing loan via Loan Core, using a signature for
+     *         a new loan to be created. The lender can be the same lender as the
+     *         loan to be rolled over, or a new lender. The net funding between the
+     *         old and new loan is calculated, with funds withdrawn from relevant
      *         parties.
      *
      * @param oldLoanId                     The ID of the old loan.
@@ -365,8 +365,8 @@ contract OriginationController is
 
     /**
      * @notice Rolls over an existing loan via Loan Core, using a signature
-     *         for a new loan to create (of items type). The lender can be the same lender as
-     *         the loan to be rolled over, or a new lender. The net funding between
+     *         for a new loan to create (of items type). The lender can be the same lender
+     *         in the loan to be rolled over, or a new lender. The net funding between
      *         the old and new loan is calculated, with funds withdrawn from relevant
      *         parties.
      *
@@ -429,7 +429,7 @@ contract OriginationController is
     // ==================================== PERMISSION MANAGEMENT =======================================
 
     /**
-     * @notice Approve a third party to sign or initialize loans on a counterparties' behalf.
+     * @notice Approve a third party to sign or initialize loans on a counterparty's behalf.
      * @notice Useful to multisig counterparties (who cannot sign themselves) or third-party integrations.
      *
      * @param signer                        The party to set approval for.
@@ -444,7 +444,7 @@ contract OriginationController is
     }
 
     /**
-     * @notice Reports whether a party is approved to act on a counterparties' behalf.
+     * @notice Reports whether a party is approved to act on a counterparty's behalf.
      *
      * @param owner                         The grantor of permission.
      * @param signer                        The grantee of permission.
@@ -460,7 +460,7 @@ contract OriginationController is
      *
      * @param target                        The grantor of permission - should be a smart contract.
      * @param sig                           A struct containing the signature data (for checking EIP-1271).
-     * @param sighash                   The hash of the signature payload (used for EIP-1271 check).
+     * @param sighash                       The hash of the signature payload (used for EIP-1271 check).
      *
      * @return isApprovedForContract        Whether the signer is either the grantor themselves, or approved.
      */
@@ -632,7 +632,7 @@ contract OriginationController is
     /**
      * @dev Validates argument bounds for the loan terms.
      *
-     * @param terms                     The terms of the loan.
+     * @param terms                  The terms of the loan.
      */
     function _validateLoanTerms(LoanLibrary.LoanTerms memory terms) internal view {
         // principal must be greater than or equal to 10000 wei
@@ -645,7 +645,7 @@ contract OriginationController is
         // and less than 10,000% (1e6 basis points)
         if (terms.interestRate < 1e18 || terms.interestRate > 1e24) revert OC_InterestRate(terms.interestRate);
 
-        // number of installments must be between either 0, or between 2 and 1000.
+        // number of installments must be either 0, or between 2 and 1000.
         if (terms.numInstallments == 1 || terms.numInstallments > 1_000)
             revert OC_NumberInstallments(terms.numInstallments);
 

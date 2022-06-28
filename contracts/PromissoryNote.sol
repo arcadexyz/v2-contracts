@@ -13,8 +13,13 @@ import "./ERC721Permit.sol";
 import "./interfaces/ILoanCore.sol";
 import "./interfaces/IPromissoryNote.sol";
 
-import { PN_MintingRole, PN_BurningRole, PN_ContractPaused, PN_CannotInitialize, PN_AlreadyInitialized } from "./errors/Lending.sol";
-import { ERC721P_InvalidSignature, ERC721P_DeadlineExpired } from "./errors/LendingUtils.sol";
+import {
+    PN_MintingRole,
+    PN_BurningRole,
+    PN_ContractPaused,
+    PN_CannotInitialize,
+    PN_AlreadyInitialized
+} from "./errors/Lending.sol";
 
 /**
  * @title PromissoryNote
@@ -36,7 +41,7 @@ import { ERC721P_InvalidSignature, ERC721P_DeadlineExpired } from "./errors/Lend
  * different roles - head to its documentation for details.
  *
  * The account that deploys the contract will be granted the minter and pauser
- * roles, as well as the default admin role, which will let it grant both minter
+ * roles, as well as the admin role, which will let it grant both minter
  * and pauser roles to other accounts.
  */
 contract PromissoryNote is
@@ -72,7 +77,7 @@ contract PromissoryNote is
      *
      * @param name                  The name of the token (see ERC721).
      * @param symbol                The symbol of the token (see ERC721).
-å     */
+     */
     constructor(string memory name, string memory symbol) ERC721(name, symbol) ERC721Permit(name) {
         // We don't want token IDs of 0
         _tokenIdTracker.increment();
@@ -120,10 +125,9 @@ contract PromissoryNote is
     }
 
     /**
-     * @notice Create a new token and assign it to a specified owner. The token ID
-     *         should match a loan ID, and can only be called by a burner - in practice
-     *         LoanCore, which burns notes when a loan ends. Also unserts the mapping to
-     *         lookup loan IDs by note IDs.
+     * @notice Burn a token assigned to a specified owner. The token ID should match a loan ID,
+     *         and can only be called by a burner - in practice LoanCore, which burns notes when
+     *         a loan ends.
      *
      * @dev See {ERC721-_burn}.
      *

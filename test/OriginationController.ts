@@ -1526,7 +1526,7 @@ describe("OriginationController", () => {
             verifier = <ArcadeItemsVerifier>await deploy("ArcadeItemsVerifier", ctx.user, []);
         });
 
-        it("does not allow a non-owner to update the whitelist", async () => {
+        it("does not allow a non-admin to update the whitelist", async () => {
             const { other, originationController } = ctx;
 
             await expect(
@@ -1554,7 +1554,7 @@ describe("OriginationController", () => {
             expect(await originationController.isAllowedVerifier(verifier.address)).to.be.true;
         });
 
-        it("does not allow a non-contract owner to perform a batch update", async () => {
+        it("does not allow a non-admin to perform a batch update", async () => {
             const { user, other, originationController } = ctx;
 
             const verifier2 = <ArcadeItemsVerifier>await deploy("ArcadeItemsVerifier", user, []);
