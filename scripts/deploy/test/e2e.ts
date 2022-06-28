@@ -206,7 +206,7 @@ describe("Deployment", function() {
         expect(await originationController.getRoleMemberCount(ADMIN_ROLE)).to.eq(1);
     });
 
-    it.only("verifies all contracts on the proper network", async () => {
+    it("verifies all contracts on the proper network", async () => {
         const filename = getLatestDeploymentFile();
         const deployment = getLatestDeployment();
 
