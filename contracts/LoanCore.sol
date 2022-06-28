@@ -110,7 +110,6 @@ contract LoanCore is
         __AccessControlEnumerable_init_unchained();
         __UUPSUpgradeable_init_unchained();
         __Pausable_init_unchained();
-        __UUPSUpgradeable_init_unchained();
 
         _setupRole(ADMIN_ROLE, _msgSender());
         _setRoleAdmin(ADMIN_ROLE, ADMIN_ROLE);
