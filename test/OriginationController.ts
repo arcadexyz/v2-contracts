@@ -227,7 +227,7 @@ describe("OriginationController", () => {
             const MockOriginationController = await hre.ethers.getContractFactory("MockOriginationController", other);
             await expect(
                 hre.upgrades.upgradeProxy(originationController.address, MockOriginationController),
-            ).to.be.revertedWith("Ownable: caller is not the owner");
+            ).to.be.revertedWith("AccessControl: account 0x88cde74d0d35369cf2253ef8353581f750b49f1f is missing role 0xa49807205ce4d355092ef5a8a18f56e8913cf4a201fbe287825b095693c21775");
         });
     });
 
@@ -1526,12 +1526,12 @@ describe("OriginationController", () => {
             verifier = <ArcadeItemsVerifier>await deploy("ArcadeItemsVerifier", ctx.user, []);
         });
 
-        it("does not allow a non-owner to update the whitelist", async () => {
+        it("does not allow a non-admin to update the whitelist", async () => {
             const { other, originationController } = ctx;
 
             await expect(
                 originationController.connect(other).setAllowedVerifier(verifier.address, true),
-            ).to.be.revertedWith("Ownable: caller is not the owner");
+            ).to.be.revertedWith("AccessControl: account 0x88cde74d0d35369cf2253ef8353581f750b49f1f is missing role 0xa49807205ce4d355092ef5a8a18f56e8913cf4a201fbe287825b095693c21775");
         });
 
         it("Try to set 0x0000 as address, should revert.", async () => {
@@ -1554,7 +1554,7 @@ describe("OriginationController", () => {
             expect(await originationController.isAllowedVerifier(verifier.address)).to.be.true;
         });
 
-        it("does not allow a non-contract owner to perform a batch update", async () => {
+        it("does not allow a non-admin to perform a batch update", async () => {
             const { user, other, originationController } = ctx;
 
             const verifier2 = <ArcadeItemsVerifier>await deploy("ArcadeItemsVerifier", user, []);
@@ -1563,7 +1563,7 @@ describe("OriginationController", () => {
                 originationController
                     .connect(other)
                     .setAllowedVerifierBatch([verifier.address, verifier2.address], [true, true]),
-            ).to.be.revertedWith("Ownable: caller is not the owner");
+            ).to.be.revertedWith("AccessControl: account 0x88cde74d0d35369cf2253ef8353581f750b49f1f is missing role 0xa49807205ce4d355092ef5a8a18f56e8913cf4a201fbe287825b095693c21775");
         });
 
         it("reverts if a batch update's arguments have mismatched length", async () => {
