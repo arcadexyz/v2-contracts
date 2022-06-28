@@ -15,9 +15,9 @@ import {
     ADMIN_ROLE,
     FEE_CLAIMER_ROLE,
     REPAYER_ROLE,
-} from "../../scripts/utils/constants";
+} from "../../utils/constants";
 
-import { ZERO_ADDRESS } from "../utils/erc20";
+import { ZERO_ADDRESS } from "../../../test/utils/erc20";
 
 import {
     CallWhitelist,
@@ -26,7 +26,7 @@ import {
     PromissoryNote,
     OriginationController,
     VaultFactory
-} from "../../typechain";
+} from "../../../typechain";
 
 /**
  * Note: Against normal conventions, these tests are interdependent and meant

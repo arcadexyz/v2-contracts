@@ -29,7 +29,10 @@ import { BlockchainTime } from "./utils/time";
 import { ItemsPredicate, LoanTerms, SignatureItem } from "./utils/types";
 import { createLoanTermsSignature, createLoanItemsSignature, createPermitSignature } from "./utils/eip712";
 import { encodePredicates, encodeSignatureItems, initializeBundle } from "./utils/loans";
+
 const ORIGINATOR_ROLE = "0x59abfac6520ec36a6556b2a4dd949cc40007459bcd5cd2507f1e5cc77b6bc97e";
+const ADMIN_ROLE = "0xa49807205ce4d355092ef5a8a18f56e8913cf4a201fbe287825b095693c21775";
+
 type Signer = SignerWithAddress;
 
 interface TestContext {
@@ -221,13 +224,14 @@ describe("OriginationController", () => {
             expect(await mockOriginationController.isApproved(await borrower.getAddress(), await lender.getAddress()))
                 .to.be.true;
         });
+
         it("v1 functionality cannot be upgraded to v2 by non authorized user", async () => {
             const { originationController, user: lender, other } = ctx;
-
             const MockOriginationController = await hre.ethers.getContractFactory("MockOriginationController", other);
+
             await expect(
                 hre.upgrades.upgradeProxy(originationController.address, MockOriginationController),
-            ).to.be.revertedWith("Ownable: caller is not the owner");
+            ).to.be.revertedWith(`AccessControl: account ${other.address.toLowerCase()} is missing role ${ADMIN_ROLE}`);
         });
     });
 
@@ -1531,7 +1535,7 @@ describe("OriginationController", () => {
 
             await expect(
                 originationController.connect(other).setAllowedVerifier(verifier.address, true),
-            ).to.be.revertedWith("Ownable: caller is not the owner");
+            ).to.be.revertedWith(`AccessControl: account ${other.address.toLowerCase()} is missing role ${ADMIN_ROLE}`);
         });
 
         it("Try to set 0x0000 as address, should revert.", async () => {
@@ -1563,7 +1567,7 @@ describe("OriginationController", () => {
                 originationController
                     .connect(other)
                     .setAllowedVerifierBatch([verifier.address, verifier2.address], [true, true]),
-            ).to.be.revertedWith("Ownable: caller is not the owner");
+            ).to.be.revertedWith(`AccessControl: account ${other.address.toLowerCase()} is missing role ${ADMIN_ROLE}`);
         });
 
         it("reverts if a batch update's arguments have mismatched length", async () => {
