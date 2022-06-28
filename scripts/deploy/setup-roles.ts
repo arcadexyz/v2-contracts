@@ -95,13 +95,15 @@ export async function main(
 
     // ============= BorrowerNote ==============
 
-    await borrowerNote.initialize(LOAN_CORE_ADDRESS);
+    const initBorrowerNote = await borrowerNote.initialize(LOAN_CORE_ADDRESS);
+    await initBorrowerNote.wait();
     console.log(`BorrowerNote: initialized loanCore at address ${LOAN_CORE_ADDRESS}`);
     console.log(SUBSECTION_SEPARATOR);
 
     // ============= LenderNote ==============
 
-    await lenderNote.initialize(LOAN_CORE_ADDRESS);
+    const initLenderNote = await lenderNote.initialize(LOAN_CORE_ADDRESS);
+    await initLenderNote.wait();
     console.log(`LenderNote: initialized loanCore at address ${LOAN_CORE_ADDRESS}`);
     console.log(SUBSECTION_SEPARATOR);
 

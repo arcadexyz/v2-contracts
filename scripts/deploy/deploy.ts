@@ -57,6 +57,7 @@ export async function main(): Promise<DeployedResources> {
         {
             kind: "uups",
             initializer: "initialize(address, address)",
+            timeout: 0
         },
     );
     await vaultFactory.deployed();
@@ -97,6 +98,7 @@ export async function main(): Promise<DeployedResources> {
         [feeController.address, borrowerNote.address, lenderNote.address],
         {
             kind: "uups",
+            timeout: 0
         },
     );
     await loanCore.deployed();
@@ -118,7 +120,7 @@ export async function main(): Promise<DeployedResources> {
 
     const OriginationControllerFactory = await ethers.getContractFactory("OriginationController");
     const originationController = <OriginationController>(
-        await upgrades.deployProxy(OriginationControllerFactory, [loanCore.address], { kind: "uups" })
+        await upgrades.deployProxy(OriginationControllerFactory, [loanCore.address], { kind: "uups", timeout: 0 })
     );
     await originationController.deployed();
 
