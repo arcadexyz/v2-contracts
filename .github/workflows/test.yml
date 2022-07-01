@@ -7,6 +7,8 @@ on:
     branches: [main]
 
 jobs:
+  runs-on: ubuntu-latest
+
   test:
     steps:
       - name: Setup Repo
@@ -15,13 +17,13 @@ jobs:
       - name: Uses node.js 16
         uses: actions/setup-node@v1
         with:
-          node-version: 16.x
+          node-version: 16.14.0
 
       - name: Install
-      run: yarn install --frozen-lockfile
+        run: yarn install --frozen-lockfile
 
       # - name: Lint
-        # run: yarn lint
+      # run: yarn lint
 
       - name: Compile
         run: yarn compile
