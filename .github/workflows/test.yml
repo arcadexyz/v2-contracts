@@ -7,9 +7,10 @@ on:
     branches: [main]
 
 jobs:
-  runs-on: ubuntu-latest
+  build:
 
-  test:
+    runs-on: ubuntu-latest
+
     steps:
       - name: Setup Repo
         uses: actions/checkout@v2
