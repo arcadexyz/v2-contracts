@@ -1,12 +1,4 @@
-# This workflow uses actions that are not certified by GitHub.
-# They are provided by a third-party and are governed by
-# separate terms of service, privacy policy, and support
-# documentation.
-
-# This workflow will install Deno and run tests across stable and nightly builds on Windows, Ubuntu and macOS.
-# For more information see: https://github.com/denolib/setup-deno
-
-name: Test
+name: build
 
 on:
   push:
@@ -15,28 +7,24 @@ on:
     branches: [main]
 
 jobs:
-  test:
-    runs-on: ${{ matrix.os }} # runs a test on Ubuntu, Windows and macOS
+  build:
 
-    strategy:
-      matrix:
-        node-version: [12.x]
-        os: [macOS-latest, windows-latest, ubuntu-latest]
+    runs-on: ubuntu-latest
 
     steps:
       - name: Setup Repo
         uses: actions/checkout@v2
 
-      - name: Uses node.js ${{ matrix.node-version }}
+      - name: Uses node.js 16
         uses: actions/setup-node@v1
         with:
-          node-version: ${{ matrix.node-version }} # tests across multiple Deno versions
+          node-version: 16.14.0
 
       - name: Install
         run: yarn install --frozen-lockfile
 
-      - name: Lint
-        run: yarn lint
+      # - name: Lint
+      # run: yarn lint
 
       - name: Compile
         run: yarn compile
@@ -49,7 +37,7 @@ jobs:
           ALCHEMY_API_KEY: ${{ secrets.ALCHEMY_API_KEY }}
         run: yarn test
 
-      - name: Coverage
-        env:
-          ALCHEMY_API_KEY: ${{ secrets.ALCHEMY_API_KEY }}
-        run: yarn coverage
+      # - name: Coverage
+      #   env:
+      #     ALCHEMY_API_KEY: ${{ secrets.ALCHEMY_API_KEY }}
+      #   run: yarn coverage
