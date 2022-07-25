@@ -11,6 +11,7 @@ import {
     RepaymentController,
     OriginationController,
     CallWhitelist,
+    ArcadeItemsVerifier,
     VaultFactory,
 } from "../../typechain";
 
@@ -24,6 +25,7 @@ export interface DeployedResources {
     originationController: OriginationController;
     whitelist: CallWhitelist;
     vaultFactory: VaultFactory;
+    verifier: ArcadeItemsVerifier
 }
 
 export async function main(): Promise<DeployedResources> {
@@ -129,6 +131,15 @@ export async function main(): Promise<DeployedResources> {
 
     console.log(SUBSECTION_SEPARATOR);
 
+    const VerifierFactory = await ethers.getContractFactory("ArcadeItemsVerifier");
+    const verifier = <ArcadeItemsVerifier>await VerifierFactory.deploy();
+    await verifier.deployed();
+
+    const verifierAddress = verifier.address;
+    console.log("ItemsVerifier deployed to:", verifierAddress);
+
+    console.log(SUBSECTION_SEPARATOR);
+
     console.log("Writing to deployments json file...");
 
     await writeJson(
@@ -141,6 +152,7 @@ export async function main(): Promise<DeployedResources> {
         vaultFactoryProxyAddress,
         loanCoreProxyAddress,
         originationContProxyAddress,
+        verifierAddress,
         bNoteName,
         bNoteSymbol,
         lNoteName,
@@ -159,6 +171,7 @@ export async function main(): Promise<DeployedResources> {
         originationController,
         whitelist,
         vaultFactory,
+        verifier
     };
 }
 

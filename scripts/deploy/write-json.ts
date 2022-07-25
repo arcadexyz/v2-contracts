@@ -23,6 +23,7 @@ export async function writeJson(
     vaultFactoryAddress: string,
     loanCoreAddress: string,
     originationContAddress: string,
+    verifierAddress: string,
     bNoteName: string,
     bNoteSymbol: string,
     lNoteName: string,
@@ -49,6 +50,7 @@ export async function writeJson(
         vaultFactoryAddress,
         loanCoreAddress,
         originationContAddress,
+        verifierAddress,
         bNoteName,
         bNoteSymbol,
         lNoteName,
@@ -73,6 +75,7 @@ export async function createInfo(
     vaultFactoryAddress: string,
     loanCoreAddress: string,
     originationContAddress: string,
+    verifierAddress: string,
     bNoteName: string,
     bNoteSymbol: string,
     lNoteName: string,
@@ -129,6 +132,12 @@ export async function createInfo(
     contractInfo["OriginationController"] = {
         contractAddress: originationContAddress,
         contractImplementationAddress: await upgrades.erc1967.getImplementationAddress(originationContAddress),
+        constructorArgs: []
+    };
+
+    contractInfo["ArcadeItemsVerifier"] = {
+        contractAddress: verifierAddress,
+        contractImplementationAddress: "",
         constructorArgs: []
     };
 

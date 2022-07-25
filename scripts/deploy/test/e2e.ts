@@ -117,6 +117,10 @@ describe("Deployment", function() {
         expect(deployment["OriginationController"].contractImplementationAddress).to.exist;
         expect(deployment["OriginationController"].constructorArgs.length).to.eq(0);
 
+        expect(deployment["ArcadeItemsVerifier"]).to.exist;
+        expect(deployment["ArcadeItemsVerifier"].contractAddress).to.exist;
+        expect(deployment["ArcadeItemsVerifier"].constructorArgs.length).to.eq(0);
+
         // Make sure OriginationController initialized correctly
         const ocFactory = await ethers.getContractFactory("OriginationController");
         const ocProxy = <OriginationController>await ocFactory.attach(deployment["OriginationController"].contractAddress);

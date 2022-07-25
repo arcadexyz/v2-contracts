@@ -49,5 +49,10 @@
     "contractAddress": "0x4c52ca29388A8A854095Fd2BeB83191D68DC840b",
     "contractImplementationAddress": "0x2DF5C801F2f082287241C8CB7f3D517C3cbA2620",
     "constructorArgs": []
+  },
+  "ArcadeItemsVerifier": {
+    "contractAddress": "0xAbfD9D9E4157695DB5812eeE279D923a4f948Df0",
+    "contractImplementationAddress": "",
+    "constructorArgs": []
   }
 }

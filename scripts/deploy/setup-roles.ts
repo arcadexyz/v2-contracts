@@ -22,6 +22,7 @@ const jsonContracts: { [key: string]: string } = {
     LoanCore: "loanCore",
     RepaymentController: "repaymentController",
     OriginationController: "originationController",
+    ArcadeItemsVerifier: "verifier"
 };
 
 type ContractArgs = {
@@ -34,6 +35,7 @@ type ContractArgs = {
     loanCore: Contract;
     repaymentController: Contract;
     originationController: Contract;
+    verifier: Contract;
 };
 
 export async function main(
@@ -45,6 +47,7 @@ export async function main(
     loanCore: Contract,
     feeController: Contract,
     whitelist: Contract,
+    verifier: Contract
 ): Promise<void> {
     const signers: SignerWithAddress[] = await hre.ethers.getSigners();
     const [deployer] = signers;
@@ -150,6 +153,13 @@ export async function main(
 
     // ============= OriginationController ==============
 
+    // whitelist verifier
+    const whitelistVerifier = await originationController.setAllowedVerifier(verifier.address, true);
+    await whitelistVerifier.wait();
+
+    console.log(`OriginationController: added ${verifier.address} as allowed verifier`);
+    console.log(SUBSECTION_SEPARATOR);
+
     // grant originationContoller the owner role to enable authorizeUpgrade onlyOwner
     const updateOriginationControllerAdmin = await originationController.grantRole(ADMIN_ROLE, ADMIN_ADDRESS);
     await updateOriginationControllerAdmin.wait();
@@ -207,6 +217,7 @@ if (require.main === module) {
             loanCore,
             feeController,
             whitelist,
+            verifier
         } = res;
 
         main(
@@ -218,6 +229,7 @@ if (require.main === module) {
             loanCore,
             feeController,
             whitelist,
+            verifier
         )
             .then(() => process.exit(0))
             .catch((error: Error) => {

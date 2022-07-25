@@ -1,8 +1,8 @@
 {
-    "name": "@Non-fungible-Technologies/v2-contracts",
+    "name": "@arcadexyz/v2-contracts",
     "description": "Smart contracts for Arcade.xyz",
     "version": "2.0.0",
-    "repository": "https://github.com/Non-fungible-Technologies/v2-contracts",
+    "repository": "https://github.com/arcadexyz/v2-contracts",
     "devDependencies": {
         "@aave/protocol-v2": "^1.0.1",
         "@commitlint/cli": "^9.1.2",
