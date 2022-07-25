@@ -22,6 +22,7 @@ export async function vaultAssetsAndMakeLoans(
     loanCore: Contract,
     feeController: Contract,
     whitelist: Contract,
+    verifier: Contract,
     punks: MockERC721Metadata,
     usd: MockERC20,
     beats: MockERC1155Metadata,
@@ -41,6 +42,7 @@ export async function vaultAssetsAndMakeLoans(
         loanCore,
         feeController,
         whitelist,
+        verifier
     );
 
     // Connect the first signer with the

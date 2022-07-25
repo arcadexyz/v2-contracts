@@ -22,11 +22,11 @@ export async function main(): Promise<void> {
         originationController,
         borrowerNote,
         repaymentController,
-        punkRouter,
         lenderNote,
         loanCore,
         feeController,
         whitelist,
+        verifier
     } = await deploy();
 
     // Mint some NFTs
@@ -51,7 +51,7 @@ export async function main(): Promise<void> {
         loanCore,
         feeController,
         whitelist,
-        punkRouter,
+        verifier,
         punks,
         usd,
         beats,

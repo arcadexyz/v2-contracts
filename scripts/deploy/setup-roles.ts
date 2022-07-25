@@ -22,7 +22,7 @@ const jsonContracts: { [key: string]: string } = {
     LoanCore: "loanCore",
     RepaymentController: "repaymentController",
     OriginationController: "originationController",
-    ArcadeItemsVerifier: "itemsVerifier"
+    ArcadeItemsVerifier: "verifier"
 };
 
 type ContractArgs = {
