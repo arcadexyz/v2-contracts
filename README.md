@@ -70,8 +70,7 @@ An ERC721 representing obligation in an active loan. When a loan begins, two typ
 are minted to the respective loan counterparties. When a loan ends via payoff or default, these notes are burned. The token IDs of each
 note are synced with the unique ID of the loan.
 
-Only the holder of the `LenderNote` can claim defaulted collateral for a different loan. No special permissions are afforded
-to the `BorrowerNote` - it is simply a representation and reminder of an obligation.
+Only the holder of the `LenderNote` can claim defaulted collateral for a different loan. When a loan is active and secured by an AssetVault, only the holder of the `BorrowerNote` can access utility for the collateralized assets using the vault's `call` function.
 
 ### OriginationController
 
