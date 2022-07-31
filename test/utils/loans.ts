@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import { BigNumber, ethers } from "ethers";
+import { BigNumber, BigNumberish, ethers } from "ethers";
 
 import { LoanCore, VaultFactory } from "../../typechain";
 import { SignatureItem, ItemsPredicate } from "./types";
@@ -28,6 +28,12 @@ export const encodeSignatureItems = (items: SignatureItem[]): string => {
 
     return ethers.utils.defaultAbiCoder.encode(types, [values]);
 };
+
+export const encodeInts = (ints: BigNumberish[]): string => {
+    const types = ["int256[]"];
+
+    return ethers.utils.defaultAbiCoder.encode(types, [ints]);
+}
 
 export const encodePredicates = (predicates: ItemsPredicate[]): string => {
     const types = ["(bytes,address)[]"];

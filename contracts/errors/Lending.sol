@@ -182,6 +182,13 @@ error IV_InvalidTokenId1155(address asset, int256 tokenId);
  */
 error IV_NonPositiveAmount20(address asset, uint256 amount);
 
+/**
+ * @notice The provided token ID is out of bounds for the given collection.
+ *
+ * @param tokenId                       The token ID provided.
+ */
+error IV_InvalidTokenId(int256 tokenId);
+
 // ==================================== REPAYMENT CONTROLLER ======================================
 /// @notice All errors prefixed with RC_, to separate from other contracts in the protocol.
 
