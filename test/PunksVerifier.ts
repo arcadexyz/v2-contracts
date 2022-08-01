@@ -121,7 +121,7 @@ describe("PunksVerifier", () => {
             await punks.connect(user).getPunk(tokenId2);
             await punks.connect(user).transferPunk(bundleAddress2, tokenId2);
 
-            // First and bundle should have item
+            // First and second bundle should have item
             expect(await verifier.verifyPredicates(encodeInts([-1]), bundleAddress)).to.be.true;
             expect(await verifier.verifyPredicates(encodeInts([-1]), bundleAddress2)).to.be.true;
 

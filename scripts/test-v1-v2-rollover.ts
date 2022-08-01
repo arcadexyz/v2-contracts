@@ -72,7 +72,7 @@ export async function main(): Promise<void> {
 
     console.log("Creating a vault...");
 
-    // Lender creates vault
+    // Borrower creates vault
     const vfFactory = await ethers.getContractFactory("VaultFactory");
     const vaultFactory = <VaultFactory>await vfFactory.attach(VAULT_FACTORY_ADDRESS);
 
@@ -84,7 +84,7 @@ export async function main(): Promise<void> {
 
     console.log(`Approving vault ${vault}...`);
 
-    // Lender approves vault
+    // Borrower approves vault
     await vaultFactory.connect(borrower).approve(flashRollover.address, vault);
 
     console.log("Creating signature...");

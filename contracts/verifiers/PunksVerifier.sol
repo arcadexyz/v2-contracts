@@ -41,7 +41,7 @@ contract PunksVerifier is ISignatureVerifier {
     // ==================================== COLLATERAL VERIFICATION =====================================
 
     /**
-     * @notice Verify that the items specified by the packed uint256 array are held by the vault.
+     * @notice Verify that the items specified by the packed int256 array are held by the vault.
      * @dev    Reverts on out of bounds token Ids, returns false on missing contents.
      *
      *         Verification for empty predicates array has been addressed in initializeLoanWithItems and
