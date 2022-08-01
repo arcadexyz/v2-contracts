@@ -22,7 +22,7 @@ export async function main(): Promise<void> {
     const [newLender] = await hre.ethers.getSigners();
 
     const LOAN_ID = 29;
-    const NONCE = 1;
+    const NONCE = 2;
     const repayAmount = ethers.utils.parseUnits("129687.5", 6);
 
     await hre.network.provider.request({

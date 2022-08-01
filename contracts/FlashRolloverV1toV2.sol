@@ -149,14 +149,14 @@ contract FlashRolloverV1toV2 is IFlashRollover, ReentrancyGuard, ERC721Holder, E
 
             uint256 newLoanId = _initializeNewLoan(
                 opContracts,
-                opContracts.borrowerNote.ownerOf(loanData.borrowerNoteId),
+                borrower,
                 opData.lender,
                 opData
             );
 
             emit Rollover(
                 opContracts.lenderNote.ownerOf(loanData.lenderNoteId),
-                opContracts.borrowerNote.ownerOf(loanData.borrowerNoteId),
+                borrower,
                 loanData.terms.collateralTokenId,
                 newLoanId
             );
@@ -167,9 +167,9 @@ contract FlashRolloverV1toV2 is IFlashRollover, ReentrancyGuard, ERC721Holder, E
         }
 
         if (leftoverPrincipal > 0) {
-            asset.safeTransfer(opContracts.borrowerNote.ownerOf(loanData.borrowerNoteId), leftoverPrincipal);
+            asset.safeTransfer(borrower, leftoverPrincipal);
         } else if (needFromBorrower > 0) {
-            asset.safeTransferFrom(opContracts.borrowerNote.ownerOf(loanData.borrowerNoteId), address(this), needFromBorrower);
+            asset.safeTransferFrom(borrower, address(this), needFromBorrower);
         }
 
         // Approve all amounts for flash loan repayment
@@ -274,6 +274,11 @@ contract FlashRolloverV1toV2 is IFlashRollover, ReentrancyGuard, ERC721Holder, E
         uint256 oldBundleId = loanData.terms.collateralTokenId;
         IAssetWrapper sourceAssetWrapper = IAssetWrapper(address(contracts.sourceAssetWrapper));
 
+        /**
+         * @dev Only ERC721 and ERC1155 bundle holdings supported (ERC20 and ETH
+         *      holdings will be ignored and get stuck). Only 20 of each supported
+         *      (any extras will get stuck).
+         */
         ERC721Holding[] memory bundleERC721Holdings = new ERC721Holding[](20);
         ERC1155Holding[] memory bundleERC1155Holdings = new ERC1155Holding[](20);
 
