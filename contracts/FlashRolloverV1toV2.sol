@@ -125,7 +125,6 @@ contract FlashRolloverV1toV2 is IFlashRollover, ReentrancyGuard, ERC721Holder, E
         LoanLibraryV1.LoanData memory loanData = opContracts.loanCore.getLoan(opData.loanId);
 
         address borrower = opContracts.borrowerNote.ownerOf(loanData.borrowerNoteId);
-        address lender = opContracts.lenderNote.ownerOf(loanData.lenderNoteId);
 
         // Do accounting to figure out amount each party needs to receive
         (uint256 flashAmountDue, uint256 needFromBorrower, uint256 leftoverPrincipal) = _ensureFunds(
@@ -149,13 +148,18 @@ contract FlashRolloverV1toV2 is IFlashRollover, ReentrancyGuard, ERC721Holder, E
 
             uint256 newLoanId = _initializeNewLoan(
                 opContracts,
-                borrower,
-                lender,
+                opContracts.borrowerNote.ownerOf(loanData.borrowerNoteId),
+                opContracts.lenderNote.ownerOf(loanData.lenderNoteId),
                 vaultId,
                 opData
             );
 
-            emit Rollover(lender, borrower, loanData.terms.collateralTokenId, newLoanId);
+            emit Rollover(
+                opContracts.lenderNote.ownerOf(loanData.lenderNoteId),
+                opContracts.borrowerNote.ownerOf(loanData.borrowerNoteId),
+                loanData.terms.collateralTokenId,
+                newLoanId
+            );
 
             if (address(opData.contracts.sourceLoanCore) != address(opData.contracts.targetLoanCore)) {
                 emit Migration(address(opContracts.loanCore), address(opContracts.targetLoanCore), newLoanId);
@@ -163,9 +167,9 @@ contract FlashRolloverV1toV2 is IFlashRollover, ReentrancyGuard, ERC721Holder, E
         }
 
         if (leftoverPrincipal > 0) {
-            asset.safeTransfer(borrower, leftoverPrincipal);
+            asset.safeTransfer(opContracts.borrowerNote.ownerOf(loanData.borrowerNoteId), leftoverPrincipal);
         } else if (needFromBorrower > 0) {
-            asset.safeTransferFrom(borrower, address(this), needFromBorrower);
+            asset.safeTransferFrom(opContracts.borrowerNote.ownerOf(loanData.borrowerNoteId), address(this), needFromBorrower);
         }
 
         // Approve all amounts for flash loan repayment
