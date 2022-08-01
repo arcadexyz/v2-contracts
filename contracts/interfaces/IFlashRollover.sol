@@ -60,6 +60,7 @@ interface IFlashRollover is IFlashLoanReceiver {
         RolloverContractParams contracts;
         uint256 loanId;
         LoanLibrary.LoanTerms newLoanTerms;
+        address lender;
         uint160 nonce;
         uint8 v;
         bytes32 r;
@@ -89,6 +90,7 @@ interface IFlashRollover is IFlashLoanReceiver {
         RolloverContractParams calldata contracts,
         uint256 loanId,
         LoanLibrary.LoanTerms calldata newLoanTerms,
+        address lender,
         uint160 nonce,
         uint8 v,
         bytes32 r,

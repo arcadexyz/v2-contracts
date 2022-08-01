@@ -70,16 +70,17 @@ contract FlashRolloverV1toV2 is IFlashRollover, ReentrancyGuard, ERC721Holder, E
         RolloverContractParams calldata contracts,
         uint256 loanId,
         LoanLibrary.LoanTerms calldata newLoanTerms,
+        address lender,
         uint160 nonce,
         uint8 v,
         bytes32 r,
         bytes32 s
     ) external override {
-        ILoanCoreV1 sourceLoanCore = contracts.sourceLoanCore;
-        LoanLibraryV1.LoanData memory loanData = sourceLoanCore.getLoan(loanId);
-        LoanLibraryV1.LoanTerms memory loanTerms = loanData.terms;
+        LoanLibraryV1.LoanTerms memory loanTerms = contracts.sourceLoanCore.getLoan(loanId).terms;
 
-        _validateRollover(sourceLoanCore, contracts.targetVaultFactory, loanTerms, newLoanTerms, loanData.borrowerNoteId);
+        {
+            _validateRollover(contracts.sourceLoanCore, contracts.targetVaultFactory, loanTerms, newLoanTerms, contracts.sourceLoanCore.getLoan(loanId).borrowerNoteId);
+        }
 
         {
             address[] memory assets = new address[](1);
@@ -92,7 +93,7 @@ contract FlashRolloverV1toV2 is IFlashRollover, ReentrancyGuard, ERC721Holder, E
             modes[0] = 0;
 
             bytes memory params = abi.encode(
-                OperationData({ contracts: contracts, loanId: loanId, newLoanTerms: newLoanTerms, nonce: nonce, v: v, r: r, s: s })
+                OperationData({ contracts: contracts, loanId: loanId, newLoanTerms: newLoanTerms, lender: lender, nonce: nonce, v: v, r: r, s: s })
             );
 
             // Flash loan based on principal + interest
@@ -144,13 +145,12 @@ contract FlashRolloverV1toV2 is IFlashRollover, ReentrancyGuard, ERC721Holder, E
         _repayLoan(opContracts, loanData, borrower);
 
         {
-            uint256 vaultId = _recreateBundle(opContracts, loanData);
+            _recreateBundle(opContracts, loanData, opData.newLoanTerms.collateralId);
 
             uint256 newLoanId = _initializeNewLoan(
                 opContracts,
                 opContracts.borrowerNote.ownerOf(loanData.borrowerNoteId),
-                opContracts.lenderNote.ownerOf(loanData.lenderNoteId),
-                vaultId,
+                opData.lender,
                 opData
             );
 
@@ -237,9 +237,13 @@ contract FlashRolloverV1toV2 is IFlashRollover, ReentrancyGuard, ERC721Holder, E
         OperationContracts memory contracts,
         address borrower,
         address lender,
-        uint256 collateralId,
         OperationData memory opData
     ) internal returns (uint256) {
+        uint256 collateralId = opData.newLoanTerms.collateralId;
+
+        // Withdraw vault token
+        IERC721(address(contracts.targetVaultFactory)).safeTransferFrom(borrower, address(this), collateralId);
+
         // approve originationController
         IERC721(address(contracts.targetVaultFactory)).approve(address(contracts.originationController), collateralId);
 
@@ -264,8 +268,9 @@ contract FlashRolloverV1toV2 is IFlashRollover, ReentrancyGuard, ERC721Holder, E
 
     function _recreateBundle(
         OperationContracts memory contracts,
-        LoanLibraryV1.LoanData memory loanData
-    ) internal returns (uint256 vaultId) {
+        LoanLibraryV1.LoanData memory loanData,
+        uint256 vaultId
+    ) internal {
         uint256 oldBundleId = loanData.terms.collateralTokenId;
         IAssetWrapper sourceAssetWrapper = IAssetWrapper(address(contracts.sourceAssetWrapper));
 
@@ -287,7 +292,6 @@ contract FlashRolloverV1toV2 is IFlashRollover, ReentrancyGuard, ERC721Holder, E
         sourceAssetWrapper.withdraw(oldBundleId);
 
         // Create new asset vault
-        vaultId = contracts.targetVaultFactory.initializeBundle(address(this));
         address vault = address(uint160(vaultId));
 
         for (uint256 i = 0; i < bundleERC721Holdings.length; i++) {
@@ -337,7 +341,6 @@ contract FlashRolloverV1toV2 is IFlashRollover, ReentrancyGuard, ERC721Holder, E
         require(sourceLoanCore.borrowerNote().ownerOf(borrowerNoteId) == msg.sender, "caller not borrower");
         require(newLoanTerms.payableCurrency == sourceLoanTerms.payableCurrency, "currency mismatch");
         require(newLoanTerms.collateralAddress == address(targetVaultFactory), "must use vault");
-        require(newLoanTerms.collateralId == sourceLoanTerms.collateralTokenId, "collateral mismatch");
     }
 
     function setOwner(address _owner) external override {
