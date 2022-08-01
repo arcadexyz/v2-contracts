@@ -53,8 +53,6 @@ interface IFlashRollover is IFlashLoanReceiver {
      * Holds parameters passed through flash loan
      * control flow that dictate terms of the new loan.
      * Contains a signature by lender for same terms.
-     * isLegacy determines which loanCore to look for the
-     * old loan in.
      */
     struct OperationData {
         RolloverContractParams contracts;
@@ -69,9 +67,7 @@ interface IFlashRollover is IFlashLoanReceiver {
 
     /**
      * Defines the contracts that should be used for a
-     * flash loan operation. May change based on if the
-     * old loan is on the current loanCore or legacy (in
-     * which case it requires migration).
+     * flash loan operation.
      */
     struct OperationContracts {
         ILoanCoreV1 loanCore;
