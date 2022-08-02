@@ -31,7 +31,7 @@
     "constructorArgs": [
       "Arcade.xyz LenderNote",
       "aLN"
-  ]
+    ]
   },
   "LoanCore": {
     "contractAddress": "0x81b2F8Fc75Bab64A6b144aa6d2fAa127B4Fa7fD9",
