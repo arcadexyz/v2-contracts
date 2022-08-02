@@ -54,5 +54,17 @@
     "contractAddress": "0xAbfD9D9E4157695DB5812eeE279D923a4f948Df0",
     "contractImplementationAddress": "",
     "constructorArgs": []
+  },
+  "FlashRolloverV1toV2": {
+    "contractAddress": "0x07352eD030C6fd8d12f8258d2DF6f99Cba533dC9",
+    "constructorArgs": [
+      "0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5"
+    ]
+  },
+  "PunksVerifier": {
+    "contractAddress": "0x16D99EC34AA91162D71c84BCbE7a7EaD5908B8E2",
+    "constructorArgs": [
+      "0xb47e3cd837dDF8e4c57F05d70Ab865de6e193BBB"
+    ]
   }
 }
