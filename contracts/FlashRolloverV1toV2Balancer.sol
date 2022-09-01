@@ -21,6 +21,8 @@ import "./v1/ILoanCoreV1.sol";
 import "./v1/IAssetWrapperV1.sol";
 import "./v1/LoanLibraryV1.sol";
 
+import "hardhat/console.sol";
+
 /**
  * @title BalancerFlashRolloverV1toV2
  * @author Non-Fungible Technologies, Inc.
@@ -105,6 +107,7 @@ contract BalancerFlashRolloverV1toV2 is IFlashRolloverBalancer, ReentrancyGuard,
         uint256[] calldata feeAmounts,
         bytes calldata params
     ) external override nonReentrant {
+        // console.log("INFO", address(assets[0]), address())
         require(msg.sender == address(VAULT), "unknown callback sender");
 
         _executeOperation(assets, amounts, feeAmounts, abi.decode(params, (OperationData)));
