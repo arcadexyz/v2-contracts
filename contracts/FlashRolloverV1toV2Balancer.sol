@@ -21,8 +21,6 @@ import "./v1/ILoanCoreV1.sol";
 import "./v1/IAssetWrapperV1.sol";
 import "./v1/LoanLibraryV1.sol";
 
-import "hardhat/console.sol";
-
 /**
  * @title BalancerFlashRolloverV1toV2
  * @author Non-Fungible Technologies, Inc.
@@ -52,8 +50,7 @@ contract BalancerFlashRolloverV1toV2 is IFlashRolloverBalancer, ReentrancyGuard,
     }
 
     /* solhint-disable var-name-mixedcase */
-    // AAVE Contracts
-    // Variable names are in upper case to fulfill IFlashLoanReceiver interface
+    // Balancer Contracts
     IVault public immutable VAULT; // 0xBA12222222228d8Ba445958a75a0704d566BF2C8
 
     /* solhint-enable var-name-mixedcase */
@@ -107,7 +104,6 @@ contract BalancerFlashRolloverV1toV2 is IFlashRolloverBalancer, ReentrancyGuard,
         uint256[] calldata feeAmounts,
         bytes calldata params
     ) external override nonReentrant {
-        // console.log("INFO", address(assets[0]), address())
         require(msg.sender == address(VAULT), "unknown callback sender");
 
         _executeOperation(assets, amounts, feeAmounts, abi.decode(params, (OperationData)));
@@ -172,8 +168,9 @@ contract BalancerFlashRolloverV1toV2 is IFlashRolloverBalancer, ReentrancyGuard,
             asset.safeTransferFrom(borrower, address(this), needFromBorrower);
         }
 
-        // Approve all amounts for flash loan repayment
-        asset.approve(address(VAULT), flashAmountDue);
+        // Make flash loan repayment
+        // Unlike for AAVE, Balancer requires a transfer
+        asset.transfer(address(VAULT), flashAmountDue);
 
         return true;
     }

@@ -38,6 +38,11 @@ const TARGET_ORIGINATION_CONTROLLER = "0x4c52ca29388A8A854095Fd2BeB83191D68DC840
 const VAULT_FACTORY = "0x6e9B4c2f6Bd57b7b924d29b5dcfCa1273Ecc94A2";
 const BORROWER_NOTE = "0xc3231258D6Ed397Dce7a52a27f816c8f41d22151";
 
+const loanCore = new ethers.utils.Interface([
+    "event LoanStarted(uint256 loanId, address lender, address borrower)",
+    "event LoanRepaid(uint256 loanId)"
+]);
+
 const createLoanTerms = (
     payableCurrency: string,
     collateralAddress: string,
@@ -73,6 +78,7 @@ describe("Deployment", function () {
     let borrower: SignerWithAddress;
     let lender: SignerWithAddress;
     let nftId: BigNumberish;
+    let bundleId: BigNumberish;
     let loanId: BigNumberish;
 
     // Protocl contracts
@@ -125,7 +131,7 @@ describe("Deployment", function () {
     it("starts a loan on the V1 protocol", async () => {
         // Borrower creates bundle and approves it
         await assetWrapper.initializeBundle(borrower.address);
-        const bundleId = await assetWrapper.tokenOfOwnerByIndex(borrower.address, 0);
+        bundleId = await assetWrapper.tokenOfOwnerByIndex(borrower.address, 0);
 
         await mockNft.connect(borrower).approve(assetWrapper.address, nftId);
         await assetWrapper.connect(borrower).depositERC721(mockNft.address, nftId, bundleId);
@@ -151,10 +157,6 @@ describe("Deployment", function () {
         expect(loanCoreEvents.length).to.eq(2);
         const loanStartedEvent = loanCoreEvents[1];
         expect(loanStartedEvent).to.not.be.undefined;
-
-        const loanCore = new ethers.utils.Interface([
-            "event LoanStarted(uint256 loanId, address lender, address borrower)"
-        ]);
 
         const payload = loanCore.parseLog(loanStartedEvent);
 
@@ -188,10 +190,10 @@ describe("Deployment", function () {
             TARGET_ORIGINATION_CONTROLLER,
             "OriginationController",
             terms,
-            borrower,
+            lender,
             "2",
             1,
-            "b",
+            "l",
         );
 
         // Do approvals
@@ -211,7 +213,7 @@ describe("Deployment", function () {
         };
 
         // Call rollover and check event payload
-        await rollover.connect(borrower).rolloverLoan(
+        const rolloverTx = await rollover.connect(borrower).rolloverLoan(
             contracts,
             loanId,
             terms,
@@ -222,6 +224,67 @@ describe("Deployment", function () {
             sig.s
         );
 
-        // Check all balances are correct
+        const rolloverReceipt = await rolloverTx.wait();
+
+        const oldLoanCoreEvents = rolloverReceipt.logs.filter((e: any) => e.address === SOURCE_LOAN_CORE_ADDRESS);
+        expect(oldLoanCoreEvents.length).to.eq(1);
+        const loanRepaidEvent = oldLoanCoreEvents[0];
+
+        const repaidPayload = loanCore.parseLog(loanRepaidEvent);
+        expect(repaidPayload.name).to.eq("LoanRepaid");
+        expect(repaidPayload.args.loanId).to.eq(loanId);
+
+        const rolloverEvents = rolloverReceipt.logs.filter((e: any) => e.address === rollover.address);
+        expect(rolloverEvents.length).to.eq(2);
+        const [rolloverEvent, migrationEvent] = rolloverEvents;
+
+        const rolloverPayload = rollover.interface.parseLog(rolloverEvent);
+        expect(rolloverPayload.name).to.eq("Rollover")
+        expect(rolloverPayload.args.lender).to.eq(lender.address);
+        expect(rolloverPayload.args.borrower).to.eq(borrower.address);
+        expect(rolloverPayload.args.collateralTokenId).to.eq(bundleId);
+
+        const newLoanId = rolloverPayload.args.newLoanId;
+
+        const migrationPayload = rollover.interface.parseLog(migrationEvent);
+        expect(migrationPayload.name).to.eq("Migration")
+        expect(migrationPayload.args.oldLoanCore).to.eq(SOURCE_LOAN_CORE_ADDRESS);
+        expect(migrationPayload.args.newLoanCore).to.eq(TARGET_LOAN_CORE_ADDRESS);
+        expect(migrationPayload.args.newLoanId).to.eq(newLoanId);
+
+        const newLoanCoreEvents = rolloverReceipt.logs.filter((e: any) => e.address === TARGET_LOAN_CORE_ADDRESS);
+        expect(newLoanCoreEvents.length).to.eq(2);
+        const loanStartedEvent = newLoanCoreEvents[1];
+
+        const loanStartedPayload = loanCore.parseLog(loanStartedEvent);
+        expect(loanStartedPayload.name).to.eq("LoanStarted")
+        expect(loanStartedPayload.args.loanId).to.eq(newLoanId);
+        expect(loanStartedPayload.args.lender).to.eq(lender.address);
+        expect(loanStartedPayload.args.borrower).to.eq(rollover.address);
+
+        // Check all balances are correct, with no balancer fees
+
+        // Borrower should have 134 tokens (150 principal - 15 interest repayment - 1% fee on v1 loan)
+        const borrowerBalance = await mockToken.balanceOf(borrower.address);
+        expect(borrowerBalance).to.eq(ethers.utils.parseEther("134"));
+
+        const lenderBalance = await mockToken.balanceOf(lender.address);
+        const lenderNet = ethers.utils.parseEther("100000").sub(lenderBalance);
+        expect(lenderNet).to.eq(ethers.utils.parseEther("135"));
+
+        // Vault should own mockNft
+        const nftOwner = await mockNft.ownerOf(nftId);
+        expect(nftOwner).to.eq(vaultId);
+
+        // lender and borrower should own new notes
+        const loanCoreFactory = await ethers.getContractFactory("LoanCore");
+        const lc = await loanCoreFactory.attach(TARGET_LOAN_CORE_ADDRESS);
+
+        const nftFactory = await ethers.getContractFactory("ERC721");
+        const borrowerNoteV2 = await nftFactory.attach(await lc.borrowerNote());
+        const lenderNoteV2 = await nftFactory.attach(await lc.lenderNote());
+
+        expect(await borrowerNoteV2.ownerOf(newLoanId)).to.eq(borrower.address);
+        expect(await lenderNoteV2.ownerOf(newLoanId)).to.eq(lender.address);
     });
 });
