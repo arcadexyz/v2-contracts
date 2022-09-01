@@ -10,8 +10,6 @@ import "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
-import "@balancer-labs/v2-vault/contracts/interfaces/IVault.sol";
-
 import "./external/interfaces/ILendingPool.sol";
 import "./interfaces/IFlashRolloverBalancer.sol";
 import "./interfaces/ILoanCore.sol";
@@ -24,7 +22,7 @@ import "./v1/IAssetWrapperV1.sol";
 import "./v1/LoanLibraryV1.sol";
 
 /**
- * @title FlashRolloverV1toV2
+ * @title BalancerFlashRolloverV1toV2
  * @author Non-Fungible Technologies, Inc.
  *
  * Based off Arcade.xyz's V1 lending FlashRollover.
@@ -32,7 +30,7 @@ import "./v1/LoanLibraryV1.sol";
  * on the V1 protocol, and open a new loan on V2
  * (with lender's signature).
  */
-contract FlashRolloverV1toV2 is IFlashRolloverBalancer, ReentrancyGuard, ERC721Holder, ERC1155Holder {
+contract BalancerFlashRolloverV1toV2 is IFlashRolloverBalancer, ReentrancyGuard, ERC721Holder, ERC1155Holder {
     using SafeERC20 for IERC20;
 
     struct ERC20Holding {
@@ -54,7 +52,7 @@ contract FlashRolloverV1toV2 is IFlashRolloverBalancer, ReentrancyGuard, ERC721H
     /* solhint-disable var-name-mixedcase */
     // AAVE Contracts
     // Variable names are in upper case to fulfill IFlashLoanReceiver interface
-    IVault public immutable override VAULT; // 0xBA12222222228d8Ba445958a75a0704d566BF2C8
+    IVault public immutable VAULT; // 0xBA12222222228d8Ba445958a75a0704d566BF2C8
 
     /* solhint-enable var-name-mixedcase */
 
@@ -83,8 +81,8 @@ contract FlashRolloverV1toV2 is IFlashRolloverBalancer, ReentrancyGuard, ERC721H
         }
 
         {
-            address[] memory assets = new address[](1);
-            assets[0] = loanTerms.payableCurrency;
+            IERC20[] memory assets = new IERC20[](1);
+            assets[0] = IERC20(loanTerms.payableCurrency);
 
             uint256[] memory amounts = new uint256[](1);
             amounts[0] = loanTerms.principal + loanTerms.interest;
@@ -106,16 +104,16 @@ contract FlashRolloverV1toV2 is IFlashRolloverBalancer, ReentrancyGuard, ERC721H
         uint256[] calldata amounts,
         uint256[] calldata feeAmounts,
         bytes calldata params
-    ) external override nonReentrant returns (bool) {
+    ) external override nonReentrant {
         require(msg.sender == address(VAULT), "unknown callback sender");
 
-        return _executeOperation(assets, amounts, premiums, abi.decode(params, (OperationData)));
+        _executeOperation(assets, amounts, feeAmounts, abi.decode(params, (OperationData)));
     }
 
     function _executeOperation(
         IERC20[] calldata assets,
         uint256[] calldata amounts,
-        uint256[] calldata premiums,
+        uint256[] memory premiums,
         OperationData memory opData
     ) internal returns (bool) {
         OperationContracts memory opContracts = _getContracts(opData.contracts);
@@ -172,7 +170,7 @@ contract FlashRolloverV1toV2 is IFlashRolloverBalancer, ReentrancyGuard, ERC721H
         }
 
         // Approve all amounts for flash loan repayment
-        asset.approve(address(LENDING_POOL), flashAmountDue);
+        asset.approve(address(VAULT), flashAmountDue);
 
         return true;
     }

@@ -7,6 +7,7 @@ import hre, { ethers } from "hardhat";
 import { expect } from "chai";
 
 export const NETWORK = hre.network.name;
+export const IS_MAINNET_FORK = process.env.FORK_MAINNET === "true";
 export const ROOT_DIR = path.join(__dirname, "../../../");
 export const DEPLOYMENTS_DIR = path.join(ROOT_DIR, ".deployments", NETWORK);
 
