@@ -100,7 +100,7 @@ function createMainnetConfig(): NetworkUserConfig {
     };
 }
 
-const optimizerEnabled = process.env.DISABLE_OPTIMIZER ? false : true;
+const optimizerEnabled = true;
 
 export const config: HardhatUserConfig = {
     defaultNetwork: "hardhat",

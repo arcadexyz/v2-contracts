@@ -135,7 +135,7 @@ describe("Deployment", function() {
         const deployment = getLatestDeployment();
         const [deployer] = await ethers.getSigners();
         // const ADMIN_ADDRESS = process.env.ADMIN!;
-        const ADMIN_ADDRESS = "0xAdD93e738a415c5248f7cB044FCFC71d86b18572";
+        const ADMIN_ADDRESS = "0x21aDafAA34d250a4fa0f8A4d2E2424ABa0cEE563";
 
         if (!ADMIN_ADDRESS) {
             throw new Error("did not get admin address!");
