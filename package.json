@@ -95,6 +95,7 @@
         "setup-roles": "ts-node scripts/utils/setup-roles.ts"
     },
     "dependencies": {
+        "@balancer-labs/v2-vault": "^2.0.0",
         "@openzeppelin/contracts-upgradeable": "4.5.2",
         "@openzeppelin/hardhat-upgrades": "^1.17.0"
     }
