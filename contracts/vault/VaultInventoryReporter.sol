@@ -29,12 +29,6 @@ import "../interfaces/IVaultInventoryReporter.sol";
 contract VaultInventoryReporter is IVaultInventoryReporter {
     using EnumerableSet for EnumerableSet.Bytes32Set;
 
-    error VIR_NoItems();
-    error VIR_TooManyItems(uint256 maxItems);
-    error VIR_InvalidRegistration(address vault, uint256 itemIndex);
-    error VIR_NotVerified(address vault, uint256 itemIndex);
-    error VIR_NotInInventory(address vault, bytes32 itemHash);
-
     // ============================================ STATE ==============================================
 
     // ============= Global Immutable State ==============
@@ -230,7 +224,7 @@ contract VaultInventoryReporter is IVaultInventoryReporter {
      */
     function itemAtIndex(address vault, uint256 index) external view override returns (Item memory) {
         bytes32 itemHash = inventoryKeysForVault[vault].at(index);
-            return inventoryForVault[vault][itemHash];
+        return inventoryForVault[vault][itemHash];
     }
 
     // =========================================== HELPERS =============================================

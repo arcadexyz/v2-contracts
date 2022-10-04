@@ -7,6 +7,14 @@ interface IVaultInventoryReporter {
 
     event Registered(address indexed vault, address indexed reporter, bytes32 itemsHash);
 
+    // ============= Errors ==============
+
+    error VIR_NoItems();
+    error VIR_TooManyItems(uint256 maxItems);
+    error VIR_InvalidRegistration(address vault, uint256 itemIndex);
+    error VIR_NotVerified(address vault, uint256 itemIndex);
+    error VIR_NotInInventory(address vault, bytes32 itemHash);
+
     // ============= Data Types ==============
 
     enum ItemType {
