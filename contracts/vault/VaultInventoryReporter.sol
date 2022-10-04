@@ -10,7 +10,6 @@ import "@openzeppelin/contracts/utils/structs/EnumerableMap.sol";
 
 import "../interfaces/IVaultInventoryReporter.sol";
 
-// TODO: Write reporter contract
 // TODO: Write vault deposit router
 // TODO: Write tests
 
@@ -78,6 +77,10 @@ contract VaultInventoryReporter is IVaultInventoryReporter {
                 }
             } else if (item.itemType == ItemType.ERC_20) {
                 if (IERC20(item.tokenAddress).balanceOf(vault) < item.tokenAmount){
+                    revert VIR_NotVerified(vault, i);
+                }
+            } else if (item.itemType == ItemType.PUNKS) {
+                if (IERC721(item.tokenAddress).ownerOf(item.tokenId) != vault){
                     revert VIR_NotVerified(vault, i);
                 }
             }

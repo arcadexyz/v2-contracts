@@ -20,7 +20,8 @@ interface IVaultInventoryReporter {
     enum ItemType {
         ERC_721,
         ERC_1155,
-        ERC_20
+        ERC_20,
+        PUNKS
     }
 
     struct Item {
