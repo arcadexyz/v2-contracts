@@ -43,6 +43,14 @@ contract VaultDepositRouter is IVaultDepositRouter {
 
     // ====================================== DEPOSIT OPERATIONS ========================================
 
+    /**
+     * @notice Deposit an ERC20 token to the vault, registering its inventory on the reporter
+     *         simultaneously.
+     *
+     * @param vault                         The vault to deposit to.
+     * @param token                         The token to deposit.
+     * @param amount                        The amount of tokens to deposit.
+     */
     function depositERC20(
         address vault,
         address token,
@@ -64,6 +72,14 @@ contract VaultDepositRouter is IVaultDepositRouter {
         // No events because both token and reporter will emit
     }
 
+    /**
+     * @notice Deposit multiple ERC20 tokens to the vault, registering inventory on the reporter
+     *         simultaneously.
+     *
+     * @param vault                         The vault to deposit to.
+     * @param tokens                         The tokens to deposit.
+     * @param amounts                        The amount of tokens to deposit, for each token.
+     */
     function depositERC20Batch(
         address vault,
         address[] calldata tokens,
@@ -93,6 +109,14 @@ contract VaultDepositRouter is IVaultDepositRouter {
         // No events because both token and reporter will emit
     }
 
+    /**
+     * @notice Deposit an ERC721 token to the vault, registering its inventory on the reporter
+     *         simultaneously.
+     *
+     * @param vault                         The vault to deposit to.
+     * @param token                         The token to deposit.
+     * @param id                            The ID of the token to deposit.
+     */
     function depositERC721(
         address vault,
         address token,
@@ -114,6 +138,14 @@ contract VaultDepositRouter is IVaultDepositRouter {
         // No events because both token and reporter will emit
     }
 
+    /**
+     * @notice Deposit ERC721 tokens to the vault, registering inventory on the reporter
+     *         simultaneously.
+     *
+     * @param vault                         The vault to deposit to.
+     * @param tokens                        The token to deposit.
+     * @param ids                           The ID of the token to deposit, for each token.
+     */
     function depositERC721Batch(
         address vault,
         address[] calldata tokens,
@@ -143,6 +175,15 @@ contract VaultDepositRouter is IVaultDepositRouter {
         // No events because both token and reporter will emit
     }
 
+    /**
+     * @notice Deposit an ERC1155 token to the vault, registering its inventory on the reporter
+     *         simultaneously.
+     *
+     * @param vault                         The vault to deposit to.
+     * @param token                         The token to deposit.
+     * @param id                            The ID of the token to deposit.
+     * @param amount                        The amount of tokens to deposit.
+     */
     function depositERC1155(
         address vault,
         address token,
@@ -165,6 +206,15 @@ contract VaultDepositRouter is IVaultDepositRouter {
         // No events because both token and reporter will emit
     }
 
+    /**
+     * @notice Deposit ERC1155 tokens to the vault, registering its inventory on the reporter
+     *         simultaneously.
+     *
+     * @param vault                         The vault to deposit to.
+     * @param tokens                        The token to deposit.
+     * @param ids                           The ID of the tokens to deposit.
+     * @param amounts                       The amount of tokens to deposit, for each token.
+     */
     function depositERC1155Batch(
         address vault,
         address[] calldata tokens,
@@ -177,18 +227,7 @@ contract VaultDepositRouter is IVaultDepositRouter {
         IVaultInventoryReporter.Item[] memory items = new IVaultInventoryReporter.Item[](numItems);
 
         for (uint256 i = 0; i < numItems; i++) {
-            address token = tokens[i];
-            uint256 id = ids[i];
-            uint256 amount = amounts[i];
-
-            IERC1155(token).safeTransferFrom(msg.sender, vault, id, amount, "");
-
-            items[i] = IVaultInventoryReporter.Item({
-                itemType: IVaultInventoryReporter.ItemType.ERC_1155,
-                tokenAddress: token,
-                tokenId: id,
-                tokenAmount: amount
-            });
+            items[i] = _depositERC1155(vault, tokens[i], ids[i], amounts[i]);
         }
 
         reporter.add(vault, items);
@@ -196,6 +235,14 @@ contract VaultDepositRouter is IVaultDepositRouter {
         // No events because both token and reporter will emit
     }
 
+    /**
+     * @notice Deposit a CryptoPunk to the vault, registering its inventory on the reporter
+     *         simultaneously.
+     *
+     * @param vault                         The vault to deposit to.
+     * @param token                         The token to deposit.
+     * @param id                            The ID of the token to deposit.
+     */
     function depositPunk(
         address vault,
         address token,
@@ -218,6 +265,14 @@ contract VaultDepositRouter is IVaultDepositRouter {
         // No events because both token and reporter will emit
     }
 
+    /**
+     * @notice Deposit CryptoPunks to the vault, registering inventory on the reporter
+     *         simultaneously.
+     *
+     * @param vault                         The vault to deposit to.
+     * @param tokens                        The token to deposit.
+     * @param ids                           The ID of the tokens to deposit.
+     */
     function depositPunkBatch(
         address vault,
         address[] calldata tokens,
@@ -250,6 +305,13 @@ contract VaultDepositRouter is IVaultDepositRouter {
 
     // ============================================ HELPERS =============================================
 
+    /**
+     * @dev Validates that the caller is allowed to deposit to the specified vault (owner or approved),
+     *      and that the specified vault exists. Reverts on failed validation.
+     *
+     * @param vault                         The vault that will be deposited to.
+     * @param caller                        The caller who wishes to deposit.
+     */
     modifier validate(address vault, address caller) {
         if (vault == address(0)) revert VDR_ZeroAddress();
         if (!IVaultFactory(factory).isInstance(vault)) revert VDR_InvalidVault(vault);
@@ -264,6 +326,17 @@ contract VaultDepositRouter is IVaultDepositRouter {
         ) revert VDR_NotOwnerOrApproved(vault, caller);
 
         _;
+    }
+
+    function _depositERC1155(address vault, address token, uint256 id, uint256 amount) internal returns (IVaultInventoryReporter.Item memory) {
+        IERC1155(token).safeTransferFrom(msg.sender, vault, id, amount, "");
+
+        return IVaultInventoryReporter.Item({
+            itemType: IVaultInventoryReporter.ItemType.ERC_1155,
+            tokenAddress: token,
+            tokenId: id,
+            tokenAmount: amount
+        });
     }
 
 
