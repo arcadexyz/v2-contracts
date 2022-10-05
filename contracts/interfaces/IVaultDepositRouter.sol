@@ -3,12 +3,6 @@
 pragma solidity ^0.8.11;
 
 interface IVaultDepositRouter {
-    // ============= Events ==============
-
-    event ERC20Deposit(address indexed vault, address indexed token, uint256 amount);
-    event ERC721Deposit(address indexed vault, address indexed token, uint256 id);
-    event ERC1155Deposit(address indexed vault, address indexed token, uint256 id, uint256 amount);
-
     // ============= Errors ==============
 
     error VDR_ZeroAddress();

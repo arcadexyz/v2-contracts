@@ -285,6 +285,56 @@ contract VaultDepositRouter is IVaultDepositRouter {
     // ============================================ HELPERS =============================================
 
     /**
+     * @dev Collect an ERC1155 from the caller, and return the Item struct.
+     *
+     * @param vault                         The vault to deposit to.
+     * @param token                         The token to deposit.
+     * @param id                            The ID of the token to deposit.
+     * @param amount                        The amount of tokens to deposit.
+     *
+     * @return item                         The Item struct for the asset collected.
+     */
+    function _depositERC1155(
+        address vault,
+        address token,
+        uint256 id,
+        uint256 amount
+    ) internal returns (IVaultInventoryReporter.Item memory) {
+        IERC1155(token).safeTransferFrom(msg.sender, vault, id, amount, "");
+
+        return IVaultInventoryReporter.Item({
+            itemType: IVaultInventoryReporter.ItemType.ERC_1155,
+            tokenAddress: token,
+            tokenId: id,
+            tokenAmount: amount
+        });
+    }
+
+    /**
+     * @dev Collect an ERC721 from the caller, and return the Item struct.
+     *
+     * @param vault                         The vault to deposit to.
+     * @param token                         The token to deposit.
+     * @param id                            The ID of the token to deposit.
+     *
+     * @return item                         The Item struct for the asset collected.
+     */
+    function _depositERC721(
+        address vault,
+        address token,
+        uint256 id
+    ) internal returns (IVaultInventoryReporter.Item memory) {
+        IERC721(token).safeTransferFrom(msg.sender, vault, id);
+
+        return IVaultInventoryReporter.Item({
+            itemType: IVaultInventoryReporter.ItemType.ERC_721,
+            tokenAddress: token,
+            tokenId: id,
+            tokenAmount: 0
+        });
+    }
+
+    /**
      * @dev Validates that the caller is allowed to deposit to the specified vault (owner or approved),
      *      and that the specified vault exists. Reverts on failed validation.
      *
@@ -306,37 +356,4 @@ contract VaultDepositRouter is IVaultDepositRouter {
 
         _;
     }
-
-    function _depositERC1155(
-        address vault,
-        address token,
-        uint256 id,
-        uint256 amount
-    ) internal returns (IVaultInventoryReporter.Item memory) {
-        IERC1155(token).safeTransferFrom(msg.sender, vault, id, amount, "");
-
-        return IVaultInventoryReporter.Item({
-            itemType: IVaultInventoryReporter.ItemType.ERC_1155,
-            tokenAddress: token,
-            tokenId: id,
-            tokenAmount: amount
-        });
-    }
-
-    function _depositERC721(
-        address vault,
-        address token,
-        uint256 id
-    ) internal returns (IVaultInventoryReporter.Item memory) {
-        IERC721(token).safeTransferFrom(msg.sender, vault, id);
-
-        return IVaultInventoryReporter.Item({
-            itemType: IVaultInventoryReporter.ItemType.ERC_721,
-            tokenAddress: token,
-            tokenId: id,
-            tokenAmount: 0
-        });
-    }
-
-
 }

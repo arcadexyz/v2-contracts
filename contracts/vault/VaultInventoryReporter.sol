@@ -10,7 +10,7 @@ import "@openzeppelin/contracts/utils/structs/EnumerableMap.sol";
 
 import "../interfaces/IVaultInventoryReporter.sol";
 
-// TODO: Write vault deposit router
+// TODO: Figure out punk verification
 // TODO: Write tests
 
 /**
@@ -268,7 +268,6 @@ contract VaultInventoryReporter is IVaultInventoryReporter {
      * @return hash                         The digest of the hash.
      */
     function _hash(Item memory item) internal pure returns (bytes32) {
-        // TODO: Decide on image for itemsHash
         return keccak256(abi.encodePacked(item.tokenAddress, item.tokenId, item.tokenAmount));
     }
 }
