@@ -126,12 +126,7 @@ contract VaultDepositRouter is IVaultDepositRouter {
 
         IVaultInventoryReporter.Item[] memory items = new IVaultInventoryReporter.Item[](1);
 
-        items[0] = IVaultInventoryReporter.Item({
-            itemType: IVaultInventoryReporter.ItemType.ERC_721,
-            tokenAddress: token,
-            tokenId: id,
-            tokenAmount: 0
-        });
+        items[0] = _depositERC721(vault, token, id);
 
         reporter.add(vault, items);
 
@@ -157,17 +152,7 @@ contract VaultDepositRouter is IVaultDepositRouter {
         IVaultInventoryReporter.Item[] memory items = new IVaultInventoryReporter.Item[](numItems);
 
         for (uint256 i = 0; i < numItems; i++) {
-            address token = tokens[i];
-            uint256 id = ids[i];
-
-            IERC721(token).safeTransferFrom(msg.sender, vault, id);
-
-            items[i] = IVaultInventoryReporter.Item({
-                itemType: IVaultInventoryReporter.ItemType.ERC_721,
-                tokenAddress: token,
-                tokenId: 0,
-                tokenAmount: id
-            });
+            items[i] = _depositERC721(vault, tokens[i], ids[i]);
         }
 
         reporter.add(vault, items);
@@ -193,13 +178,7 @@ contract VaultDepositRouter is IVaultDepositRouter {
         IERC1155(token).safeTransferFrom(msg.sender, vault, id, amount, "");
 
         IVaultInventoryReporter.Item[] memory items = new IVaultInventoryReporter.Item[](1);
-
-        items[0] = IVaultInventoryReporter.Item({
-            itemType: IVaultInventoryReporter.ItemType.ERC_1155,
-            tokenAddress: token,
-            tokenId: id,
-            tokenAmount: amount
-        });
+        items[0] = _depositERC1155(vault, token, id, amount);
 
         reporter.add(vault, items);
 
@@ -328,7 +307,12 @@ contract VaultDepositRouter is IVaultDepositRouter {
         _;
     }
 
-    function _depositERC1155(address vault, address token, uint256 id, uint256 amount) internal returns (IVaultInventoryReporter.Item memory) {
+    function _depositERC1155(
+        address vault,
+        address token,
+        uint256 id,
+        uint256 amount
+    ) internal returns (IVaultInventoryReporter.Item memory) {
         IERC1155(token).safeTransferFrom(msg.sender, vault, id, amount, "");
 
         return IVaultInventoryReporter.Item({
@@ -336,6 +320,21 @@ contract VaultDepositRouter is IVaultDepositRouter {
             tokenAddress: token,
             tokenId: id,
             tokenAmount: amount
+        });
+    }
+
+    function _depositERC721(
+        address vault,
+        address token,
+        uint256 id
+    ) internal returns (IVaultInventoryReporter.Item memory) {
+        IERC721(token).safeTransferFrom(msg.sender, vault, id);
+
+        return IVaultInventoryReporter.Item({
+            itemType: IVaultInventoryReporter.ItemType.ERC_721,
+            tokenAddress: token,
+            tokenId: id,
+            tokenAmount: 0
         });
     }
 
