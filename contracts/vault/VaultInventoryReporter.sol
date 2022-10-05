@@ -9,9 +9,11 @@ import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableMap.sol";
 
 import "../interfaces/IVaultInventoryReporter.sol";
+import "../external/interfaces/IPunks.sol";
 
 // TODO: Figure out punk verification
 // TODO: Write tests
+// TODO: Write deploy script
 
 /**
  * @title VaultInventoryReporter
@@ -68,19 +70,19 @@ contract VaultInventoryReporter is IVaultInventoryReporter {
             bytes32 itemHash = _hash(item);
 
             if (item.itemType == ItemType.ERC_721) {
-                if (IERC721(item.tokenAddress).ownerOf(item.tokenId) != vault){
+                if (IERC721(item.tokenAddress).ownerOf(item.tokenId) != vault) {
                     revert VIR_NotVerified(vault, i);
                 }
             } else if (item.itemType == ItemType.ERC_1155) {
-                if (IERC1155(item.tokenAddress).balanceOf(vault, item.tokenId) < item.tokenAmount){
+                if (IERC1155(item.tokenAddress).balanceOf(vault, item.tokenId) < item.tokenAmount) {
                     revert VIR_NotVerified(vault, i);
                 }
             } else if (item.itemType == ItemType.ERC_20) {
-                if (IERC20(item.tokenAddress).balanceOf(vault) < item.tokenAmount){
+                if (IERC20(item.tokenAddress).balanceOf(vault) < item.tokenAmount) {
                     revert VIR_NotVerified(vault, i);
                 }
             } else if (item.itemType == ItemType.PUNKS) {
-                if (IERC721(item.tokenAddress).ownerOf(item.tokenId) != vault){
+                if (IPunks(item.tokenAddress).punkIndexToAddress(item.tokenId) != vault) {
                     revert VIR_NotVerified(vault, i);
                 }
             }
@@ -242,17 +244,22 @@ contract VaultInventoryReporter is IVaultInventoryReporter {
      *
      * @return verified                     Whether the vault inventory is still accurate.
      */
+    // solhint-disable-next-line code-complexity
     function _verifyItem(address vault, Item memory item) internal view returns (bool) {
         if (item.itemType == ItemType.ERC_721) {
-            if (IERC721(item.tokenAddress).ownerOf(item.tokenId) != vault){
+            if (IERC721(item.tokenAddress).ownerOf(item.tokenId) != vault) {
                 return false;
             }
         } else if (item.itemType == ItemType.ERC_1155) {
-            if (IERC1155(item.tokenAddress).balanceOf(vault, item.tokenId) < item.tokenAmount){
+            if (IERC1155(item.tokenAddress).balanceOf(vault, item.tokenId) < item.tokenAmount) {
                 return false;
             }
         } else if (item.itemType == ItemType.ERC_20) {
-            if (IERC20(item.tokenAddress).balanceOf(vault) < item.tokenAmount){
+            if (IERC20(item.tokenAddress).balanceOf(vault) < item.tokenAmount) {
+                return false;
+            }
+        } else if (item.itemType == ItemType.PUNKS) {
+            if (IPunks(item.tokenAddress).punkIndexToAddress(item.tokenId) != vault) {
                 return false;
             }
         }
