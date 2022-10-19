@@ -64,5 +64,5 @@ interface IAssetVault {
 
     function call(address to, bytes memory data) external;
 
-    function approve(address token, address spender, uint256 amount) external;
+    function callApprove(address token, address spender, uint256 amount) external;
 }

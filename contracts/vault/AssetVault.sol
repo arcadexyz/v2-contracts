@@ -16,6 +16,8 @@ import "../interfaces/IAssetVault.sol";
 import "../external/interfaces/IPunks.sol";
 import "./OwnableERC721.sol";
 
+import "hardhat/console.sol";
+
 import { AV_WithdrawsDisabled, AV_WithdrawsEnabled, AV_AlreadyInitialized, AV_CallDisallowed, AV_NonWhitelistedCall, AV_NonWhitelistedApproval } from "../errors/Vault.sol";
 
 /**
@@ -224,7 +226,7 @@ contract AssetVault is IAssetVault, OwnableERC721, Initializable, ERC1155Holder,
      * @param spender               The approved spender.
      * @param amount                The amount to approve.
      */
-    function approve(address token, address spender, uint256 amount) external override onlyWithdrawDisabled nonReentrant {
+    function callApprove(address token, address spender, uint256 amount) external override onlyWithdrawDisabled nonReentrant {
         if (msg.sender != owner() && !ICallDelegator(owner()).canCallOn(msg.sender, address(this)))
             revert AV_CallDisallowed(msg.sender);
 

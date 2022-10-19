@@ -27,10 +27,10 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
  *
  */
 export async function main(): Promise<void> {
-    const APE = "0x328507DC29C95c170B56a1b3A758eB7a9E73455c";
-    const BAYC = "0xF40299b626ef6E197F5d9DE9315076CAB788B6Ef";
-    const MAYC = "0x3f228cBceC3aD130c45D21664f2C7f5b23130d23";
-    const BAKC = "0xd60d682764Ee04e54707Bee7B564DC65b31884D0";
+    const APE = "0x4d224452801ACEd8B2F0aebE155379bb5D594381";
+    const BAYC = "0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D";
+    const MAYC = "0x60E4d786628Fea6478F785A6d7e704777c86a7c6";
+    const BAKC = "0xba30E5F9Bb24caa003E9f2f0497Ad287FDF95623";
     const WHALE = "0x54BE3a794282C030b15E43aE2bB182E14c409C5e";
     const OWNER = "0xA2852f6E66cbA2A69685da5cB0A7e48dB8b3E05a";
 
@@ -158,24 +158,24 @@ export async function main(): Promise<void> {
     const whitelistFactory = await hre.ethers.getContractFactory("CallWhitelistApprovals");
     const whitelist = <CallWhitelistApprovals>await whitelistFactory.connect(msig).deploy();
 
-    // Whitelist BAYC deposit
+    // Whitelist BAYC deposit - depositBAYC
     await whitelist.connect(msig).add(staking.address, "0x8f4972a9");
-    // Whitelist MAYC deposit
+    // Whitelist MAYC deposit - depositMAYC
     await whitelist.connect(msig).add(staking.address, "0x4bd1e8f7");
-    // Whitelist BAKC deposit
+    // Whitelist BAKC deposit - depositBAKC
     await whitelist.connect(msig).add(staking.address, "0x417a32f9");
-    // Whitelist BAYC claim
+    // Whitelist BAYC claim - claimSelfBAYC
     await whitelist.connect(msig).add(staking.address, "0x20a325d0");
-    // Whitelist MAYC claim
+    // Whitelist MAYC claim - claimSelfMAYC
     await whitelist.connect(msig).add(staking.address, "0x381b4682");
-    // Whitelist BAKC claim
+    // Whitelist BAKC claim - claimSelfBAKC
     await whitelist.connect(msig).add(staking.address, "0xb0847dec");
-    // Whitelist BAYC withdraw
-    await whitelist.connect(msig).add(staking.address, "0x20a325d0");
-    // Whitelist MAYC withdraw
-    await whitelist.connect(msig).add(staking.address, "0x381b4682");
-    // Whitelist BAKC withdraw
-    await whitelist.connect(msig).add(staking.address, "0xb0847dec");
+    // Whitelist BAYC withdraw - withdrawSelfBAYC
+    await whitelist.connect(msig).add(staking.address, "0x3d0fa3b5");
+    // Whitelist MAYC withdraw - withdrawSelfMAYC
+    await whitelist.connect(msig).add(staking.address, "0xa1782c9d");
+    // Whitelist BAKC withdraw  - withdrawBAKC
+    await whitelist.connect(msig).add(staking.address, "0x8536c652");
 
     // Set up approvals
     await whitelist.connect(msig).setApproval(ape.address, staking.address, true);
@@ -226,7 +226,7 @@ export async function main(): Promise<void> {
 
     await originationController
         .connect(lender)
-        .initializeLoan(terms1, user1.address, lender.address, sig1, 1);
+        .initializeLoan(terms1, user1.address, lender.address, sig1, 2);
 
     console.log("Starting loan 2...");
 
@@ -240,7 +240,7 @@ export async function main(): Promise<void> {
 
     await originationController
         .connect(lender)
-        .initializeLoan(terms2, user2.address, lender.address, sig2, 1);
+        .initializeLoan(terms2, user2.address, lender.address, sig2, 2);
 
     console.log("Starting loan 3...");
 
@@ -255,7 +255,7 @@ export async function main(): Promise<void> {
 
     await originationController
         .connect(lender)
-        .initializeLoan(terms3, user3.address, lender.address, sig3, 1);
+        .initializeLoan(terms3, user3.address, lender.address, sig3, 2);
 
     console.log("Starting loan 4...");
 
@@ -263,18 +263,72 @@ export async function main(): Promise<void> {
     const av4 = await createVault(factory, user4);
     await mayc.connect(user4).transferFrom(user4.address, av4.address, 21026);
     await bakc.connect(user4).transferFrom(user4.address, av4.address, 3292);
-    await factory.connect(user3).approve(ORIGINATION_CONTROLLER, av4.address);
+    await factory.connect(user4).approve(ORIGINATION_CONTROLLER, av4.address);
 
     const terms4 = makeTerms(av4);
     const sig4 = await makeSig(user4, terms4);
 
     await originationController
         .connect(lender)
-        .initializeLoan(terms4, user4.address, lender.address, sig4, 1);
+        .initializeLoan(terms4, user4.address, lender.address, sig4, 2);
+
+    console.log("Performing Asset Vault approvals...");
 
     // Vaults are live - try to stake apecoin from the vault using "call"
+    const apeAmount = ethers.utils.parseEther("100");
 
-    // const cd1 = staking.callStatic.depositBAYC([{ tokenId: 3518, amount: }])
+    await ape.connect(user1).transfer(av1.address, apeAmount);
+    await ape.connect(user2).transfer(av2.address, apeAmount);
+    await ape.connect(user3).transfer(av3.address, apeAmount);
+    await ape.connect(user4).transfer(av4.address, apeAmount);
+
+    await av1.connect(user1).callApprove(ape.address, staking.address, apeAmount);
+    await av2.connect(user2).callApprove(ape.address, staking.address, apeAmount);
+    await av3.connect(user3).callApprove(ape.address, staking.address, apeAmount);
+    await av4.connect(user4).callApprove(ape.address, staking.address, apeAmount);
+
+    console.log("Performing staking operation...");
+
+    const cd1 = staking.interface.encodeFunctionData("depositBAYC", [
+        [{ tokenId: 3518, amount: apeAmount }]
+    ]);
+
+    const cd2 = staking.interface.encodeFunctionData("depositMAYC", [
+        [{ tokenId: 11706, amount: apeAmount }]
+    ]);
+
+    const cd3 = staking.interface.encodeFunctionData("depositBAKC", [
+        [{ mainTokenId: 1044, bakcTokenId: 6037, amount: apeAmount }],
+        []
+    ]);
+
+    const cd4 = staking.interface.encodeFunctionData("depositBAKC", [
+        [],
+        [{ mainTokenId: 21026, bakcTokenId: 3292, amount: apeAmount }]
+    ]);
+
+    await av1.connect(user1).call(staking.address, cd1);
+    await av2.connect(user2).call(staking.address, cd2);
+    await av3.connect(user3).call(staking.address, cd3);
+    await av4.connect(user4).call(staking.address, cd4);
+
+    console.log("Accruing staking rewards...");
+
+    // Go through half of program
+    await hre.network.provider.send("evm_increaseTime", [1800]);
+    await hre.network.provider.send("evm_mine");
+
+    const pr1 = await staking.pendingRewards(1, av1.address, 3518);
+    const pr2 = await staking.pendingRewards(2, av2.address, 11706);
+    const pr3 = await staking.pendingRewards(3, av3.address, 6037);
+    const pr4 = await staking.pendingRewards(3, av4.address, 3292);
+
+    console.log("Pending Rewards User 1:", pr1.toString());
+    console.log("Pending Rewards User 2:", pr2.toString());
+    console.log("Pending Rewards User 3:", pr3.toString());
+    console.log("Pending Rewards User 4:", pr4.toString());
+
+
 }
 
 // We recommend this pattern to be able to use async/await everywhere
