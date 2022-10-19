@@ -1,13 +1,12 @@
 /* eslint no-unused-vars: 0 */
 
 import hre, { ethers, upgrades } from "hardhat";
-import { ApeCoinStaking, AssetVault, CallWhitelistApprovals, MockERC20, OriginationController, VaultFactory } from "../typechain";
+import { ApeCoinStaking, AssetVault, CallWhitelistApprovals, MockERC20, OriginationController, PromissoryNote, VaultFactory, RepaymentController } from "../typechain";
 
 import { createVault } from "./utils/vault";
 import { LoanTerms } from "../test/utils/types";
 import { createLoanTermsSignature } from "../test/utils/eip712";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import { start } from "repl";
 
 
 // TODO:
@@ -40,6 +39,8 @@ export async function main(): Promise<void> {
     const OWNER = "0xA2852f6E66cbA2A69685da5cB0A7e48dB8b3E05a";
 
     const ORIGINATION_CONTROLLER = "0x4c52ca29388A8A854095Fd2BeB83191D68DC840b";
+    const REPAYMENT_CONTROLLER = "0xb39dAB85FA05C381767FF992cCDE4c94619993d4";
+    const BORROWER_NOTE = "0x337104A4f06260Ff327d6734C555A0f5d8F863aa";
     const ARCADE_MSIG = "0x398e92C827C5FA0F33F171DC8E20570c5CfF330e";
 
     const [user1, user2, user3, user4, lender] = await ethers.getSigners();
@@ -63,11 +64,13 @@ export async function main(): Promise<void> {
     const mayc = await factory721.attach(MAYC);
     const bakc = await factory721.attach(BAKC);
 
+    const apeAmount = ethers.utils.parseEther("100");
+
     // Send APE to users
-    await ape.connect(whale).transfer(user1.address, ethers.utils.parseEther("100000"));
-    await ape.connect(whale).transfer(user2.address, ethers.utils.parseEther("100000"));
-    await ape.connect(whale).transfer(user3.address, ethers.utils.parseEther("100000"));
-    await ape.connect(whale).transfer(user4.address, ethers.utils.parseEther("100000"));
+    await ape.connect(whale).transfer(user1.address, apeAmount);
+    await ape.connect(whale).transfer(user2.address, apeAmount);
+    await ape.connect(whale).transfer(user3.address, apeAmount);
+    await ape.connect(whale).transfer(user4.address, apeAmount);
     await ape.connect(whale).transfer(OWNER, ethers.utils.parseEther("100000"));
 
     // Send NFTs to users
@@ -129,7 +132,7 @@ export async function main(): Promise<void> {
         1,
         ethers.utils.parseEther("25000"),
         startTime,
-        startTime + 3600,
+        startTime + 36000,
         ethers.utils.parseEther("10000")
     );
 
@@ -137,7 +140,7 @@ export async function main(): Promise<void> {
         2,
         ethers.utils.parseEther("25000"),
         startTime,
-        startTime + 3600,
+        startTime + 36000,
         ethers.utils.parseEther("10000")
     );
 
@@ -145,7 +148,7 @@ export async function main(): Promise<void> {
         3,
         ethers.utils.parseEther("25000"),
         startTime,
-        startTime + 3600,
+        startTime + 36000,
         ethers.utils.parseEther("10000")
     );
 
@@ -200,7 +203,7 @@ export async function main(): Promise<void> {
     const makeTerms = (vault: AssetVault): LoanTerms => ({
         durationSecs: 86_400,
         principal: ethers.utils.parseEther("10"),
-        interestRate: ethers.utils.parseEther("1"),
+        interestRate: ethers.utils.parseEther("10"),
         collateralAddress: factory.address,
         collateralId: vault.address,
         payableCurrency: token.address,
@@ -279,9 +282,6 @@ export async function main(): Promise<void> {
 
     console.log("Performing Asset Vault approvals...");
 
-    // Vaults are live - try to stake apecoin from the vault using "call"
-    const apeAmount = ethers.utils.parseEther("100");
-
     await ape.connect(user1).transfer(av1.address, apeAmount);
     await ape.connect(user2).transfer(av2.address, apeAmount);
     await ape.connect(user3).transfer(av3.address, apeAmount);
@@ -322,7 +322,7 @@ export async function main(): Promise<void> {
     // Go through half of program
     await hre.network.provider.send("evm_setNextBlockTimestamp", [startTime]);
     await hre.network.provider.send("evm_mine", []);
-    await hre.network.provider.send("evm_increaseTime", [1800]);
+    await hre.network.provider.send("evm_increaseTime", [18000]);
     await staking.updatePool(1);
     await staking.updatePool(2);
     await staking.updatePool(3);
@@ -374,11 +374,111 @@ export async function main(): Promise<void> {
     console.log("Claimed User 3:", earned3.toString());
     console.log("Claimed User 4:", earned4.toString());
 
+    // Finish the program
+    await hre.network.provider.send("evm_increaseTime", [18000]);
+
     // Repay all loans
+    await token.connect(user1).approve(REPAYMENT_CONTROLLER, apeAmount.mul(2));
+    await token.connect(user2).approve(REPAYMENT_CONTROLLER, apeAmount.mul(2));
+    await token.connect(user3).approve(REPAYMENT_CONTROLLER, apeAmount.mul(2));
+    await token.connect(user4).approve(REPAYMENT_CONTROLLER, apeAmount.mul(2));
+
+    const rcFactory = await hre.ethers.getContractFactory("RepaymentController");
+    const repaymentController = <RepaymentController>await rcFactory.attach(REPAYMENT_CONTROLLER);
+    const pmFactory = await hre.ethers.getContractFactory("PromissoryNote");
+    const note = <PromissoryNote>await pmFactory.attach(BORROWER_NOTE);
+
+    const note1Id = await note.tokenOfOwnerByIndex(user1.address, 0);
+    const note2Id = await note.tokenOfOwnerByIndex(user2.address, 0);
+    const note3Id = await note.tokenOfOwnerByIndex(user3.address, 0);
+    const note4Id = await note.tokenOfOwnerByIndex(user4.address, 0);
+
+    await repaymentController.connect(user1).repay(note1Id);
+    await repaymentController.connect(user2).repay(note2Id);
+    await repaymentController.connect(user2).repay(note3Id);
+    await repaymentController.connect(user2).repay(note4Id);
+
+    console.log("Repaid all loans.");
 
     // Withdraw ape 1 from vault, claim rewards for user 1
-    // Claim rewards into vault, then withdraw mutant and rewards for user 2
-    // Withdraw both from vault, claim rewards for user 2
+    const b1_1 = await ape.balanceOf(user1.address);
+    await av1.connect(user1).enableWithdraw();
+    await av1.connect(user1).withdrawERC721(bayc.address, 3518, user1.address);
+    await av1.connect(user1).withdrawERC20(ape.address, user1.address);
+
+    const b1_2 = await ape.balanceOf(user1.address);
+    await staking.connect(user1).withdrawBAYC([ { tokenId: 3518, amount: apeAmount }], user1.address);
+    const b1_3 = await ape.balanceOf(user1.address);
+    await staking.connect(user1).claimSelfBAYC([3518]);
+    const b1_4 = await ape.balanceOf(user1.address);
+
+    console.log("User 1 Balance before withdrawal:", ethers.utils.formatEther(b1_1));
+    console.log("User 1 Balance after vault withdrawal:", ethers.utils.formatEther(b1_2));
+    console.log("User 1 Balance after staking withdrawal:", ethers.utils.formatEther(b1_3));
+    console.log("User 1 Balance after staking claim:", ethers.utils.formatEther(b1_4));
+
+    // Withdraw MAYC into vault, then withdraw mutant and rewards for user 2
+    const b2_1 = await ape.balanceOf(user2.address);
+
+    cd2 = staking.interface.encodeFunctionData("withdrawSelfMAYC", [
+        [{ tokenId: 11706, amount: apeAmount }]
+    ]);
+
+    await av2.connect(user2).call(staking.address, cd2);
+
+    await av2.connect(user2).enableWithdraw();
+    await av2.connect(user2).withdrawERC721(mayc.address, 11706, user2.address);
+    await av2.connect(user2).withdrawERC20(ape.address, user2.address);
+
+    const b2_2 = await ape.balanceOf(user2.address);
+    const b2_3 = b2_2;
+    await staking.connect(user2).claimSelfMAYC([11706]);
+    const b2_4 = await ape.balanceOf(user2.address);
+
+    console.log("User 2 Balance before withdrawal:", ethers.utils.formatEther(b2_1));
+    console.log("User 2 Balance after vault withdrawal:", ethers.utils.formatEther(b2_2));
+    console.log("User 2 Balance after staking withdrawal:", ethers.utils.formatEther(b2_3));
+    console.log("User 2 Balance after staking claim:", ethers.utils.formatEther(b2_4));
+
+    // Withdraw both from vault, claim rewards for user 3
+    const b3_1 = await ape.balanceOf(user3.address);
+
+    await av3.connect(user3).call(staking.address, cd3);
+
+    await av3.connect(user3).enableWithdraw();
+    await av3.connect(user3).withdrawERC721(bayc.address, 1044, user3.address);
+    await av3.connect(user3).withdrawERC721(bakc.address, 6037, user3.address);
+    await av3.connect(user3).withdrawERC20(ape.address, user3.address);
+
+    const b3_2 = await ape.balanceOf(user3.address);
+    const b3_3 = b3_2;
+    await staking.connect(user3).withdrawBAKC(
+        [{ mainTokenId: 1044, bakcTokenId: 6037, amount: apeAmount }],
+        []
+    );
+    const b3_4 = await ape.balanceOf(user3.address);
+
+    console.log("User 3 Balance before withdrawal:", ethers.utils.formatEther(b3_1));
+    console.log("User 3 Balance after vault withdrawal:", ethers.utils.formatEther(b3_2));
+    console.log("User 3 Balance after staking withdrawal:", ethers.utils.formatEther(b3_3));
+    console.log("User 3 Balance after staking claim:", ethers.utils.formatEther(b3_4));
+
+    // Withdraw from the vault for user 4 and claim latent rewards
+    const b4_1 = await ape.balanceOf(user4.address);
+
+    await av4.connect(user4).enableWithdraw();
+    await av4.connect(user4).withdrawERC721(mayc.address, 21026, user4.address);
+    await av4.connect(user4).withdrawERC721(bakc.address, 3292, user4.address);
+    await av4.connect(user4).withdrawERC20(ape.address, user4.address);
+
+    const b4_2 = await ape.balanceOf(user4.address);
+    const b4_3 = b4_2;
+    const b4_4 = b4_2;
+
+    console.log("User 4 Balance before withdrawal:", ethers.utils.formatEther(b4_1));
+    console.log("User 4 Balance after vault withdrawal:", ethers.utils.formatEther(b4_2));
+    console.log("User 4 Balance after staking withdrawal:", ethers.utils.formatEther(b4_3));
+    console.log("User 4 Balance after staking claim:", ethers.utils.formatEther(b4_4));
 }
 
 // We recommend this pattern to be able to use async/await everywhere
