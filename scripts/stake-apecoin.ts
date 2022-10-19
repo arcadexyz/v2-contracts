@@ -7,6 +7,11 @@ import { createVault } from "./utils/vault";
 import { LoanTerms } from "../test/utils/types";
 import { createLoanTermsSignature } from "../test/utils/eip712";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
+import { start } from "repl";
+
+
+// TODO:
+// Create large section separators
 
 /**
  * This script runs apecoin staking through end-to-end, by:
@@ -289,20 +294,20 @@ export async function main(): Promise<void> {
 
     console.log("Performing staking operation...");
 
-    const cd1 = staking.interface.encodeFunctionData("depositBAYC", [
+    let cd1 = staking.interface.encodeFunctionData("depositBAYC", [
         [{ tokenId: 3518, amount: apeAmount }]
     ]);
 
-    const cd2 = staking.interface.encodeFunctionData("depositMAYC", [
+    let cd2 = staking.interface.encodeFunctionData("depositMAYC", [
         [{ tokenId: 11706, amount: apeAmount }]
     ]);
 
-    const cd3 = staking.interface.encodeFunctionData("depositBAKC", [
+    let cd3 = staking.interface.encodeFunctionData("depositBAKC", [
         [{ mainTokenId: 1044, bakcTokenId: 6037, amount: apeAmount }],
         []
     ]);
 
-    const cd4 = staking.interface.encodeFunctionData("depositBAKC", [
+    let cd4 = staking.interface.encodeFunctionData("depositBAKC", [
         [],
         [{ mainTokenId: 21026, bakcTokenId: 3292, amount: apeAmount }]
     ]);
@@ -315,8 +320,12 @@ export async function main(): Promise<void> {
     console.log("Accruing staking rewards...");
 
     // Go through half of program
+    await hre.network.provider.send("evm_setNextBlockTimestamp", [startTime]);
+    await hre.network.provider.send("evm_mine", []);
     await hre.network.provider.send("evm_increaseTime", [1800]);
-    await hre.network.provider.send("evm_mine");
+    await staking.updatePool(1);
+    await staking.updatePool(2);
+    await staking.updatePool(3);
 
     const pr1 = await staking.pendingRewards(1, av1.address, 3518);
     const pr2 = await staking.pendingRewards(2, av2.address, 11706);
@@ -328,7 +337,48 @@ export async function main(): Promise<void> {
     console.log("Pending Rewards User 3:", pr3.toString());
     console.log("Pending Rewards User 4:", pr4.toString());
 
+    cd1 = staking.interface.encodeFunctionData("claimSelfBAYC", [[3518]]);
+    cd2 = staking.interface.encodeFunctionData("claimSelfMAYC", [[11706]]);
+    cd3 = staking.interface.encodeFunctionData("claimSelfBAKC", [
+        [{ mainTokenId: 1044, bakcTokenId: 6037 }],
+        [],
+    ]);
+    cd4 = staking.interface.encodeFunctionData("withdrawBAKC", [
+        [],
+        [{ mainTokenId: 21026, bakcTokenId: 3292, amount: apeAmount }]
+    ]);
 
+    // Have users 1, 2, 3 claim, have user 4 withdraw
+    const balanceBefore1 = await ape.balanceOf(av1.address);
+    await av1.connect(user1).call(staking.address, cd1);
+    const balanceAfter1 = await ape.balanceOf(av1.address);
+    const earned1 = balanceAfter1.sub(balanceBefore1);
+
+    const balanceBefore2 = await ape.balanceOf(av2.address);
+    await av2.connect(user2).call(staking.address, cd2);
+    const balanceAfter2 = await ape.balanceOf(av2.address);
+    const earned2 = balanceAfter2.sub(balanceBefore2);
+
+    const balanceBefore3 = await ape.balanceOf(av3.address);
+    await av3.connect(user3).call(staking.address, cd3);
+    const balanceAfter3 = await ape.balanceOf(av3.address);
+    const earned3 = balanceAfter3.sub(balanceBefore3);
+
+    const balanceBefore4 = await ape.balanceOf(av4.address);
+    await av4.connect(user4).call(staking.address, cd4);
+    const balanceAfter4 = await ape.balanceOf(av4.address);
+    const earned4 = balanceAfter4.sub(balanceBefore4);
+
+    console.log("Claimed User 1:", earned1.toString());
+    console.log("Claimed User 2:", earned2.toString());
+    console.log("Claimed User 3:", earned3.toString());
+    console.log("Claimed User 4:", earned4.toString());
+
+    // Repay all loans
+
+    // Withdraw ape 1 from vault, claim rewards for user 1
+    // Claim rewards into vault, then withdraw mutant and rewards for user 2
+    // Withdraw both from vault, claim rewards for user 2
 }
 
 // We recommend this pattern to be able to use async/await everywhere
