@@ -49,6 +49,8 @@ interface IVaultInventoryReporter {
 
     function enumerate(address vault) external view returns (Item[] memory);
 
+    function enumerateOrFail(address vault) external view returns (Item[] memory);
+
     function keys(address vault) external view returns (bytes32[] memory);
 
     function keyAtIndex(address vault, uint256 index) external view returns (bytes32);

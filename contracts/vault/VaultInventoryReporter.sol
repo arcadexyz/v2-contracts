@@ -11,7 +11,9 @@ import "@openzeppelin/contracts/utils/structs/EnumerableMap.sol";
 import "../interfaces/IVaultInventoryReporter.sol";
 import "../external/interfaces/IPunks.sol";
 
-// TODO: Figure out punk verification
+import "hardhat/console.sol";
+
+// TODO: Add events
 // TODO: Write tests
 // TODO: Write deploy script
 
@@ -186,11 +188,36 @@ contract VaultInventoryReporter is IVaultInventoryReporter {
      */
     function enumerate(address vault) external view override returns (Item[] memory items) {
         uint256 numItems = inventoryKeysForVault[vault].length();
+        items = new Item[](numItems);
 
         for (uint256 i = 0; i < numItems; i++) {
             bytes32 itemHash = inventoryKeysForVault[vault].at(i);
 
             items[i] = inventoryForVault[vault][itemHash];
+        }
+    }
+
+    /**
+     * @notice Return a list of items in the vault. Checks for staleness and reverts if
+     *         a reported asset is no longer owned.
+     *
+     * @param vault                         The address of the vault.
+     *
+     * @return items                        An array of items in the vault.
+     */
+    function enumerateOrFail(address vault) external view override returns (Item[] memory items) {
+        uint256 numItems = inventoryKeysForVault[vault].length();
+        items = new Item[](numItems);
+
+        for (uint256 i = 0; i < numItems; i++) {
+            bytes32 itemHash = inventoryKeysForVault[vault].at(i);
+
+            if (!_verifyItem(vault, inventoryForVault[vault][itemHash])) {
+                revert VIR_NotVerified(vault, i);
+            }
+
+            items[i] = inventoryForVault[vault][itemHash];
+
         }
     }
 

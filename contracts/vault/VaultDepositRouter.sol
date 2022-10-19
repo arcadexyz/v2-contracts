@@ -12,6 +12,8 @@ import "../interfaces/IVaultInventoryReporter.sol";
 import "../interfaces/IVaultFactory.sol";
 import "../external/interfaces/IPunks.sol";
 
+import "hardhat/console.sol";
+
 /**
  * @title VaultInventoryReporter
  * @author Non-Fungible Technologies, Inc.
@@ -324,6 +326,8 @@ contract VaultDepositRouter is IVaultDepositRouter {
         address token,
         uint256 id
     ) internal returns (IVaultInventoryReporter.Item memory) {
+        console.log("ID", msg.sender, token, address(this));
+        console.log("APPROVED", IERC721(token).getApproved(id));
         IERC721(token).safeTransferFrom(msg.sender, vault, id);
 
         return IVaultInventoryReporter.Item({
