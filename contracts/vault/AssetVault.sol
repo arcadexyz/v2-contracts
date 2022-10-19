@@ -10,13 +10,13 @@ import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "../interfaces/ICallWhitelist.sol";
+import "./CallWhitelistApprovals.sol";
 import "../interfaces/ICallDelegator.sol";
 import "../interfaces/IAssetVault.sol";
 import "../external/interfaces/IPunks.sol";
 import "./OwnableERC721.sol";
 
-import { AV_WithdrawsDisabled, AV_WithdrawsEnabled, AV_AlreadyInitialized, AV_CallDisallowed, AV_NonWhitelistedCall } from "../errors/Vault.sol";
+import { AV_WithdrawsDisabled, AV_WithdrawsEnabled, AV_AlreadyInitialized, AV_CallDisallowed, AV_NonWhitelistedCall, AV_NonWhitelistedApproval } from "../errors/Vault.sol";
 
 /**
  * @title AssetVault
@@ -201,8 +201,8 @@ contract AssetVault is IAssetVault, OwnableERC721, Initializable, ERC1155Holder,
      *         must either be the owner, or the owner must have explicitly
      *         delegated this ability to the caller through ICallDelegator interface.
      *
-     * @param to The contract address to call.
-     * @param data The data to call the contract with.
+     * @param to                    The contract address to call.
+     * @param data                  The data to call the contract with.
      */
     function call(address to, bytes calldata data) external override onlyWithdrawDisabled nonReentrant {
         if (msg.sender != owner() && !ICallDelegator(owner()).canCallOn(msg.sender, address(this)))
@@ -213,6 +213,27 @@ contract AssetVault is IAssetVault, OwnableERC721, Initializable, ERC1155Holder,
         to.functionCall(data);
 
         emit Call(msg.sender, to, data);
+    }
+
+    /**
+     * @notice Approve a token for spending by an external contract. Note that any token
+     *         approved in the whitelist does not make good collateral, because the allowed
+     *         spender may be able to withdraw it from the vault.
+     *
+     * @param token                 The token to approve.
+     * @param spender               The approved spender.
+     * @param amount                The amount to approve.
+     */
+    function approve(address token, address spender, uint256 amount) external override onlyWithdrawDisabled nonReentrant {
+        if (msg.sender != owner() && !ICallDelegator(owner()).canCallOn(msg.sender, address(this)))
+            revert AV_CallDisallowed(msg.sender);
+
+        if (!CallWhitelistApprovals(address(whitelist)).isApproved(token, spender)) revert AV_NonWhitelistedApproval(token, spender);
+
+        // Do approval
+        IERC20(token).approve(spender, amount);
+
+        emit Approve(msg.sender, token, spender);
     }
 
     // ============================================ HELPERS =============================================

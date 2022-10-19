@@ -47,6 +47,14 @@ error AV_CallDisallowed(address caller);
  */
 error AV_NonWhitelistedCall(address to, bytes4 data);
 
+/**
+ * @notice Approval disallowed.
+ *
+ * @param token                             The token to approve.
+ * @param spender                           The spender to approve.
+ */
+error AV_NonWhitelistedApproval(address token, address spender);
+
 // ==================================== Ownable ERC721 ======================================
 /// @notice All errors prefixed with OERC721_, to separate from other contracts in the protocol.
 
