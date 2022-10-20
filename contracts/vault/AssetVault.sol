@@ -16,8 +16,6 @@ import "../interfaces/IAssetVault.sol";
 import "../external/interfaces/IPunks.sol";
 import "./OwnableERC721.sol";
 
-import "hardhat/console.sol";
-
 import { AV_WithdrawsDisabled, AV_WithdrawsEnabled, AV_AlreadyInitialized, AV_CallDisallowed, AV_NonWhitelistedCall, AV_NonWhitelistedApproval } from "../errors/Vault.sol";
 
 /**
@@ -235,7 +233,7 @@ contract AssetVault is IAssetVault, OwnableERC721, Initializable, ERC1155Holder,
         // Do approval
         IERC20(token).approve(spender, amount);
 
-        emit Approve(msg.sender, token, spender);
+        emit Approve(msg.sender, token, spender, amount);
     }
 
     // ============================================ HELPERS =============================================

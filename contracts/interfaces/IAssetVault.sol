@@ -22,7 +22,7 @@ interface IAssetVault {
 
     event WithdrawETH(address indexed operator, address indexed recipient, uint256 amount);
     event Call(address indexed operator, address indexed to, bytes data);
-    event Approve(address indexed operator, address indexed token, address indexed spender);
+    event Approve(address indexed operator, address indexed token, address indexed spender, uint256 amount);
 
     // ================= Initializer ==================
 
