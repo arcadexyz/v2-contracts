@@ -128,7 +128,7 @@ describe("VaultDepositRouter", () => {
         });
     });
 
-    describe.only("Deposits", () => {
+    describe("Deposits", () => {
         it("should not accept a deposit for the zero address", async () => {
             const { mockERC20, user, router } = await loadFixture(fixture);
             const amount = hre.ethers.utils.parseUnits("50", 18);
@@ -292,6 +292,15 @@ describe("VaultDepositRouter", () => {
             // approve router to send ERC20 tokens in
             await mockERC20.connect(user).approve(router.address, amount);
             await otherMockERC20.connect(user).approve(router.address, amount);
+
+            await expect(
+                router.connect(user).depositERC20Batch(
+                    vault.address,
+                    [mockERC20.address, otherMockERC20.address],
+                    [amount]
+                )
+            ).to.be.revertedWith("VDR_BatchLengthMismatch");
+
             await router.connect(user).depositERC20Batch(
                 vault.address,
                 [mockERC20.address, otherMockERC20.address],
@@ -325,6 +334,15 @@ describe("VaultDepositRouter", () => {
             // approve router to send ERC721 tokens in
             await mockERC721.connect(user).setApprovalForAll(router.address, true);
             await otherMockERC721.connect(user).approve(router.address, tokenId2);
+
+            await expect(
+                router.connect(user).depositERC721Batch(
+                    vault.address,
+                    [mockERC721.address, otherMockERC721.address, mockERC721.address],
+                    [tokenId, tokenId2]
+                )
+            ).to.be.revertedWith("VDR_BatchLengthMismatch");
+
             await router.connect(user).depositERC721Batch(
                 vault.address,
                 [mockERC721.address, otherMockERC721.address, mockERC721.address],
@@ -364,6 +382,35 @@ describe("VaultDepositRouter", () => {
             // approve router to send ERC1155 tokens in
             await mockERC1155.connect(user).setApprovalForAll(router.address, true);
             await otherMockERC1155.connect(user).setApprovalForAll(router.address, true);
+
+            await expect(
+                router.connect(user).depositERC1155Batch(
+                    vault.address,
+                    [mockERC1155.address, otherMockERC1155.address, mockERC1155.address],
+                    [tokenId, tokenId2, tokenId3],
+                    [amount, amount]
+                )
+            ).to.be.revertedWith("VDR_BatchLengthMismatch");
+
+            await expect(
+                router.connect(user).depositERC1155Batch(
+                    vault.address,
+                    [mockERC1155.address, otherMockERC1155.address, mockERC1155.address],
+                    [tokenId2, tokenId3],
+                    [amount, amount, amount]
+                )
+            ).to.be.revertedWith("VDR_BatchLengthMismatch");
+
+            await expect(
+                router.connect(user).depositERC1155Batch(
+                    vault.address,
+                    [mockERC1155.address, otherMockERC1155.address, mockERC1155.address],
+                    [tokenId, tokenId2, tokenId3],
+                    [amount, amount]
+                )
+            ).to.be.revertedWith("VDR_BatchLengthMismatch");
+
+
             await router.connect(user).depositERC1155Batch(
                 vault.address,
                 [mockERC1155.address, otherMockERC1155.address, mockERC1155.address],
@@ -404,6 +451,15 @@ describe("VaultDepositRouter", () => {
             // approve router to send a punk in
             await punks.connect(user).offerPunkForSaleToAddress(tokenId, 0, router.address);
             await punks.connect(user).offerPunkForSaleToAddress(tokenId2, 0, router.address);
+
+            await expect(
+                router.connect(user).depositPunkBatch(
+                    vault.address,
+                    [punks.address],
+                    [tokenId, tokenId2]
+                )
+            ).to.be.revertedWith("VDR_BatchLengthMismatch");
+
             await router.connect(user).depositPunkBatch(
                 vault.address,
                 [punks.address, punks.address],

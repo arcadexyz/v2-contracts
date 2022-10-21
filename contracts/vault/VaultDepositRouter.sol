@@ -198,6 +198,8 @@ contract VaultDepositRouter is IVaultDepositRouter {
     ) external override validate(vault, msg.sender) {
         uint256 numItems = tokens.length;
         if (numItems != ids.length) revert VDR_BatchLengthMismatch();
+        if (numItems != amounts.length) revert VDR_BatchLengthMismatch();
+        if (ids.length != amounts.length) revert VDR_BatchLengthMismatch();
 
         IVaultInventoryReporter.Item[] memory items = new IVaultInventoryReporter.Item[](numItems);
 
