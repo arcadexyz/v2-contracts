@@ -124,8 +124,6 @@ contract VaultDepositRouter is IVaultDepositRouter {
         address token,
         uint256 id
     ) external override validate(vault, msg.sender) {
-        IERC721(token).safeTransferFrom(msg.sender, vault, id);
-
         IVaultInventoryReporter.Item[] memory items = new IVaultInventoryReporter.Item[](1);
 
         items[0] = _depositERC721(vault, token, id);
@@ -177,8 +175,6 @@ contract VaultDepositRouter is IVaultDepositRouter {
         uint256 id,
         uint256 amount
     ) external override validate(vault, msg.sender) {
-        IERC1155(token).safeTransferFrom(msg.sender, vault, id, amount, "");
-
         IVaultInventoryReporter.Item[] memory items = new IVaultInventoryReporter.Item[](1);
         items[0] = _depositERC1155(vault, token, id, amount);
 
@@ -326,8 +322,6 @@ contract VaultDepositRouter is IVaultDepositRouter {
         address token,
         uint256 id
     ) internal returns (IVaultInventoryReporter.Item memory) {
-        console.log("ID", msg.sender, token, address(this));
-        console.log("APPROVED", IERC721(token).getApproved(id));
         IERC721(token).safeTransferFrom(msg.sender, vault, id);
 
         return IVaultInventoryReporter.Item({
