@@ -11,7 +11,6 @@ import {
     AssetVault,
     CallWhitelist,
     VaultFactory,
-    MockCallDelegator,
     MockERC20,
     MockERC721,
     MockERC1155,
@@ -257,6 +256,29 @@ describe("VaultDepositRouter", () => {
             expect(items[0].tokenAddress).to.eq(mockERC1155.address);
             expect(items[0].tokenId).to.eq(tokenId);
             expect(items[0].tokenAmount).to.eq(amount);
+        });
+
+        it("should accept deposit from a CryptoPunk and report inventory", async () => {
+            const { vault, punks, user, router, reporter } = await loadFixture(fixture);
+
+            const tokenId = 8888;
+            await punks.setInitialOwner(user.address, tokenId);
+            await punks.allInitialOwnersAssigned();
+
+            // approve router to send a punk in
+            await punks.connect(user).offerPunkForSaleToAddress(tokenId, 0, router.address);
+            await router.connect(user).depositPunk(vault.address, punks.address, tokenId);
+
+            expect(await punks.balanceOf(vault.address)).to.equal(1);
+
+            // Expect reporter to show correct inventory
+            expect(await reporter.verify(vault.address)).to.eq(true);
+
+            const items = await reporter.enumerate(vault.address);
+
+            expect(items.length).to.eq(1);
+            expect(items[0].tokenAddress).to.eq(punks.address);
+            expect(items[0].tokenId).to.eq(tokenId);
         });
     });
 });

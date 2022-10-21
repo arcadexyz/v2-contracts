@@ -13,8 +13,9 @@ import "../external/interfaces/IPunks.sol";
 
 import "hardhat/console.sol";
 
-// TODO: Write tests
-// TODO: Add permissions
+// TODO: Write router tests
+// TODO: Add repoter permissions
+// TODO: Write reporter tests
 
 /**
  * @title VaultInventoryReporter
