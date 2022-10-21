@@ -8,12 +8,16 @@ import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableMap.sol";
 
+import "./VaultOwnershipChecker.sol";
+import "./OwnableERC721.sol";
 import "../interfaces/IVaultInventoryReporter.sol";
 import "../external/interfaces/IPunks.sol";
 
 import "hardhat/console.sol";
 
 // TODO: Add reporter permissions
+// TODO: Add permits
+
 // TODO: Write reporter tests
 
 /**
@@ -32,7 +36,7 @@ import "hardhat/console.sol";
  * the report is also idempotent - any matching itemsHash will simply
  * update a status or amount, and will not increment any stored value.
  */
-contract VaultInventoryReporter is IVaultInventoryReporter {
+contract VaultInventoryReporter is IVaultInventoryReporter, VaultOwnershipChecker {
     using EnumerableSet for EnumerableSet.Bytes32Set;
 
     // ============================================ STATE ==============================================
@@ -49,6 +53,9 @@ contract VaultInventoryReporter is IVaultInventoryReporter {
     mapping(address => mapping(bytes32 => Item)) public inventoryForVault;
     /// @notice vault address -> itemHash[] (for enumeration)
     mapping(address => EnumerableSet.Bytes32Set) private inventoryKeysForVault;
+    /// @notice Approvals to modify inventory contents for a vault
+    ///         vault -> approved address
+    mapping(address => address) public approved;
 
     // ===================================== INVENTORY OPERATIONS ======================================
 
@@ -60,7 +67,7 @@ contract VaultInventoryReporter is IVaultInventoryReporter {
      * @param items                         The list of items to add.
      */
     // solhint-disable-next-line code-complexity
-    function add(address vault, Item[] calldata items) external override {
+    function add(address vault, Item[] calldata items) external override validate(msg.sender, vault) {
         // For each item, verify the vault actually owns it, or revert
         uint256 numItems = items.length;
 
@@ -108,7 +115,7 @@ contract VaultInventoryReporter is IVaultInventoryReporter {
      * @param vault                         The address of the vault.
      * @param items                         The list of items to remove.
      */
-    function remove(address vault, Item[] calldata items) external override {
+    function remove(address vault, Item[] calldata items) external override validate(msg.sender, vault) {
         uint256 numItems = items.length;
 
         if (numItems > MAX_ITEMS_PER_REGISTRATION) revert VIR_TooManyItems(MAX_ITEMS_PER_REGISTRATION);
@@ -128,7 +135,7 @@ contract VaultInventoryReporter is IVaultInventoryReporter {
      *
      * @param vault                         The address of the vault.
      */
-    function clear(address vault) external override {
+    function clear(address vault) external override validate(msg.sender, vault) {
         uint256 numItems = inventoryKeysForVault[vault].length();
 
         if (numItems > MAX_ITEMS_PER_REGISTRATION) revert VIR_TooManyItems(MAX_ITEMS_PER_REGISTRATION);
@@ -268,6 +275,39 @@ contract VaultInventoryReporter is IVaultInventoryReporter {
         return inventoryForVault[vault][itemHash];
     }
 
+    // ========================================= PERMISSIONS ===========================================
+
+    /**
+     * @notice Sets an approval for a vault. If approved, a caller is allowed to make updates
+     *         to the vault's reported inventory. The caller itself must be the owner or approved
+     *         for the vault's corresponding ownership token. Can unset an approval by sending
+     *         the zero address as a target.
+     *
+     * @param vault                         The vault to set approval for.
+     * @param target                        The address to set approval for.
+     */
+    function setApproval(address vault, address target) external override {
+        address factory = OwnableERC721(vault).ownershipToken();
+        checkOwnership(factory, vault, msg.sender);
+
+        // Set approval, overwriting any previous
+        // If zero, results in no approvals
+        approved[vault] = target;
+
+        emit SetApproval(vault, target);
+    }
+
+    /**
+     * @notice Reports.
+     */
+    function isOwnerOrApproved(address vault, address target) public view override returns (bool) {
+        address factory = OwnableERC721(vault).ownershipToken();
+        uint256 tokenId = uint256(uint160(vault));
+        address owner = IERC721(factory).ownerOf(tokenId);
+
+        return owner == target || approved[vault] == target;
+    }
+
     // =========================================== HELPERS =============================================
 
 
@@ -312,5 +352,11 @@ contract VaultInventoryReporter is IVaultInventoryReporter {
      */
     function _hash(Item memory item) internal pure returns (bytes32) {
         return keccak256(abi.encodePacked(item.tokenAddress, item.tokenId, item.tokenAmount));
+    }
+
+    modifier validate(address caller, address vault) {
+        // If caller is not owner or approved for vault, then revert
+        if (!isOwnerOrApproved(vault, caller)) revert VIR_NotApproved(vault, caller);
+
     }
 }

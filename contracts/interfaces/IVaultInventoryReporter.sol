@@ -8,6 +8,7 @@ interface IVaultInventoryReporter {
     event Add(address indexed vault, address indexed reporter, bytes32 itemHash);
     event Remove(address indexed vault, address indexed reporter, bytes32 itemHash);
     event Clear(address indexed vault, address indexed reporter);
+    event SetApproval(address indexed vault, address indexed target);
 
     // ============= Errors ==============
 
@@ -16,6 +17,7 @@ interface IVaultInventoryReporter {
     error VIR_InvalidRegistration(address vault, uint256 itemIndex);
     error VIR_NotVerified(address vault, uint256 itemIndex);
     error VIR_NotInInventory(address vault, bytes32 itemHash);
+    error VIR_NotApproved(address vault, address target);
 
     // ============= Data Types ==============
 
@@ -58,4 +60,10 @@ interface IVaultInventoryReporter {
     function keyAtIndex(address vault, uint256 index) external view returns (bytes32);
 
     function itemAtIndex(address vault, uint256 index) external view returns (Item memory);
+
+    // ================ Permissions ================
+
+    function setApproval(address vault, address target) external;
+
+    function isOwnerOrApproved(address vault, address target) external view returns (bool);
 }

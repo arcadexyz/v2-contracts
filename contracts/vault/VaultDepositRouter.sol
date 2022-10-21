@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
+import "./VaultOwnershipChecker.sol";
 import "../interfaces/IVaultDepositRouter.sol";
 import "../interfaces/IVaultInventoryReporter.sol";
 import "../interfaces/IVaultFactory.sol";
@@ -21,7 +22,7 @@ import "../external/interfaces/IPunks.sol";
  * By depositing to asset vaults by calling the functions in this contract,
  * inventory registration will be automatically updated.
  */
-contract VaultDepositRouter is IVaultDepositRouter {
+contract VaultDepositRouter is IVaultDepositRouter, VaultOwnershipChecker {
     using SafeERC20 for IERC20;
 
     // ============================================ STATE ==============================================
@@ -340,17 +341,7 @@ contract VaultDepositRouter is IVaultDepositRouter {
      * @param caller                        The caller who wishes to deposit.
      */
     modifier validate(address vault, address caller) {
-        if (vault == address(0)) revert VDR_ZeroAddress();
-        if (!IVaultFactory(factory).isInstance(vault)) revert VDR_InvalidVault(vault);
-
-        uint256 tokenId = uint256(uint160(vault));
-        address owner = IERC721(factory).ownerOf(tokenId);
-
-        if (
-            caller != owner
-            && IERC721(factory).getApproved(tokenId) != caller
-            && !IERC721(factory).isApprovedForAll(owner, caller)
-        ) revert VDR_NotOwnerOrApproved(vault, caller);
+        checkOwnership(factory, vault, caller);
 
         _;
     }
