@@ -12,8 +12,6 @@ import "../interfaces/IVaultInventoryReporter.sol";
 import "../interfaces/IVaultFactory.sol";
 import "../external/interfaces/IPunks.sol";
 
-import "hardhat/console.sol";
-
 /**
  * @title VaultInventoryReporter
  * @author Non-Fungible Technologies, Inc.
@@ -270,8 +268,8 @@ contract VaultDepositRouter is IVaultDepositRouter {
             items[i] = IVaultInventoryReporter.Item({
                 itemType: IVaultInventoryReporter.ItemType.PUNKS,
                 tokenAddress: token,
-                tokenId: 0,
-                tokenAmount: id
+                tokenId: id,
+                tokenAmount: 0
             });
         }
 

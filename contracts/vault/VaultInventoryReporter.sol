@@ -13,8 +13,7 @@ import "../external/interfaces/IPunks.sol";
 
 import "hardhat/console.sol";
 
-// TODO: Write router tests
-// TODO: Add repoter permissions
+// TODO: Add reporter permissions
 // TODO: Write reporter tests
 
 /**
@@ -28,6 +27,10 @@ import "hardhat/console.sol";
  * be used specifically to verify _whether_ certain items are in the
  * reported inventory, and not to get a sense of truth as to _all_
  * the items in a particular vault.
+ *
+ * Based on the method of storing inventory based on an itemsHash,
+ * the report is also idempotent - any matching itemsHash will simply
+ * update a status or amount, and will not increment any stored value.
  */
 contract VaultInventoryReporter is IVaultInventoryReporter {
     using EnumerableSet for EnumerableSet.Bytes32Set;
