@@ -13,9 +13,8 @@ import "../external/interfaces/IPunks.sol";
 
 import "hardhat/console.sol";
 
-// TODO: Add events
 // TODO: Write tests
-// TODO: Write deploy script
+// TODO: Add permissions
 
 /**
  * @title VaultInventoryReporter
@@ -93,6 +92,8 @@ contract VaultInventoryReporter is IVaultInventoryReporter {
             // Does not encode itemType, meaning updates can be made if wrong item type was submitted
             inventoryForVault[vault][itemHash] = item;
             inventoryKeysForVault[vault].add(itemHash);
+
+            emit Add(vault, msg.sender, itemHash);
         }
     }
 
@@ -113,6 +114,8 @@ contract VaultInventoryReporter is IVaultInventoryReporter {
 
             delete inventoryForVault[vault][itemHash];
             inventoryKeysForVault[vault].remove(itemHash);
+
+            emit Remove(vault, msg.sender, itemHash);
         }
     }
 
@@ -132,6 +135,8 @@ contract VaultInventoryReporter is IVaultInventoryReporter {
             delete inventoryForVault[vault][itemHash];
             inventoryKeysForVault[vault].remove(itemHash);
         }
+
+        emit Clear(vault, msg.sender);
     }
 
     // ========================================= VERIFICATION ==========================================

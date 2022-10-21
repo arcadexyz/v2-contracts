@@ -5,7 +5,9 @@ pragma solidity ^0.8.11;
 interface IVaultInventoryReporter {
     // ============= Events ==============
 
-    event Registered(address indexed vault, address indexed reporter, bytes32 itemsHash);
+    event Add(address indexed vault, address indexed reporter, bytes32 itemHash);
+    event Remove(address indexed vault, address indexed reporter, bytes32 itemHash);
+    event Clear(address indexed vault, address indexed reporter);
 
     // ============= Errors ==============
 
