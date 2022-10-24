@@ -135,6 +135,7 @@ contract VaultInventoryReporter is IVaultInventoryReporter, VaultOwnershipChecke
     function remove(address vault, Item[] calldata items) public override validate(msg.sender, vault) {
         uint256 numItems = items.length;
 
+        if (numItems == 0) revert VIR_NoItems();
         if (numItems > MAX_ITEMS_PER_REGISTRATION) revert VIR_TooManyItems(MAX_ITEMS_PER_REGISTRATION);
 
         for (uint256 i = 0; i < numItems; i++) {

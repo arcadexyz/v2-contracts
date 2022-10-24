@@ -9,8 +9,14 @@ export const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
  */
 export const mint = async (token: MockERC1155, to: Signer, amount: BigNumber): Promise<string> => {
     const address = await to.getAddress();
+    return mintToAddress(token, address, amount);
+};
 
-    const tx = await token.mint(address, amount);
+/**
+ * Mint tokens for `to`
+ */
+export const mintToAddress = async (token: MockERC1155, to: string, amount: BigNumber): Promise<string> => {
+    const tx = await token.mint(to, amount);
     const receipt = await tx.wait();
 
     if (receipt && receipt.events && receipt.events.length === 1 && receipt.events[0].args) {
