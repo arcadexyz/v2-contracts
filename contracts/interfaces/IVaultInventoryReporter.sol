@@ -18,6 +18,8 @@ interface IVaultInventoryReporter {
     error VIR_NotVerified(address vault, uint256 itemIndex);
     error VIR_NotInInventory(address vault, bytes32 itemHash);
     error VIR_NotApproved(address vault, address target);
+    error VIR_PermitDeadlineExpired(uint256 deadline);
+    error VIR_InvalidPermitSignature(address signer);
 
     // ============= Data Types ==============
 
@@ -42,6 +44,45 @@ interface IVaultInventoryReporter {
     function remove(address vault, Item[] calldata items) external;
 
     function clear(address vault) external;
+
+    function addWithPermit(
+        address vault,
+        Item[] calldata items,
+        uint256 deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external;
+
+    function removeWithPermit(
+        address vault,
+        Item[] calldata items,
+        uint256 deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external;
+
+    function clearWithPermit(
+        address vault,
+        uint256 deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external;
+
+    function permit(
+        address owner,
+        address target,
+        address vault,
+        uint256 deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external;
+
+    // solhint-disable-next-line func-name-mixedcase
+    function DOMAIN_SEPARATOR() external view returns (bytes32);
 
     // ================ Verification ================
 

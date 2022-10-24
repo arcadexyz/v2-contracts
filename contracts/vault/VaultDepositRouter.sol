@@ -341,7 +341,7 @@ contract VaultDepositRouter is IVaultDepositRouter, VaultOwnershipChecker {
      * @param caller                        The caller who wishes to deposit.
      */
     modifier validate(address vault, address caller) {
-        checkOwnership(factory, vault, caller);
+        _checkApproval(factory, vault, caller);
 
         _;
     }
