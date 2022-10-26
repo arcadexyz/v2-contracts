@@ -17,10 +17,10 @@ import {
     CryptoPunksMarket,
     VaultInventoryReporter
 } from "../typechain";
-import { ZERO_ADDRESS } from "./utils/erc20";
 import { mintToAddress as mintERC721 } from "./utils/erc721";
 import { mintToAddress as mintERC1155 } from "./utils/erc1155";
 import { deploy } from "./utils/contracts";
+import { createInventoryPermitSignature, InventoryPermitData } from "./utils/eip712";
 
 type Signer = SignerWithAddress;
 
@@ -28,6 +28,9 @@ const ERC_721_ITEM_TYPE = 0;
 const ERC_1155_ITEM_TYPE = 1;
 const ERC_20_ITEM_TYPE = 2;
 const PUNKS_ITEM_TYPE = 3;
+
+const maxDeadline = hre.ethers.constants.MaxUint256;
+const NAME = "VR1";
 
 const hashItem = (item: Item) => {
     const types = ["address", "uint256", "uint256"];
@@ -105,7 +108,7 @@ describe("VaultInventoryReporter", () => {
 
         const punks = <CryptoPunksMarket>await deploy("CryptoPunksMarket", signers[0], []);
 
-        const reporter = <VaultInventoryReporter>await deploy("VaultInventoryReporter", signers[0], []);
+        const reporter = <VaultInventoryReporter>await deploy("VaultInventoryReporter", signers[0], [NAME]);
 
         return {
             nft: factory,
@@ -361,7 +364,65 @@ describe("VaultInventoryReporter", () => {
             });
 
             it("should not allow an address to add items to inventory with an invalid permit signature");
-            it("should allow an address to add items to inventory with a permit signature from the owner");
+            it("should not allow an address to add items to inventory with an expired permit signature");
+            it("should allow an address to add items to inventory with a permit signature from the owner", async () => {
+                const { reporter, user, other, vault, punks, mockERC1155, mockERC20, mockERC721 } = ctx;
+
+                const deadline = maxDeadline;
+
+                const permitData: InventoryPermitData = {
+                    owner: user.address,
+                    target: other.address,
+                    vault: vault.address,
+                    nonce: 1,
+                    deadline
+                };
+
+                const sig = await createInventoryPermitSignature(
+                    reporter.address,
+                    NAME,
+                    permitData,
+                    user
+                );
+
+                const items: Item[] = [
+                    {
+                        itemType: ERC_20_ITEM_TYPE,
+                        tokenAddress: mockERC20.address,
+                        tokenId: 0,
+                        tokenAmount: amount20
+                    },
+                    {
+                        itemType: ERC_721_ITEM_TYPE,
+                        tokenAddress: mockERC721.address,
+                        tokenId: id721,
+                        tokenAmount: 0
+                    },
+                    {
+                        itemType: ERC_1155_ITEM_TYPE,
+                        tokenAddress: mockERC1155.address,
+                        tokenId: id1155,
+                        tokenAmount: amount1155
+                    },
+                    {
+                        itemType: PUNKS_ITEM_TYPE,
+                        tokenAddress: punks.address,
+                        tokenId: idPunk,
+                        tokenAmount: 0
+                    }
+                ];
+
+                await expect(
+                    reporter.connect(other).addWithPermit(vault.address, items, deadline, sig.v, sig.r, sig.s)
+                ).to.emit(reporter, "Add")
+                    .withArgs(vault.address, other.address, hashItem(items[0]))
+                    .to.emit(reporter, "Add")
+                    .withArgs(vault.address, other.address, hashItem(items[1]))
+                    .to.emit(reporter, "Add")
+                    .withArgs(vault.address, other.address, hashItem(items[2]))
+                    .to.emit(reporter, "Add")
+                    .withArgs(vault.address, other.address, hashItem(items[3]));
+            });
         });
 
         describe("remove", () => {
@@ -374,6 +435,7 @@ describe("VaultInventoryReporter", () => {
             it("should allow an approved address to remove items from inventory");
             it("should not revert if a specified item is not registered in inventory");
             it("should not allow an address to remove items from inventory with an invalid permit signature");
+            it("should not allow an address to remove items from inventory with an expired permit signature");
             it("should allow an address to remove items from inventory with a permit signature from the owner");
         });
 
@@ -385,6 +447,7 @@ describe("VaultInventoryReporter", () => {
             it("should allow the vault owner to clear inventory");
             it("should allow an approved address to clear inventory");
             it("should not allow an address to clear inventory with an invalid permit signature");
+            it("should not allow an address to clear inventory with an expired permit signature");
             it("should allow an address to clear inventory with a permit signature from the owner");
         });
     });
