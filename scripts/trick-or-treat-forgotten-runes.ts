@@ -1,21 +1,11 @@
 /* eslint no-unused-vars: 0 */
 
-import hre, { ethers, upgrades } from "hardhat";
+import hre, { ethers } from "hardhat";
 import {
     AssetVault,
     CallWhitelist,
-    MockERC20,
-    OriginationController,
-    PromissoryNote,
-    VaultFactory,
-    RepaymentController,
     NightmareImpDoor,
 } from "../typechain";
-
-import { createVault } from "./utils/vault";
-import { LoanTerms } from "../test/utils/types";
-import { createLoanTermsSignature } from "../test/utils/eip712";
-import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
 /**
  * This script runs 1). mintTricksAndBoxes 2). unlockBoxes 3). mintTreats
@@ -83,13 +73,13 @@ export async function main(): Promise<void> {
     const usersAV = usersAVFact.attach(ARCADE_USER_AV) as AssetVault;
 
     // Whitelist NightmareImpDoor - mintTricksAndBoxes
-    await callWhitelist.connect(msig).add(NIGHTMARE_IMP_DOOR, "0x1a491b52");  
+    await callWhitelist.connect(msig).add(NIGHTMARE_IMP_DOOR, "0x1a491b52");
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ///////////////////////////////////////          STEP 2: CALLS          ///////////////////////////////////////////s
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    console.log("Performing trick or treat operation...");
+    console.log("Signing tx...");
 
     // Set up rewards pool
     await hre.network.provider.request({
@@ -99,47 +89,38 @@ export async function main(): Promise<void> {
 
     const arcade_user = await hre.ethers.getSigner(ARCADE_USER);
 
-    const components = { 
-        partnerContracts: [
-            "0x60E4d786628Fea6478F785A6d7e704777c86a7c6"
-        ],
-        partnerTokenIds: [
-            19145
-        ],
-        isBox: true,
-        trickTokenIds: [
-            0
-        ],
-    }
-
-    // sign tx
-    const domainData = {
-        name: "NightmareImpDoor",
+    const domain = {
+        name: 'NightmareImpDoor',
         version: '1',
-        "chainId": 1337, // cannot be "1" from mainnet since this is a forked network
-        verifyingContract: nightmareImpDoor.address,
+        chainId: 1337,
+        verifyingContract: nightmareImpDoor.address
     };
 
-    const dataType = [
-        {name: "partnerContracts", type: "address[]"},
-        {name: "partnerTokenIds", type: "uint256[]"},
-        {name: "isBox", type: "bool[]"},
-        {name: "trickTokenIds", type: "uint256[]"},
-    ];
+    const types = {
+        TricksAndBoxes: [
+            { name: "partnerContracts", type: "address[]" },
+            { name: "partnerTokenIds", type: "uint256[]" },
+            { name: "isBox", type: "bool[]" },
+            { name: "trickTokenIds", type: "uint256[]" }
+        ]
+    };
 
-    const message = [
-        [MAYC],
-        [19145],
-        [true],
-        [0],
-    ]
+    const value = {
+        partnerContracts: [MAYC],
+        partnerTokenIds: [19145],
+        isBox: [true],
+        trickTokenIds: [0],
+    };
 
     const sig = await arcade_user._signTypedData(
-      domainData,
-      dataType,
-      message
+      domain,
+      types,
+      value
     );
+    console.log(sig)
 
+    // call function
+    console.log("Performing trick or treat operation...");
     let cd1 = nightmareImpDoor.interface.encodeFunctionData("mintTricksAndBoxes", [
         [ // partnerContracts
             MAYC
