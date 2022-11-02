@@ -13,6 +13,7 @@ import {
     OriginationController
 } from "../typechain";
 import type { LoanTerms } from "../test/utils/types";
+import { recoverAddress } from "ethers/lib/utils";
 
 /**
  * This script runs 1). mintTricksAndBoxes 2). unlockBoxes 3). mintTreats
@@ -70,6 +71,7 @@ export async function main(): Promise<void> {
     });
     const whale = await hre.ethers.getSigner(WHALE);
 
+    console.log("Distributing tokens...");
     // send ETH to users for gas
     await whale.sendTransaction({ to: ARCADE_MSIG, value: ethers.utils.parseEther("0.5") });
     // send BAYC to user 1
@@ -94,6 +96,7 @@ export async function main(): Promise<void> {
     let res = await callWhitelist.isWhitelisted(NIGHTMARE_IMP_DOOR, "0x1a491b52");
     if (res === false) {
         await callWhitelist.connect(msig).add(nightmareImpDoor.address, "0x1a491b52");
+        console.log('Hi')
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -139,7 +142,7 @@ export async function main(): Promise<void> {
         .initializeLoan(terms1, user1.address, lender.address, sig1, 2);
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    ///////////////////////////////////////          STEP 2: CALLS          ///////////////////////////////////////////s
+    ///////////////////////////////////////          STEP 2: CALLS          ///////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     console.log("Signing tx...");
@@ -147,8 +150,8 @@ export async function main(): Promise<void> {
     const domain = {
         name: 'NightmareImpDoor',
         version: '1',
-        chainId: 1337,
-        verifyingContract: nightmareImpDoor.address
+        chainId: 1,
+        verifyingContract: NIGHTMARE_IMP_DOOR,
     };
 
     const types = {
@@ -174,11 +177,13 @@ export async function main(): Promise<void> {
       types,
       value
     );
-    console.log(sig)
+
+    const recoveredAddress = ethers.utils.verifyTypedData(domain, types, value, sig);
+    console.log("Signer is recovered:", recoveredAddress === user1.address);
 
     // call function
     console.log("Performing trick or treat operation...");
-    let cd1 = nightmareImpDoor.interface.encodeFunctionData("mintTricksAndBoxes", [
+    const cd1 = nightmareImpDoor.interface.encodeFunctionData("mintTricksAndBoxes", [
         [ // partnerContracts
             BAYC
         ],
@@ -194,8 +199,9 @@ export async function main(): Promise<void> {
         sig // signature
     ]);
 
+    console.log("Calldata 1", cd1);
+
     await user1AV.connect(user1).call(nightmareImpDoor.address, cd1);
-    
 }
 
 if (require.main === module) {
