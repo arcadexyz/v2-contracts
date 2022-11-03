@@ -10,28 +10,30 @@ import "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
-import "./external/interfaces/ILendingPool.sol";
-import "./interfaces/IFlashRolloverBalancer.sol";
-import "./interfaces/ILoanCore.sol";
-import "./interfaces/IOriginationController.sol";
-import "./interfaces/IRepaymentController.sol";
-import "./interfaces/IFeeController.sol";
+import "../external/interfaces/ILendingPool.sol";
+import "../interfaces/IFlashRolloverBalancer.sol";
+import "../interfaces/ILoanCore.sol";
+import "../interfaces/IOriginationController.sol";
+import "../interfaces/IRepaymentController.sol";
+import "../interfaces/IFeeController.sol";
 
-import "./v1/ILoanCoreV1.sol";
-import "./v1/IAssetWrapperV1.sol";
-import "./v1/LoanLibraryV1.sol";
+// solhint-disable max-line-length
 
 /**
- * @title BalancerFlashRolloverV1toV2
+ * @title FlashRolloverStakingVaultUpgrade
  * @author Non-Fungible Technologies, Inc.
  *
  * Based off Arcade.xyz's V1 lending FlashRollover.
- * Uses AAVE flash loan liquidity to repay a loan
- * on the V1 protocol, and open a new loan on V2
- * (with lender's signature).
+ * Switches from a V2 loan with an old asset vault
+ * to a V2 loan with a new asset vault.
  */
-contract BalancerFlashRolloverV1toV2 is IFlashRolloverBalancer, ReentrancyGuard, ERC721Holder, ERC1155Holder {
+contract FlashRolloverStakingVaultUpgrade is ReentrancyGuard, ERC721Holder, ERC1155Holder {
     using SafeERC20 for IERC20;
+
+    event Rollover(address indexed lender, address indexed borrower, uint256 collateralTokenId, uint256 newLoanId);
+    event Migration(address indexed oldLoanCore, address indexed newLoanCore, uint256 newLoanId);
+    event SetOwner(address owner);
+
 
     struct ERC20Holding {
         address tokenAddress;
@@ -49,6 +51,37 @@ contract BalancerFlashRolloverV1toV2 is IFlashRolloverBalancer, ReentrancyGuard,
         uint256 amount;
     }
 
+    struct VaultRolloverContractParams {
+        ILoanCore loanCore;
+        IRepaymentController repaymentController;
+        IOriginationController originationController;
+        IVaultFactory vaultFactory;
+        IVaultFactory targetVaultFactory;
+    }
+
+    struct OperationData {
+        VaultRolloverContractParams contracts;
+        uint256 loanId;
+        LoanLibrary.LoanTerms newLoanTerms;
+        address lender;
+        uint160 nonce;
+        uint8 v;
+        bytes32 r;
+        bytes32 s;
+    }
+
+    struct OperationContracts {
+        ILoanCore loanCore;
+        IERC721 borrowerNote;
+        IERC721 lenderNote;
+        IFeeController feeController;
+        IERC721 sourceAssetWrapper;
+        IVaultFactory sourceVaultFactory;
+        IVaultFactory targetVaultFactory;
+        IRepaymentController repaymentController;
+        IOriginationController originationController;
+    }
+
     /* solhint-disable var-name-mixedcase */
     // Balancer Contracts
     IVault public immutable VAULT; // 0xBA12222222228d8Ba445958a75a0704d566BF2C8
@@ -64,7 +97,7 @@ contract BalancerFlashRolloverV1toV2 is IFlashRolloverBalancer, ReentrancyGuard,
     }
 
     function rolloverLoan(
-        RolloverContractParams calldata contracts,
+        VaultRolloverContractParams calldata contracts,
         uint256 loanId,
         LoanLibrary.LoanTerms calldata newLoanTerms,
         address lender,
@@ -72,11 +105,11 @@ contract BalancerFlashRolloverV1toV2 is IFlashRolloverBalancer, ReentrancyGuard,
         uint8 v,
         bytes32 r,
         bytes32 s
-    ) external override {
-        LoanLibraryV1.LoanTerms memory loanTerms = contracts.sourceLoanCore.getLoan(loanId).terms;
+    ) external {
+        LoanLibrary.LoanTerms memory loanTerms = contracts.loanCore.getLoan(loanId).terms;
 
         {
-            _validateRollover(contracts.sourceLoanCore, contracts.targetVaultFactory, loanTerms, newLoanTerms, contracts.sourceLoanCore.getLoan(loanId).borrowerNoteId);
+            _validateRollover(contracts.loanCore, contracts.vaultFactory, contracts.targetVaultFactory, loanTerms, newLoanTerms, loanId);
         }
 
         {
@@ -118,10 +151,10 @@ contract BalancerFlashRolloverV1toV2 is IFlashRolloverBalancer, ReentrancyGuard,
         OperationContracts memory opContracts = _getContracts(opData.contracts);
 
         // Get loan details
-        LoanLibraryV1.LoanData memory loanData = opContracts.loanCore.getLoan(opData.loanId);
+        LoanLibrary.LoanData memory loanData = opContracts.loanCore.getLoan(opData.loanId);
 
-        address borrower = opContracts.borrowerNote.ownerOf(loanData.borrowerNoteId);
-        address lender = opContracts.lenderNote.ownerOf(loanData.lenderNoteId);
+        address borrower = opContracts.borrowerNote.ownerOf(opData.loanId);
+        address lender = opContracts.lenderNote.ownerOf(opData.loanId);
 
         // Do accounting to figure out amount each party needs to receive
         (uint256 flashAmountDue, uint256 needFromBorrower, uint256 leftoverPrincipal) = _ensureFunds(
@@ -207,9 +240,12 @@ contract BalancerFlashRolloverV1toV2 is IFlashRolloverBalancer, ReentrancyGuard,
 
     function _repayLoan(
         OperationContracts memory contracts,
-        LoanLibraryV1.LoanData memory loanData,
+        LoanLibrary.LoanData memory loanData,
         address borrower
     ) internal {
+        // TODO: Fix this by using loanId instead of borrowerNoteId,
+        //       and calculating interest rate
+
         // Take BorrowerNote from borrower
         // Must be approved for withdrawal
         contracts.borrowerNote.transferFrom(borrower, address(this), loanData.borrowerNoteId);
@@ -265,9 +301,16 @@ contract BalancerFlashRolloverV1toV2 is IFlashRolloverBalancer, ReentrancyGuard,
 
     function _recreateBundle(
         OperationContracts memory contracts,
-        LoanLibraryV1.LoanData memory loanData,
+        LoanLibrary.LoanData memory loanData,
         uint256 vaultId
     ) internal {
+        // TODO: Fix this by calling withdrawEnabled on old vault,
+        //       then withdrawing everything. Since we cannot enumerate contents,
+        //       we need to have them passed by the rollover function.
+        //       After withdrawing everythnig, we create a new vault with the new vault
+        //       factory, and send all the assets back in.
+
+
         uint256 oldBundleId = loanData.terms.collateralTokenId;
         IAssetWrapper sourceAssetWrapper = IAssetWrapper(address(contracts.sourceAssetWrapper));
 
@@ -317,35 +360,35 @@ contract BalancerFlashRolloverV1toV2 is IFlashRolloverBalancer, ReentrancyGuard,
         }
     }
 
-    function _getContracts(RolloverContractParams memory contracts) internal returns (OperationContracts memory) {
+    function _getContracts(VaultRolloverContractParams memory contracts) internal returns (OperationContracts memory) {
         return
             OperationContracts({
-                loanCore: contracts.sourceLoanCore,
-                borrowerNote: contracts.sourceLoanCore.borrowerNote(),
-                lenderNote: contracts.sourceLoanCore.lenderNote(),
-                feeController: contracts.targetLoanCore.feeController(),
-                sourceAssetWrapper: contracts.sourceLoanCore.collateralToken(),
+                loanCore: contracts.loanCore,
+                borrowerNote: contracts.loanCore.borrowerNote(),
+                lenderNote: contracts.loanCore.lenderNote(),
+                feeController: contracts.loanCore.feeController(),
+                sourceVaultFactory: contracts.vaultFactory,
                 targetVaultFactory: contracts.targetVaultFactory,
-                repaymentController: contracts.sourceRepaymentController,
-                originationController: contracts.targetOriginationController,
-                targetLoanCore: contracts.targetLoanCore,
-                targetBorrowerNote: contracts.targetLoanCore.borrowerNote()
+                repaymentController: contracts.repaymentController,
+                originationController: contracts.originationController
             });
     }
 
     function _validateRollover(
-        ILoanCoreV1 sourceLoanCore,
+        ILoanCore sourceLoanCore,
+        IVaultFactory sourceVaultFactory,
         IVaultFactory targetVaultFactory,
-        LoanLibraryV1.LoanTerms memory sourceLoanTerms,
+        LoanLibrary.LoanTerms memory sourceLoanTerms,
         LoanLibrary.LoanTerms calldata newLoanTerms,
         uint256 borrowerNoteId
     ) internal {
         require(sourceLoanCore.borrowerNote().ownerOf(borrowerNoteId) == msg.sender, "caller not borrower");
         require(newLoanTerms.payableCurrency == sourceLoanTerms.payableCurrency, "currency mismatch");
-        require(newLoanTerms.collateralAddress == address(targetVaultFactory), "must use vault");
+        require(newLoanTerms.collateralAddress == address(targetVaultFactory), "must target new vault");
+        require(sourceLoanTerms.collateralAddress == address(sourceVaultFactory), "must roll over from old vault");
     }
 
-    function setOwner(address _owner) external override {
+    function setOwner(address _owner) external {
         require(msg.sender == owner, "not owner");
 
         owner = _owner;
@@ -353,7 +396,16 @@ contract BalancerFlashRolloverV1toV2 is IFlashRolloverBalancer, ReentrancyGuard,
         emit SetOwner(owner);
     }
 
-    function flushToken(IERC20 token, address to) external override {
+    function flushToken(IERC20 token, address to) external {
+        require(msg.sender == owner, "not owner");
+
+        uint256 balance = token.balanceOf(address(this));
+        require(balance > 0, "no balance");
+
+        token.transfer(to, balance);
+    }
+
+    function flushERC721(IERC721 token, uint256 id, address to) external {
         require(msg.sender == owner, "not owner");
 
         uint256 balance = token.balanceOf(address(this));
