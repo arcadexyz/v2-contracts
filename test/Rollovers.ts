@@ -361,7 +361,7 @@ describe("Rollovers", () => {
                 lender,
                 "2",
                 2,
-                "b",
+                "l",
             );
 
             await expect(
