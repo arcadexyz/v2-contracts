@@ -3,6 +3,7 @@
 pragma solidity ^0.8.11;
 
 import "../libraries/LoanLibrary.sol";
+import "../interfaces/IOriginationController.sol";
 
 /**
  * @title LendingErrors
@@ -140,6 +141,14 @@ error OC_RolloverCollateralMismatch(
     address newCollateralAddress,
     uint256 newCollateralId
 );
+
+/**
+ * @notice New currency does not match for a loan rollover request.
+ *
+ * @param signer                       The address of the external signer.
+ * @param side                         The side of the loan being signed.
+ */
+error OC_SideMismatch(address signer, IOriginationController.Side side);
 
 // ==================================== ITEMS VERIFIER ======================================
 /// @notice All errors prefixed with IV_, to separate from other contracts in the protocol.

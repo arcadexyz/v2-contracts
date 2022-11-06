@@ -543,6 +543,34 @@ describe("OriginationController", () => {
                 .withArgs(await lender.getAddress(), originationController.address, loanTerms.principal);
         });
 
+        it("it does not allow a mismatch between signer and loan side", async () => {
+            const { originationController, mockERC20, vaultFactory, user: lender, other: borrower } = ctx;
+
+            const bundleId = await initializeBundle(vaultFactory, borrower);
+            const loanTerms = createLoanTerms(mockERC20.address, vaultFactory.address, {
+                collateralId: bundleId,
+            });
+            await mint(mockERC20, lender, loanTerms.principal);
+
+            const sig = await createLoanTermsSignature(
+                originationController.address,
+                "OriginationController",
+                loanTerms,
+                borrower,
+                "2",
+                1,
+                "l",
+            );
+
+            await approve(mockERC20, lender, originationController.address, loanTerms.principal);
+            await vaultFactory.connect(borrower).approve(originationController.address, bundleId);
+            await expect(
+                originationController
+                    .connect(borrower)
+                    .initializeLoan(loanTerms, await borrower.getAddress(), await lender.getAddress(), sig, 1),
+            ).to.be.revertedWith("SideMismatch");
+        });
+
         it("Initializes a loan with unbundled collateral", async () => {
             const { originationController, mockERC20, mockERC721, user: lender, other: borrower } = ctx;
 
@@ -605,6 +633,73 @@ describe("OriginationController", () => {
                     .connect(borrower)
                     .initializeLoan(loanTerms, await borrower.getAddress(), await lender.getAddress(), sig, 1),
             ).to.be.revertedWith("LC_NonceUsed");
+        });
+
+        //////////////////////// TODO: REMOVE IF KEVIN AGREES ////////////////////
+        /////////////////////////////////////////////////////////////////////////
+        xit("it does not allow a mismatch between signer and loan side when a party is a contract", async () => {
+            // Deploy an ERC-1271 to act as the lender
+            const {
+                originationController,
+                mockERC20,
+                vaultFactory,
+                user: lender,
+                other: borrower,
+                signers: signers,
+            } = ctx;
+            const lenderContract = <ERC1271LenderMock>await deploy("ERC1271LenderMock", lender, []);
+            const attacker = signers[1];
+
+            // Lender signs a borrow against a collateral, with convenient terms for the borrower
+            const bundleId = await initializeBundle(vaultFactory, lender);
+
+            const borrowerLoanTerms = createLoanTerms(mockERC20.address, vaultFactory.address, {
+                collateralId: bundleId,
+            });
+
+            // The lender signed a borrow signature
+            const sig = await createLoanTermsSignature(
+                originationController.address,
+                "OriginationController",
+                borrowerLoanTerms,
+                lender,
+                "2",
+                1,
+                "b",
+            );
+
+            // Lender is also willing to lend, with worse terms for the borrower and better terms for the lender
+            const lenderLoanTerms = createLoanTerms(mockERC20.address, vaultFactory.address, {
+                collateralId: bundleId,
+            });
+
+            await mint(mockERC20, lender, lenderLoanTerms.principal);
+            await mockERC20.connect(lender).transfer(lenderContract.address, lenderLoanTerms.principal);
+            await lenderContract.approve(mockERC20.address, originationController.address);
+            // No approval for origination - OC will check ERC-1271
+
+            await approve(mockERC20, lender, originationController.address, lenderLoanTerms.principal);
+
+            // The borrower buys the NFT from the lender
+            await vaultFactory
+                .connect(lender)
+                .transferFrom(await lender.getAddress(), await borrower.getAddress(), bundleId);
+
+            // The borrower want to borrow against that collateral with good terms for the borrower, that the lender didn't agree to as a lender
+            await vaultFactory.connect(borrower).approve(originationController.address, bundleId);
+
+            await expect(originationController.connect(borrower).approve(await lender.getAddress(), true))
+                .to.emit(originationController, "Approval")
+                .withArgs(borrower.address, await lender.getAddress(), true);
+
+            expect(await originationController.isApproved(await borrower.getAddress(), await lender.getAddress())).to.be
+                .true;
+
+            await expect(
+                originationController
+                    .connect(attacker)
+                    .initializeLoan(borrowerLoanTerms, await borrower.getAddress(), lenderContract.address, sig, 1),
+            ).to.be.revertedWith("OC_SideMismatch");
         });
 
         describe("initializeLoanWithCollateralPermit", () => {

@@ -38,7 +38,8 @@ import {
     OC_NumberInstallments,
     OC_SignatureIsExpired,
     OC_RolloverCurrencyMismatch,
-    OC_RolloverCollateralMismatch
+    OC_RolloverCollateralMismatch,
+    OC_SideMismatch
 } from "./errors/Lending.sol";
 
 /**
@@ -697,10 +698,25 @@ contract OriginationController is
         bytes32 sighash,
         Side neededSide
     ) internal view {
-        if (caller == signer) revert OC_ApprovedOwnLoan(caller);
-
         address shouldBeSigner = neededSide == Side.LEND ? lender : borrower;
         address shouldBeCaller = shouldBeSigner == lender ? borrower : lender;
+
+        //checks for signature side wrt to signer
+        if (signer == borrower && neededSide == Side.LEND) {
+            revert OC_SideMismatch(signer, Side.LEND);
+        } else if (signer == lender && neededSide == Side.BORROW) {
+            revert OC_SideMismatch(signer, Side.BORROW);
+        } else if (isSelfOrApproved(shouldBeCaller, caller) && shouldBeCaller == borrower) {
+            if (neededSide == Side.BORROW) {
+               revert OC_SideMismatch(shouldBeCaller, neededSide);
+            }
+        } else if (isSelfOrApproved(shouldBeCaller, caller) && shouldBeCaller == lender) {
+            if (neededSide == Side.LEND) {
+               revert OC_SideMismatch(shouldBeCaller, neededSide);
+           }
+        }
+
+        if (caller == signer) revert OC_ApprovedOwnLoan(caller);
 
         if (!isSelfOrApproved(shouldBeCaller, caller) && !isApprovedForContract(shouldBeCaller, sig, sighash)) {
             revert OC_CallerNotParticipant(msg.sender);
