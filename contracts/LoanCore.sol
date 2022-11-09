@@ -222,10 +222,6 @@ contract LoanCore is
 
         // transfer from msg.sender to this contract
         IERC20Upgradeable(data.terms.payableCurrency).safeTransferFrom(_msgSender(), address(this), returnAmount);
-        // asset and collateral redistribution
-        // Not using safeTransfer to prevent lenders from blocking
-        // loan receipt and forcing a default
-        //IERC20Upgradeable(data.terms.payableCurrency).transfer(lender, returnAmount);
         // add return amount to the lender reserve
         lenderReserve[lender][data.terms.payableCurrency] += returnAmount;
         IERC721Upgradeable(data.terms.collateralAddress).transferFrom(address(this), borrower, data.terms.collateralId);
@@ -448,13 +444,8 @@ contract LoanCore is
         // calculate total sent by borrower and transferFrom repayment controller to this address
         uint256 paymentTotal = _paymentToPrincipal + _paymentToLateFees + _paymentToInterest;
         IERC20Upgradeable(data.terms.payableCurrency).safeTransferFrom(_msgSender(), address(this), paymentTotal);
-        // Send payment to lender.
-        // Not using safeTransfer to prevent lenders from blocking
-        // loan receipt and forcing a default
-        // IERC20Upgradeable(data.terms.payableCurrency).transfer(lender, boundedPaymentTotal);
         // add boundedPaymentTotal to the lender reserve
         lenderReserve[lender][data.terms.payableCurrency] += boundedPaymentTotal;
-        IERC721Upgradeable(data.terms.collateralAddress).transferFrom(address(this), borrower, data.terms.collateralId);
 
         // If repaid, send collateral to borrower
         if (data.state == LoanLibrary.LoanState.Repaid) {

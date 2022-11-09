@@ -334,7 +334,7 @@ describe("Integration", () => {
             };
         };
 
-        it.only("should successfully repay loan", async () => {
+        it("should successfully repay loan", async () => {
             const context = await loadFixture(fixture);
             const { repaymentController, vaultFactory, mockERC20, loanCore, borrower, lender } = context;
             const { loanId, loanTerms, bundleId } = await initializeLoan(context, 1);
