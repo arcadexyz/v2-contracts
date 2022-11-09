@@ -77,6 +77,7 @@ contract LoanCore is
     // key is hash of (collateralAddress, collateralId)
     mapping(bytes32 => bool) private collateralInUse;
     mapping(address => mapping(uint160 => bool)) public usedNonces;
+    mapping(address => mapping(address => uint256)) public lenderReserve;
 
     // ========================================== CONSTRUCTOR ===========================================
 
@@ -224,7 +225,9 @@ contract LoanCore is
         // asset and collateral redistribution
         // Not using safeTransfer to prevent lenders from blocking
         // loan receipt and forcing a default
-        IERC20Upgradeable(data.terms.payableCurrency).transfer(lender, returnAmount);
+        //IERC20Upgradeable(data.terms.payableCurrency).transfer(lender, returnAmount);
+        // add return amount to the lender reserve
+        lenderReserve[lender][data.terms.payableCurrency] += returnAmount;
         IERC721Upgradeable(data.terms.collateralAddress).transferFrom(address(this), borrower, data.terms.collateralId);
 
         emit LoanRepaid(loanId);
@@ -279,6 +282,29 @@ contract LoanCore is
         IERC721Upgradeable(data.terms.collateralAddress).transferFrom(address(this), lender, data.terms.collateralId);
 
         emit LoanClaimed(loanId);
+    }
+
+    /**
+     * @notice Lender claiming of the borrower repayments. Can only be called by RepaymentController,
+     *         which verifies claim conditions. 
+     * 
+     * @param loanId                The ID of the loan to claim.
+     */
+    function claimRepayment(uint256 loanId)
+        external
+        override
+        whenNotPaused
+        onlyRole(REPAYER_ROLE)
+    {
+        LoanLibrary.LoanData memory data = loans[loanId];
+        // get lender
+        address lender = lenderNote.ownerOf(loanId);
+        // get reserve amount to return to the lender
+        uint256 returnAmount = lenderReserve[lender][data.terms.payableCurrency];
+        // zero out the lenders reserve balance
+        lenderReserve[lender][data.terms.payableCurrency] = 0;
+        // send repayment to lender
+        IERC20Upgradeable(data.terms.payableCurrency).transfer(lender, returnAmount);
     }
 
     /**
@@ -361,7 +387,7 @@ contract LoanCore is
         emit LoanRolledOver(oldLoanId, newLoanId);
     }
 
-    // ===================================== INSTALLMENT OPERATI\ONS =====================================
+    // ===================================== INSTALLMENT OPERATIONS =====================================
 
     /**
      * @notice Called from RepaymentController when paying back an installment loan.
@@ -417,7 +443,10 @@ contract LoanCore is
         // Send payment to lender.
         // Not using safeTransfer to prevent lenders from blocking
         // loan receipt and forcing a default
-        IERC20Upgradeable(data.terms.payableCurrency).transfer(lender, boundedPaymentTotal);
+        // IERC20Upgradeable(data.terms.payableCurrency).transfer(lender, boundedPaymentTotal);
+        // add boundedPaymentTotal to the lender reserve
+        lenderReserve[lender][data.terms.payableCurrency] += boundedPaymentTotal;
+        IERC721Upgradeable(data.terms.collateralAddress).transferFrom(address(this), borrower, data.terms.collateralId);
 
         // If repaid, send collateral to borrower
         if (data.state == LoanLibrary.LoanState.Repaid) {
