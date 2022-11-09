@@ -334,7 +334,7 @@ describe("Integration", () => {
             };
         };
 
-        it("should successfully repay loan", async () => {
+        it.only("should successfully repay loan", async () => {
             const context = await loadFixture(fixture);
             const { repaymentController, vaultFactory, mockERC20, loanCore, borrower, lender } = context;
             const { loanId, loanTerms, bundleId } = await initializeLoan(context, 1);
@@ -352,6 +352,8 @@ describe("Integration", () => {
                 .to.emit(loanCore, "LoanRepaid")
                 .withArgs(loanId);
 
+            await repaymentController.connect(lender).claimRepayment([lender.address], mockERC20.address);
+            
             // post-repaid state
             expect(await vaultFactory.ownerOf(bundleId)).to.equal(await borrower.getAddress());
             const postLenderBalance = await mockERC20.balanceOf(await lender.getAddress());

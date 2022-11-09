@@ -285,26 +285,34 @@ contract LoanCore is
     }
 
     /**
-     * @notice Lender claiming of the borrower repayments. Can only be called by RepaymentController,
-     *         which verifies claim conditions. 
-     * 
-     * @param loanId                The ID of the loan to claim.
+     * @notice Claiming of the borrower repayments. This function pays out the lender
+     * accounts provided in the function call their respective claim balances. Lender 
+     * repayments are tracked by the lenderReserve mapping.
+     *
+     * @param lenders              Lender accounts to recieve repayments. 
+     * @param payableCurrency      The currency requested to recieve.
      */
-    function claimRepayment(uint256 loanId)
+    function claimRepayment(address[] memory lenders, address payableCurrency)
         external
         override
         whenNotPaused
         onlyRole(REPAYER_ROLE)
     {
-        LoanLibrary.LoanData memory data = loans[loanId];
-        // get lender
-        address lender = lenderNote.ownerOf(loanId);
-        // get reserve amount to return to the lender
-        uint256 returnAmount = lenderReserve[lender][data.terms.payableCurrency];
-        // zero out the lenders reserve balance
-        lenderReserve[lender][data.terms.payableCurrency] = 0;
-        // send repayment to lender
-        IERC20Upgradeable(data.terms.payableCurrency).transfer(lender, returnAmount);
+        // record keeping for lender repayments
+        uint256[] memory lenderBalances = new uint256[](lenders.length);
+        // lender repayments
+        for(uint256 i = 0; i < lenders.length; i++) {
+            // get reserve amount to return to the lender
+            uint256 returnAmount = lenderReserve[lenders[i]][payableCurrency];
+            // zero out the lenders reserve balance
+            lenderReserve[lenders[i]][payableCurrency] = 0;
+            // record keeping
+            lenderBalances[i] = returnAmount;
+            // send repayment to lender
+            IERC20Upgradeable(payableCurrency).transfer(lenders[i], returnAmount);
+        }
+
+        emit LenderRepaymentRecieved(lenders, lenderBalances, payableCurrency);
     }
 
     /**
