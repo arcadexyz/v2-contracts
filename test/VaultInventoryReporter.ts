@@ -228,6 +228,24 @@ describe("VaultInventoryReporter", () => {
                 ).to.be.revertedWith("VIR_NotApproved");
             });
 
+            it("should revert if trying to add a token with address 0", async () => {
+                const { reporter, user, vault } = ctx;
+
+                const item: Item = {
+                    itemType: ERC_20_ITEM_TYPE,
+                    tokenAddress: ZERO_ADDRESS,
+                    tokenId: 0,
+                    tokenAmount: amount20
+                };
+
+                const items = [item];
+
+                await expect(
+                    reporter.connect(user).add(vault.address, items)
+                ).to.be.revertedWith("VIR_InvalidRegistration");
+            });
+
+
             it("should revert if not enough ERC20 tokens are held by the vault", async () => {
                 const { reporter, user, vault, mockERC20 } = ctx;
 
@@ -782,7 +800,7 @@ describe("VaultInventoryReporter", () => {
             expect(await reporter.verify(vault.address)).to.be.true;
         });
 
-        it("should return false if all items in a vault's inventory are not owned by the vault", async () => {
+        it("should return false if an ERC721 cannot be verified", async () => {
             const { reporter, user, mockERC721, vault } = ctx;
 
             // Make sure verification succeeds
@@ -791,6 +809,48 @@ describe("VaultInventoryReporter", () => {
             // Move item out of vault
             await vault.connect(user).enableWithdraw();
             await vault.connect(user).withdrawERC721(mockERC721.address, id721, user.address);
+
+            // make sure verification fails
+            expect(await reporter.verify(vault.address)).to.be.false;
+        });
+
+        it("should return false if an ERC20 cannot be verified", async () => {
+            const { reporter, user, mockERC20, vault } = ctx;
+
+            // Make sure verification succeeds
+            expect(await reporter.verify(vault.address)).to.be.true;
+
+            // Move item out of vault
+            await vault.connect(user).enableWithdraw();
+            await vault.connect(user).withdrawERC20(mockERC20.address, user.address);
+
+            // make sure verification fails
+            expect(await reporter.verify(vault.address)).to.be.false;
+        });
+
+        it("should return false if an ERC1155 cannot be verified", async () => {
+            const { reporter, user, mockERC1155, vault } = ctx;
+
+            // Make sure verification succeeds
+            expect(await reporter.verify(vault.address)).to.be.true;
+
+            // Move item out of vault
+            await vault.connect(user).enableWithdraw();
+            await vault.connect(user).withdrawERC1155(mockERC1155.address, id1155, user.address);
+
+            // make sure verification fails
+            expect(await reporter.verify(vault.address)).to.be.false;
+        });
+
+        it("should return false if a punk cannot be verified", async () => {
+            const { reporter, user, punks, vault } = ctx;
+
+            // Make sure verification succeeds
+            expect(await reporter.verify(vault.address)).to.be.true;
+
+            // Move item out of vault
+            await vault.connect(user).enableWithdraw();
+            await vault.connect(user).withdrawPunk(punks.address, idPunk, user.address);
 
             // make sure verification fails
             expect(await reporter.verify(vault.address)).to.be.false;
