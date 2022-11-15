@@ -148,7 +148,7 @@ export const config: HardhatUserConfig = {
                     optimizer: {
                         enabled: optimizerEnabled,
                         runs: 200,
-                    }
+                    },
                 },
             },
             {

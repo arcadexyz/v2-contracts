@@ -16,9 +16,6 @@ import "./OwnableERC721.sol";
 import "../interfaces/IVaultInventoryReporter.sol";
 import "../external/interfaces/IPunks.sol";
 
-// TODO: Write reporter tests
-import "hardhat/console.sol";
-
 /**
  * @title VaultInventoryReporter
  * @author Non-Fungible Technologies, Inc.
