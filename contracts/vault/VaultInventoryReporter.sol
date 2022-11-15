@@ -17,6 +17,7 @@ import "../interfaces/IVaultInventoryReporter.sol";
 import "../external/interfaces/IPunks.sol";
 
 // TODO: Write reporter tests
+import "hardhat/console.sol";
 
 /**
  * @title VaultInventoryReporter
@@ -141,10 +142,14 @@ contract VaultInventoryReporter is IVaultInventoryReporter, VaultOwnershipChecke
         for (uint256 i = 0; i < numItems; i++) {
             bytes32 itemHash = _hash(items[i]);
 
-            delete inventoryForVault[vault][itemHash];
-            inventoryKeysForVault[vault].remove(itemHash);
+            if (inventoryKeysForVault[vault].contains(itemHash)) {
 
-            emit Remove(vault, msg.sender, itemHash);
+                delete inventoryForVault[vault][itemHash];
+                inventoryKeysForVault[vault].remove(itemHash);
+
+                emit Remove(vault, msg.sender, itemHash);
+            }
+
         }
     }
 
@@ -155,14 +160,21 @@ contract VaultInventoryReporter is IVaultInventoryReporter, VaultOwnershipChecke
      */
     function clear(address vault) public override validate(msg.sender, vault) {
         uint256 numItems = inventoryKeysForVault[vault].length();
+        bytes32[] memory itemHashSet = new bytes32[](numItems);
 
         if (numItems > MAX_ITEMS_PER_REGISTRATION) revert VIR_TooManyItems(MAX_ITEMS_PER_REGISTRATION);
 
+        // Clear vault lookup
         for (uint256 i = 0; i < numItems; i++) {
             bytes32 itemHash = inventoryKeysForVault[vault].at(i);
 
             delete inventoryForVault[vault][itemHash];
-            inventoryKeysForVault[vault].remove(itemHash);
+            itemHashSet[i] = itemHash;
+        }
+
+        // Remove keys
+        for (uint256 i = 0; i < numItems; i++) {
+            inventoryKeysForVault[vault].remove(itemHashSet[i]);
         }
 
         emit Clear(vault, msg.sender);
@@ -471,8 +483,8 @@ contract VaultInventoryReporter is IVaultInventoryReporter, VaultOwnershipChecke
         );
 
         bytes32 hash = _hashTypedDataV4(structHash);
-
         address signer = ECDSA.recover(hash, v, r, s);
+
         if (signer != owner) revert VIR_InvalidPermitSignature(signer);
 
         // Set approval, overwriting any previous
