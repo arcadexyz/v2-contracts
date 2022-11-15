@@ -17,7 +17,7 @@ import {
     CryptoPunksMarket,
     VaultInventoryReporter
 } from "../typechain";
-import { mintToAddress as mintERC721 } from "./utils/erc721";
+import { mintToAddress as mintERC721, ZERO_ADDRESS } from "./utils/erc721";
 import { mintToAddress as mintERC1155 } from "./utils/erc1155";
 import { deploy } from "./utils/contracts";
 import { createInventoryPermitSignature, InventoryPermitData } from "./utils/eip712";
@@ -943,10 +943,61 @@ describe("VaultInventoryReporter", () => {
     });
 
     describe("Permissions", () => {
-        it("should not allow a user who is not owner or approved for a vault to set reporting approval");
-        it("should allow a vault owner to set reporting approval");
-        it("should allow a vault owner to remove all reporting approval");
-        it("should allow an approved vault address to set reporting approval");
+        it("should not allow a user who is not owner or approved for a vault to set reporting approval", async () => {
+            const { reporter, other, vault } = ctx;
+
+            await expect(
+                reporter.connect(other).setApproval(vault.address, other.address)
+            ).to.be.revertedWith("VOC_NotOwnerOrApproved");
+        });
+
+        it("should allow a vault owner to set reporting approval", async () => {
+            const { reporter, user, other, vault } = ctx;
+
+            expect(await reporter.isOwnerOrApproved(vault.address, other.address)).to.be.false;
+
+            await expect(
+                reporter.connect(user).setApproval(vault.address, other.address)
+            ).to.emit(reporter, "SetApproval")
+                .withArgs(vault.address, other.address);
+
+            expect(await reporter.isOwnerOrApproved(vault.address, other.address)).to.be.true;
+        });
+
+        it("should allow a vault owner to remove all reporting approval", async () => {
+            const { reporter, user, other, vault } = ctx;
+
+            expect(await reporter.isOwnerOrApproved(vault.address, other.address)).to.be.false;
+
+            await expect(
+                reporter.connect(user).setApproval(vault.address, other.address)
+            ).to.emit(reporter, "SetApproval")
+                .withArgs(vault.address, other.address);
+
+            expect(await reporter.isOwnerOrApproved(vault.address, other.address)).to.be.true;
+
+            await expect(
+                reporter.connect(user).setApproval(vault.address, ZERO_ADDRESS)
+            ).to.emit(reporter, "SetApproval")
+                .withArgs(vault.address, ZERO_ADDRESS);
+
+            expect(await reporter.isOwnerOrApproved(vault.address, other.address)).to.be.false;
+        });
+
+        it("should allow an approved vault address to set reporting approval", async () => {
+            const { reporter, user, other, vault, nft } = ctx;
+
+            await nft.connect(user).approve(other.address, vault.address);
+
+            expect(await reporter.isOwnerOrApproved(vault.address, other.address)).to.be.false;
+
+            await expect(
+                reporter.connect(other).setApproval(vault.address, other.address)
+            ).to.emit(reporter, "SetApproval")
+                .withArgs(vault.address, other.address);
+
+            expect(await reporter.isOwnerOrApproved(vault.address, other.address)).to.be.true;
+        });
     });
 
 });
