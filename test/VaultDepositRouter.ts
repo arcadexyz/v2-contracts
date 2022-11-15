@@ -129,8 +129,19 @@ describe("VaultDepositRouter", () => {
     });
 
     describe("Deposits", () => {
+        let ctx: TestContext;
+
+        beforeEach(async () => {
+            ctx = await loadFixture(fixture);
+
+            // Approve the router to make reports for the user
+            const { reporter, user, router, vault } = ctx;
+
+            await reporter.connect(user).setApproval(vault.address, router.address);
+        });
+
         it("should not accept a deposit for the zero address", async () => {
-            const { mockERC20, user, router } = await loadFixture(fixture);
+            const { mockERC20, user, router } = ctx;
             const amount = hre.ethers.utils.parseUnits("50", 18);
 
             await mint(mockERC20, user, amount);
@@ -140,11 +151,11 @@ describe("VaultDepositRouter", () => {
             // Reporter address not a valid vault
             await expect(
                 router.connect(user).depositERC20(ZERO_ADDRESS, mockERC20.address, amount)
-            ).to.be.revertedWith("VDR_ZeroAddress");
+            ).to.be.revertedWith("VOC_ZeroAddress");
         });
 
         it("should not accept a deposit for a vault that does not exist", async () => {
-            const { mockERC20, user, router, reporter } = await loadFixture(fixture);
+            const { mockERC20, user, router, reporter } = ctx;
             const amount = hre.ethers.utils.parseUnits("50", 18);
 
             await mint(mockERC20, user, amount);
@@ -154,11 +165,11 @@ describe("VaultDepositRouter", () => {
             // Reporter address not a valid vault
             await expect(
                 router.connect(user).depositERC20(reporter.address, mockERC20.address, amount)
-            ).to.be.revertedWith("VDR_InvalidVault");
+            ).to.be.revertedWith("VOC_InvalidVault");
         });
 
         it("should not accept a deposit if the user is not the owner of a vault", async () => {
-            const { vault, mockERC20, user, other, router } = await loadFixture(fixture);
+            const { vault, mockERC20, user, other, router } = ctx;
             const amount = hre.ethers.utils.parseUnits("50", 18);
 
             await mint(mockERC20, user, amount);
@@ -168,11 +179,11 @@ describe("VaultDepositRouter", () => {
             // Reporter address not a valid vault
             await expect(
                 router.connect(other).depositERC20(vault.address, mockERC20.address, amount)
-            ).to.be.revertedWith("VDR_NotOwnerOrApproved");
+            ).to.be.revertedWith("VOC_NotOwnerOrApproved");
         });
 
         it("should accept a deposit if the depositor has an approval from the owner", async () => {
-            const { nft, vault, mockERC20, user, other, router, reporter } = await loadFixture(fixture);
+            const { nft, vault, mockERC20, user, other, router, reporter } = ctx;
             const amount = hre.ethers.utils.parseUnits("50", 18);
 
             await mint(mockERC20, other, amount);
@@ -194,7 +205,7 @@ describe("VaultDepositRouter", () => {
         });
 
         it("should accept deposit from an ERC20 token and report inventory", async () => {
-            const { vault, mockERC20, user, router, reporter } = await loadFixture(fixture);
+            const { vault, mockERC20, user, router, reporter } = ctx;
             const amount = hre.ethers.utils.parseUnits("50", 18);
 
             await mint(mockERC20, user, amount);
@@ -215,7 +226,7 @@ describe("VaultDepositRouter", () => {
         });
 
         it("should accept deposit from an ERC721 token and report inventory", async () => {
-            const { vault, mockERC721, user, router, reporter } = await loadFixture(fixture);
+            const { vault, mockERC721, user, router, reporter } = ctx;
 
             const tokenId = await mintERC721(mockERC721, user);
 
@@ -237,7 +248,7 @@ describe("VaultDepositRouter", () => {
         });
 
         it("should accept deposit from an ERC1155 token and report inventory", async () => {
-            const { vault, mockERC1155, user, router, reporter } = await loadFixture(fixture);
+            const { vault, mockERC1155, user, router, reporter } = ctx;
             const amount = hre.ethers.utils.parseUnits("50", 18);
 
             const tokenId = await mintERC1155(mockERC1155, user, amount);
@@ -259,7 +270,7 @@ describe("VaultDepositRouter", () => {
         });
 
         it("should accept deposit from a CryptoPunk and report inventory", async () => {
-            const { vault, punks, user, router, reporter } = await loadFixture(fixture);
+            const { vault, punks, user, router, reporter } = ctx;
 
             const tokenId = 8888;
             await punks.setInitialOwner(user.address, tokenId);
@@ -282,7 +293,7 @@ describe("VaultDepositRouter", () => {
         });
 
         it("should accept deposit from an ERC20 token batch and report inventory", async () => {
-            const { vault, mockERC20, user, router, reporter } = await loadFixture(fixture);
+            const { vault, mockERC20, user, router, reporter } = ctx;
             const amount = hre.ethers.utils.parseUnits("50", 18);
 
             const otherMockERC20 = <MockERC20>await deploy("MockERC20", user, ["Mock ERC20", "MOCK"]);
@@ -323,7 +334,7 @@ describe("VaultDepositRouter", () => {
         });
 
         it("should accept deposit from an ERC721 token batch and report inventory", async () => {
-            const { vault, mockERC721, user, router, reporter } = await loadFixture(fixture);
+            const { vault, mockERC721, user, router, reporter } = ctx;
 
             const otherMockERC721 = <MockERC721>await deploy("MockERC721", user, ["Mock ERC721", "MOCK"]);
 
@@ -370,7 +381,7 @@ describe("VaultDepositRouter", () => {
         });
 
         it("should accept deposit from an ERC1155 token batch and report inventory", async () => {
-            const { vault, mockERC1155, user, router, reporter } = await loadFixture(fixture);
+            const { vault, mockERC1155, user, router, reporter } = ctx;
             const amount = hre.ethers.utils.parseUnits("50", 18);
 
             const otherMockERC1155 = <MockERC1155>await deploy("MockERC1155", user, []);
@@ -440,7 +451,7 @@ describe("VaultDepositRouter", () => {
         });
 
         it("should accept deposit from a CryptoPunk batch and report inventory", async () => {
-            const { vault, punks, user, router, reporter } = await loadFixture(fixture);
+            const { vault, punks, user, router, reporter } = ctx;
 
             const tokenId = 8888;
             const tokenId2 = 5555;
