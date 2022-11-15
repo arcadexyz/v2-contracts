@@ -23,11 +23,11 @@ export async function main(): Promise<DeployedResources> {
     const VAULT_FACTORY = "0x0028BADf5d154DAE44F874AC58FFCd3fA56D9586" // goerli
 
     const reporterFactory = await ethers.getContractFactory("VaultInventoryReporter");
-    // const reporter = <VaultInventoryReporter>await reporterFactory.deploy();
-    const reporter = <VaultInventoryReporter>await reporterFactory.attach("0x606E4a441290314aEaF494194467Fd2Bb844064A");
+    const reporter = <VaultInventoryReporter>await reporterFactory.deploy("Arcade.xyz Inventory Reporter v1.0");
+    // const reporter = <VaultInventoryReporter>await reporterFactory.attach("0x606E4a441290314aEaF494194467Fd2Bb844064A");
     await reporter.deployed();
 
-    // console.log("Inventory Reporter deployed to:", reporter.address);
+    console.log("Inventory Reporter deployed to:", reporter.address);
 
     const routerFactory = await ethers.getContractFactory("VaultDepositRouter");
     const router = <VaultDepositRouter>await routerFactory.deploy(VAULT_FACTORY, reporter.address);
