@@ -352,7 +352,7 @@ describe("Integration", () => {
                 .to.emit(loanCore, "LoanRepaid")
                 .withArgs(loanId);
 
-            await repaymentController.connect(lender).claimRepayment([lender.address], mockERC20.address);
+            await repaymentController.connect(lender).claimRepayment([loanId]);
             
             // post-repaid state
             expect(await vaultFactory.ownerOf(bundleId)).to.equal(await borrower.getAddress());

@@ -9,7 +9,7 @@ interface IRepaymentController {
 
     function claim(uint256 loanId) external;
     
-    function claimRepayment(address[] memory lenders, address payableCurrency) external;
+    function claimRepayment(uint256[] memory loanIds) external;
 
     function repayPartMinimum(uint256 loanId) external;
 

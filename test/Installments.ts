@@ -693,7 +693,7 @@ describe("Installments", () => {
                 "RC_NoPaymentDue",
             );
             //lender claims repayments
-            await repaymentController.connect(lender).claimRepayment([lender.address], mockERC20.address);
+            await repaymentController.connect(lender).claimRepayment([loanId]);
 
             const loanDATA = await loanCore.connect(borrower).getLoan(loanId);
             expect(loanDATA.balance).to.equal(ethers.utils.parseEther("100"));
@@ -730,7 +730,7 @@ describe("Installments", () => {
                 .withArgs(loanId, ethers.utils.parseEther("0"), ethers.utils.parseEther("100"));
 
             //lender claims repayments
-            await repaymentController.connect(lender).claimRepayment([lender.address], mockERC20.address);
+            await repaymentController.connect(lender).claimRepayment([loanId]);
 
             const loanDATA = await loanCore.connect(borrower).getLoan(loanId);
             expect(loanDATA.balance).to.equal(ethers.utils.parseEther("100"));
@@ -795,7 +795,7 @@ describe("Installments", () => {
                     );
 
                 //lender claims repayments
-                await repaymentController.connect(lender).claimRepayment([lender.address], mockERC20.address);
+                await repaymentController.connect(lender).claimRepayment([loanId]);
 
                 const loanDATA = await loanCore.connect(borrower).getLoan(loanId);
                 expect(loanDATA.balance).to.equal(ethers.utils.parseEther("100"));
@@ -839,7 +839,7 @@ describe("Installments", () => {
                     );
                 
                 //lender claims repayments
-                await repaymentController.connect(lender).claimRepayment([lender.address], mockERC20.address);
+                await repaymentController.connect(lender).claimRepayment([loanId]);
 
                 const loanDATA = await loanCore.connect(borrower).getLoan(loanId);
                 expect(loanDATA.balance).to.equal(ethers.utils.parseEther("100"));
@@ -907,7 +907,7 @@ describe("Installments", () => {
                     );
 
                 //lender claims repayments
-                await repaymentController.connect(lender).claimRepayment([lender.address], mockERC20.address);
+                await repaymentController.connect(lender).claimRepayment([loanId]);
 
                 const loanDATA = await loanCore.connect(borrower).getLoan(loanId);
                 expect(loanDATA.balance).to.equal(ethers.utils.parseEther("100"));
@@ -955,7 +955,7 @@ describe("Installments", () => {
                         );
 
                     //lender claims repayments
-                    await repaymentController.connect(lender).claimRepayment([lender.address], mockERC20.address);
+                    await repaymentController.connect(lender).claimRepayment([loanId]);
 
                     const loanDATA = await loanCore.connect(borrower).getLoan(loanId);
                     expect(loanDATA.balance).to.equal(ethers.utils.parseEther("100"));
@@ -1030,7 +1030,7 @@ describe("Installments", () => {
                             ethers.utils.parseEther("31.15279066794581275"),
                         );
                     //lender claims repayments
-                    await repaymentController.connect(lender).claimRepayment([lender.address], mockERC20.address);
+                    await repaymentController.connect(lender).claimRepayment([loanId]);
 
                     const loanDATA = await loanCore.connect(borrower).getLoan(loanId);
                     expect(loanDATA.balance).to.equal(ethers.utils.parseEther("100"));
@@ -1076,7 +1076,7 @@ describe("Installments", () => {
                             ethers.utils.parseEther("630.929509200042118676"),
                         );
                     //lender claims repayments
-                    await repaymentController.connect(lender).claimRepayment([lender.address], mockERC20.address);
+                    await repaymentController.connect(lender).claimRepayment([loanId]);
 
                     const loanDATA = await loanCore.connect(borrower).getLoan(loanId);
                     expect(loanDATA.balance).to.equal(ethers.utils.parseEther("100"));
@@ -1132,7 +1132,7 @@ describe("Installments", () => {
                     );
 
                 //lender claims repayments
-                await repaymentController.connect(lender).claimRepayment([lender.address], mockERC20.address);
+                await repaymentController.connect(lender).claimRepayment([loanId]);
 
                 const loanDATA = await loanCore.connect(borrower).getLoan(loanId);
                 expect(loanDATA.balance).to.equal(ethers.utils.parseEther("100"));
@@ -1203,7 +1203,7 @@ describe("Installments", () => {
                     .withArgs(loanId);
 
                 //lender claims repayments
-                await repaymentController.connect(lender).claimRepayment([lender.address], mockERC20.address);
+                await repaymentController.connect(lender).claimRepayment([loanId]);
 
                 const loanDATA = await loanCore.connect(borrower).getLoan(loanId);
                 expect(loanDATA.balance).to.equal(0);
@@ -1294,7 +1294,7 @@ describe("Installments", () => {
                     .withArgs(loanId);
                 
                 //lender claims repayments
-                await repaymentController.connect(lender).claimRepayment([lender.address], mockERC20.address);
+                await repaymentController.connect(lender).claimRepayment([loanId]);
 
                 const loanDATA = await loanCore.connect(borrower).getLoan(loanId);
                 expect(loanDATA.balance).to.equal(0);
@@ -1345,7 +1345,7 @@ describe("Installments", () => {
                 }
 
                 //lender claims repayments
-                await repaymentController.connect(lender).claimRepayment([lender.address], mockERC20.address);
+                await repaymentController.connect(lender).claimRepayment([loanId]);
 
                 const loanDATA = await loanCore.connect(borrower).getLoan(loanId);
                 expect(loanDATA.balance).to.equal(ethers.utils.parseEther("1000"));
@@ -1398,7 +1398,7 @@ describe("Installments", () => {
                 }
 
                 //lender claims repayments
-                await repaymentController.connect(lender).claimRepayment([lender.address], mockERC20.address);
+                await repaymentController.connect(lender).claimRepayment([loanId]);
 
                 // verify loanData after 12 txs on time
                 const loanDATA = await loanCore.connect(borrower).getLoan(loanId);
@@ -1452,7 +1452,7 @@ describe("Installments", () => {
                 }
 
                 //lender claims repayments
-                await repaymentController.connect(lender).claimRepayment([lender.address], mockERC20.address);
+                await repaymentController.connect(lender).claimRepayment([loanId]);
 
                 // verify loanData after 4 txs on time
                 const loanDATA = await loanCore.connect(borrower).getLoan(loanId);
@@ -1511,7 +1511,7 @@ describe("Installments", () => {
                     .withArgs(loanId);
 
                 //lender claims repayments
-                await repaymentController.connect(lender).claimRepayment([lender.address], mockERC20.address);
+                await repaymentController.connect(lender).claimRepayment([loanId]);
 
                 const loanDATA = await loanCore.connect(borrower).getLoan(loanId);
                 expect(loanDATA.balance).to.equal(ethers.utils.parseEther("0"));
@@ -1564,7 +1564,7 @@ describe("Installments", () => {
                     .withArgs(loanId);
 
                 //lender claims repayments
-                await repaymentController.connect(lender).claimRepayment([lender.address], mockERC20.address);
+                await repaymentController.connect(lender).claimRepayment([loanId]);
 
                 // verify loanData after 4 txs on time
                 const loanDATA = await loanCore.connect(borrower).getLoan(loanId);
@@ -1614,7 +1614,7 @@ describe("Installments", () => {
                 }
 
                 //lender claims repayments
-                await repaymentController.connect(lender).claimRepayment([lender.address], mockERC20.address);
+                await repaymentController.connect(lender).claimRepayment([loanId]);
 
                 const loanDATA = await loanCore.connect(borrower).getLoan(loanId);
                 expect(loanDATA.balance).to.equal(ethers.utils.parseEther("1000"));
@@ -1691,7 +1691,7 @@ describe("Installments", () => {
                     );
                 
                 //lender claims repayments
-                await repaymentController.connect(lender).claimRepayment([lender.address], mockERC20.address);
+                await repaymentController.connect(lender).claimRepayment([loanId]);
 
                 const borrowerBalanceAfter = await mockERC20.balanceOf(await borrower.getAddress());
                 const lenderBalanceAfter = await mockERC20.balanceOf(await lender.getAddress());
@@ -1765,7 +1765,7 @@ describe("Installments", () => {
                     );
                 
                 //lender claims repayments
-                await repaymentController.connect(lender).claimRepayment([lender.address], mockERC20.address);
+                await repaymentController.connect(lender).claimRepayment([loanId]);
 
                 const borrowerBalanceAfter = await mockERC20.balanceOf(await borrower.getAddress());
                 const lenderBalanceAfter = await mockERC20.balanceOf(await lender.getAddress());
@@ -1830,7 +1830,7 @@ describe("Installments", () => {
                     );
 
                 //lender claims repayments
-                await repaymentController.connect(lender).claimRepayment([lender.address], mockERC20.address);
+                await repaymentController.connect(lender).claimRepayment([loanId]);
                         
                 const borrowerBalanceAfter = await mockERC20.balanceOf(await borrower.getAddress());
                 const lenderBalanceAfter = await mockERC20.balanceOf(await lender.getAddress());
@@ -1879,7 +1879,7 @@ describe("Installments", () => {
                     .withArgs(await borrower.getAddress(), repaymentController.address, ethers.utils.parseEther("100"));
 
                 //lender claims repayments
-                await repaymentController.connect(lender).claimRepayment([lender.address], mockERC20.address);
+                await repaymentController.connect(lender).claimRepayment([loanId]);
                 
                 const borrowerBalanceAfter = await mockERC20.balanceOf(await borrower.getAddress());
                 const lenderBalanceAfter = await mockERC20.balanceOf(await lender.getAddress());
@@ -1930,7 +1930,7 @@ describe("Installments", () => {
                     .withArgs(await borrower.getAddress(), repaymentController.address, ethers.utils.parseEther("50"));
                 
                 //lender claims repayments
-                await repaymentController.connect(lender).claimRepayment([lender.address], mockERC20.address);
+                await repaymentController.connect(lender).claimRepayment([loanId]);
 
                 const borrowerBalanceAfter = await mockERC20.balanceOf(await borrower.getAddress());
                 const lenderBalanceAfter = await mockERC20.balanceOf(await lender.getAddress());

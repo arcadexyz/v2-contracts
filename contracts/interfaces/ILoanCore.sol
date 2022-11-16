@@ -19,7 +19,7 @@ interface ILoanCore {
     event LoanRolledOver(uint256 oldLoanId, uint256 newLoanId);
     event InstallmentPaymentReceived(uint256 loanId, uint256 repaidAmount, uint256 remBalance);
     event LoanClaimed(uint256 loanId);
-    event LenderRepaymentRecieved(address[] lenders, uint256[] lenderBalances, address payableCurrency);
+    event LenderRepaymentRecieved(uint256[] loanIds, uint256[] repaymentAmounts);
     event FeesClaimed(address token, address to, uint256 amount);
     event SetFeeController(address feeController);
     event NonceUsed(address indexed user, uint160 nonce);
@@ -44,7 +44,7 @@ interface ILoanCore {
 
     function claim(uint256 loanId, uint256 currentInstallmentPeriod) external;
 
-    function claimRepayment(address[] memory lenders, address payableCurrency) external;
+    function claimRepayment(uint256[] memory _loanIds) external;
 
     function rollover(
         uint256 oldLoanId,

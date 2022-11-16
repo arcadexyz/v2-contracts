@@ -106,12 +106,11 @@ contract RepaymentController is IRepaymentController, InstallmentsCalc, Context 
      * @notice Anyone can call this function to initiate lender repayments. When a borrower repays during 
      * a loan, the repayment is stored in the LoanCore contract until claimed by the lender.
      *
-     * @param  lenders              Lender addresses to recieve repayments.
-     * @param  payableCurrency      The address of the ERC20 token to be used for repayment.
+     * @param  loanIds              Array of loanIds, to be claimed.
      */
-    function claimRepayment(address[] memory lenders, address payableCurrency) external override {
+    function claimRepayment(uint256[] memory loanIds) external override {
         // escrow to transfer funds to caller
-        loanCore.claimRepayment(lenders, payableCurrency);
+        loanCore.claimRepayment(loanIds);
     }
 
     // =========================== INSTALLMENT SPECIFIC OPERATIONS ===============================

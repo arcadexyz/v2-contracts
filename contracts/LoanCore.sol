@@ -77,7 +77,8 @@ contract LoanCore is
     // key is hash of (collateralAddress, collateralId)
     mapping(bytes32 => bool) private collateralInUse;
     mapping(address => mapping(uint160 => bool)) public usedNonces;
-    mapping(address => mapping(address => uint256)) public lenderReserve;
+    // key is loanId, amount paid out to the lender
+    mapping(uint256 => uint256) public pendingLenderClaims;
 
     // ========================================== CONSTRUCTOR ===========================================
 
@@ -209,21 +210,20 @@ contract LoanCore is
 
         uint256 returnAmount = getFullInterestAmount(data.terms.principal, data.terms.interestRate);
 
-        // get promissory notes from two parties involved
-        address lender = lenderNote.ownerOf(loanId);
+        // get borrower
         address borrower = borrowerNote.ownerOf(loanId);
 
         // state changes and cleanup
         // NOTE: these must be performed before assets are released to prevent reentrance
         loans[loanId].state = LoanLibrary.LoanState.Repaid;
         collateralInUse[keccak256(abi.encode(data.terms.collateralAddress, data.terms.collateralId))] = false;
+        pendingLenderClaims[loanId] = returnAmount;
 
-        _burnLoanNotes(loanId);
+        // burn borrower note
+        borrowerNote.burn(loanId);
 
-        // transfer from msg.sender to this contract
+        // move tokens
         IERC20Upgradeable(data.terms.payableCurrency).safeTransferFrom(_msgSender(), address(this), returnAmount);
-        // add return amount to the lender reserve
-        lenderReserve[lender][data.terms.payableCurrency] += returnAmount;
         IERC721Upgradeable(data.terms.collateralAddress).transferFrom(address(this), borrower, data.terms.collateralId);
 
         emit LoanRepaid(loanId);
@@ -281,34 +281,39 @@ contract LoanCore is
     }
 
     /**
-     * @notice Claiming of the borrower repayments. This function pays out the lender
-     * accounts provided in the function call their respective claim balances. Lender 
-     * repayments are tracked by the lenderReserve mapping.
+     * @notice Claiming of the borrower repayments. This function pays out the holder 
+     * of the lenderNote the amount owed to them from any borrower repayments. Lender 
+     * repayments are tracked by the pendingLenderClaims mapping.
      *
-     * @param lenders              Lender accounts to recieve repayments. 
-     * @param payableCurrency      The currency requested to recieve.
+     * @param _loanIds              Array of loanIds, to be claimed.
      */
-    function claimRepayment(address[] memory lenders, address payableCurrency)
+    function claimRepayment(uint256[] memory _loanIds)
         external
         override
         whenNotPaused
         onlyRole(REPAYER_ROLE)
     {
-        // record keeping for lender repayments
-        uint256[] memory lenderBalances = new uint256[](lenders.length);
+        uint256[] memory repaymentAmounts = new uint256[](_loanIds.length);
+
         // lender repayments
-        for(uint256 i = 0; i < lenders.length; i++) {
-            // get reserve amount to return to the lender
-            uint256 returnAmount = lenderReserve[lenders[i]][payableCurrency];
-            // zero out the lenders reserve balance
-            lenderReserve[lenders[i]][payableCurrency] = 0;
-            // record keeping
-            lenderBalances[i] = returnAmount;
-            // send repayment to lender
-            IERC20Upgradeable(payableCurrency).transfer(lenders[i], returnAmount);
+        for(uint256 i = 0; i < _loanIds.length; i++) {
+            // get loan from loanId
+            LoanLibrary.LoanData memory loanData = loans[_loanIds[i]];
+            // get pending claims for loanId
+            uint256 amoutToClaim = pendingLenderClaims[_loanIds[i]];
+            // zero out pending claims for the loanId
+            pendingLenderClaims[_loanIds[i]] = 0;
+            // send repayment to holder of the lenderNote
+            address lender = lenderNote.ownerOf(_loanIds[i]);
+            // if LoanState == Repaid, the borrower has repaid loan and retrieved their asset. 
+            // the lender note can now be burned since there is no outstanding balance. 
+            if(loanData.state == LoanLibrary.LoanState.Repaid) {
+                lenderNote.burn(_loanIds[i]);
+            }
+            IERC20Upgradeable(loanData.terms.payableCurrency).transfer(lender, amoutToClaim);
         }
 
-        emit LenderRepaymentRecieved(lenders, lenderBalances, payableCurrency);
+        emit LenderRepaymentRecieved(_loanIds, repaymentAmounts);
     }
 
     /**
@@ -417,8 +422,7 @@ contract LoanCore is
         // ensure valid initial loan state when repaying loan
         if (data.state != LoanLibrary.LoanState.Active) revert LC_InvalidState(data.state);
 
-        // get the lender and borrower
-        address lender = lenderNote.ownerOf(_loanId);
+        // get borrower
         address borrower = borrowerNote.ownerOf(_loanId);
 
         uint256 _balanceToPay = _paymentToPrincipal;
@@ -428,10 +432,12 @@ contract LoanCore is
             // mark loan as closed
             data.state = LoanLibrary.LoanState.Repaid;
             collateralInUse[keccak256(abi.encode(data.terms.collateralAddress, data.terms.collateralId))] = false;
-
-            _burnLoanNotes(_loanId);
+            // burn borrower note
+            borrowerNote.burn(_loanId);
         }
 
+        // calculate total sent by borrower
+        uint256 paymentTotal = _paymentToPrincipal + _paymentToLateFees + _paymentToInterest;
         // Unlike paymentTotal, cannot go over maximum amount owed
         uint256 boundedPaymentTotal = _balanceToPay + _paymentToLateFees + _paymentToInterest;
 
@@ -441,11 +447,11 @@ contract LoanCore is
         data.balance -= _balanceToPay;
         data.balancePaid += boundedPaymentTotal;
 
-        // calculate total sent by borrower and transferFrom repayment controller to this address
-        uint256 paymentTotal = _paymentToPrincipal + _paymentToLateFees + _paymentToInterest;
+        // record lender pending claim
+        pendingLenderClaims[_loanId] += boundedPaymentTotal;
+
+        // transferFrom repayment controller to this address
         IERC20Upgradeable(data.terms.payableCurrency).safeTransferFrom(_msgSender(), address(this), paymentTotal);
-        // add boundedPaymentTotal to the lender reserve
-        lenderReserve[lender][data.terms.payableCurrency] += boundedPaymentTotal;
 
         // If repaid, send collateral to borrower
         if (data.state == LoanLibrary.LoanState.Repaid) {
@@ -706,4 +712,7 @@ contract LoanCore is
     ) internal {
         if (amount > 0) token.safeTransfer(to, amount);
     }
+
+    // ============================================= LENDER CLAIMING ============================================
+
 }
