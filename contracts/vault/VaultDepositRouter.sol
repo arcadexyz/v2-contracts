@@ -77,7 +77,7 @@ contract VaultDepositRouter is IVaultDepositRouter, VaultOwnershipChecker {
      * @notice Deposit multiple ERC20 tokens to the vault, registering inventory on the reporter
      *         simultaneously.
      *
-     * @param vault                         The vault to deposit to.
+     * @param vault                          The vault to deposit to.
      * @param tokens                         The tokens to deposit.
      * @param amounts                        The amount of tokens to deposit, for each token.
      */

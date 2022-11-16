@@ -22,7 +22,7 @@ abstract contract VaultOwnershipChecker {
      * @dev Validates that the caller is allowed to deposit to the specified vault (owner or approved),
      *      and that the specified vault exists. Reverts on failed validation.
      *
-     * @param factory                       The vault ownership token for the specifide vault.
+     * @param factory                       The vault ownership token for the specified vault.
      * @param vault                         The vault that will be deposited to.
      * @param caller                        The caller who wishes to deposit.
      */
@@ -44,7 +44,7 @@ abstract contract VaultOwnershipChecker {
      * @dev Validates that the caller is directly the owner of the vault,
      *      and that the specified vault exists. Reverts on failed validation.
      *
-     * @param factory                       The vault ownership token for the specifide vault.
+     * @param factory                       The vault ownership token for the specified vault.
      * @param vault                         The vault that will be deposited to.
      * @param caller                        The caller who wishes to deposit.
      */

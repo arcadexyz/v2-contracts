@@ -204,7 +204,7 @@ describe("VaultDepositRouter", () => {
             expect(items[0].tokenAmount).to.eq(amount);
         });
 
-        it("should accept deposit from an ERC20 token and report inventory", async () => {
+        it("should accept deposit of an ERC20 token and report inventory", async () => {
             const { vault, mockERC20, user, router, reporter } = ctx;
             const amount = hre.ethers.utils.parseUnits("50", 18);
 
@@ -225,7 +225,7 @@ describe("VaultDepositRouter", () => {
             expect(items[0].tokenAmount).to.eq(amount);
         });
 
-        it("should accept deposit from an ERC721 token and report inventory", async () => {
+        it("should accept deposit of an ERC721 token and report inventory", async () => {
             const { vault, mockERC721, user, router, reporter } = ctx;
 
             const tokenId = await mintERC721(mockERC721, user);
@@ -247,7 +247,7 @@ describe("VaultDepositRouter", () => {
             expect(items[0].tokenId).to.eq(tokenId);
         });
 
-        it("should accept deposit from an ERC1155 token and report inventory", async () => {
+        it("should accept deposit of an ERC1155 token and report inventory", async () => {
             const { vault, mockERC1155, user, router, reporter } = ctx;
             const amount = hre.ethers.utils.parseUnits("50", 18);
 
@@ -269,7 +269,7 @@ describe("VaultDepositRouter", () => {
             expect(items[0].tokenAmount).to.eq(amount);
         });
 
-        it("should accept deposit from a CryptoPunk and report inventory", async () => {
+        it("should accept deposit of a CryptoPunk and report inventory", async () => {
             const { vault, punks, user, router, reporter } = ctx;
 
             const tokenId = 8888;
@@ -292,7 +292,7 @@ describe("VaultDepositRouter", () => {
             expect(items[0].tokenId).to.eq(tokenId);
         });
 
-        it("should accept deposit from an ERC20 token batch and report inventory", async () => {
+        it("should accept deposit of an ERC20 token batch and report inventory", async () => {
             const { vault, mockERC20, user, router, reporter } = ctx;
             const amount = hre.ethers.utils.parseUnits("50", 18);
 
@@ -333,7 +333,7 @@ describe("VaultDepositRouter", () => {
             expect(items[1].tokenAmount).to.eq(amount.div(2));
         });
 
-        it("should accept deposit from an ERC721 token batch and report inventory", async () => {
+        it("should accept deposit of an ERC721 token batch and report inventory", async () => {
             const { vault, mockERC721, user, router, reporter } = ctx;
 
             const otherMockERC721 = <MockERC721>await deploy("MockERC721", user, ["Mock ERC721", "MOCK"]);
@@ -380,7 +380,7 @@ describe("VaultDepositRouter", () => {
             expect(items[2].tokenId).to.eq(tokenId3);
         });
 
-        it("should accept deposit from an ERC1155 token batch and report inventory", async () => {
+        it("should accept deposit of an ERC1155 token batch and report inventory", async () => {
             const { vault, mockERC1155, user, router, reporter } = ctx;
             const amount = hre.ethers.utils.parseUnits("50", 18);
 
@@ -450,7 +450,7 @@ describe("VaultDepositRouter", () => {
             expect(items[2].tokenAmount).to.eq(amount);
         });
 
-        it("should accept deposit from a CryptoPunk batch and report inventory", async () => {
+        it("should accept deposit of a CryptoPunk batch and report inventory", async () => {
             const { vault, punks, user, router, reporter } = ctx;
 
             const tokenId = 8888;

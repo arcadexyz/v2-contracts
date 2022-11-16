@@ -1058,6 +1058,135 @@ describe("VaultInventoryReporter", () => {
 
             expect(await reporter.isOwnerOrApproved(vault.address, other.address)).to.be.true;
         });
+
+        it("should allow the vault owner to set approval using a permit signature", async () => {
+            const { reporter, user, other, vault } = ctx;
+
+            const deadline = maxDeadline;
+
+            const permitData: InventoryPermitData = {
+                owner: user.address,
+                target: other.address,
+                vault: vault.address,
+                nonce: 0,
+                deadline
+            };
+
+            const sig = await createInventoryPermitSignature(
+                reporter.address,
+                NAME,
+                permitData,
+                user
+            );
+
+            // Make sure user is not approved
+            expect(await reporter.isOwnerOrApproved(vault.address, other.address)).to.be.false;
+
+            await reporter.connect(user).permit(
+                user.address,
+                other.address,
+                vault.address,
+                deadline,
+                sig.v,
+                sig.r,
+                sig.s
+            );
+
+            // Make sure user is approved
+            expect(await reporter.isOwnerOrApproved(vault.address, other.address)).to.be.true;
+        });
+
+        it("should not allow an approved address to set reporting approval using a permit signature", async () => {
+            const { reporter, user, other, vault, nft } = ctx;
+
+            await nft.connect(user).approve(other.address, vault.address);
+
+            const deadline = maxDeadline;
+
+            const permitData: InventoryPermitData = {
+                owner: user.address,
+                target: other.address,
+                vault: vault.address,
+                nonce: 0,
+                deadline
+            };
+
+            const sig = await createInventoryPermitSignature(
+                reporter.address,
+                NAME,
+                permitData,
+                other
+            );
+
+            // Make sure user is not approved
+            expect(await reporter.isOwnerOrApproved(vault.address, other.address)).to.be.false;
+
+            await expect(
+                reporter.connect(other).permit(
+                    other.address,
+                    other.address,
+                    vault.address,
+                    deadline,
+                    sig.v,
+                    sig.r,
+                    sig.s
+                )
+            ).to.be.revertedWith("VOC_NotOwnerOrApproved")
+        });
+
+        it("should not allow the same permit signature to be used twice", async () => {
+            const { reporter, user, other, vault } = ctx;
+
+            const deadline = maxDeadline;
+
+            const permitData: InventoryPermitData = {
+                owner: user.address,
+                target: other.address,
+                vault: vault.address,
+                nonce: 0,
+                deadline
+            };
+
+            const sig = await createInventoryPermitSignature(
+                reporter.address,
+                NAME,
+                permitData,
+                user
+            );
+
+            // Make sure user is not approved
+            expect(await reporter.isOwnerOrApproved(vault.address, other.address)).to.be.false;
+
+            await reporter.connect(user).permit(
+                user.address,
+                other.address,
+                vault.address,
+                deadline,
+                sig.v,
+                sig.r,
+                sig.s
+            );
+
+            // Make sure user is approved
+            expect(await reporter.isOwnerOrApproved(vault.address, other.address)).to.be.true;
+
+            // Unapprove user
+            await reporter.connect(user).setApproval(vault.address, ZERO_ADDRESS);
+            expect(await reporter.isOwnerOrApproved(vault.address, other.address)).to.be.false;
+
+            // Try again
+            await expect(
+                reporter.connect(other).permit(
+                    user.address,
+                    other.address,
+                    vault.address,
+                    deadline,
+                    sig.v,
+                    sig.r,
+                    sig.s
+                )
+            ).to.be.revertedWith("VIR_InvalidPermitSignature");
+        });
     });
 
 });
