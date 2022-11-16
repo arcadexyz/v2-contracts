@@ -272,7 +272,8 @@ contract LoanCore is
         loans[loanId].state = LoanLibrary.LoanState.Defaulted;
         collateralInUse[keccak256(abi.encode(data.terms.collateralAddress, data.terms.collateralId))] = false;
 
-        _burnLoanNotes(loanId);
+        // burn borrower note, borrower can not longer make repayments.
+        borrowerNote.burn(loanId);
 
         // collateral redistribution
         IERC721Upgradeable(data.terms.collateralAddress).transferFrom(address(this), lender, data.terms.collateralId);
@@ -305,9 +306,9 @@ contract LoanCore is
             pendingLenderClaims[_loanIds[i]] = 0;
             // send repayment to holder of the lenderNote
             address lender = lenderNote.ownerOf(_loanIds[i]);
-            // if LoanState == Repaid, the borrower has repaid loan and retrieved their asset. 
+            // if LoanState == Repaid or LoanState == Defaulted, the borrower has repaid loan and retrieved their asset. 
             // the lender note can now be burned since there is no outstanding balance. 
-            if(loanData.state == LoanLibrary.LoanState.Repaid) {
+            if(loanData.state == LoanLibrary.LoanState.Repaid || loanData.state == LoanLibrary.LoanState.Defaulted) {
                 lenderNote.burn(_loanIds[i]);
             }
             IERC20Upgradeable(loanData.terms.payableCurrency).transfer(lender, amoutToClaim);
