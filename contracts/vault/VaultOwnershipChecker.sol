@@ -3,14 +3,10 @@
 pragma solidity ^0.8.11;
 
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "../interfaces/IVaultDepositRouter.sol";
 import "../interfaces/IVaultInventoryReporter.sol";
 import "../interfaces/IVaultFactory.sol";
-import "../external/interfaces/IPunks.sol";
 
 abstract contract VaultOwnershipChecker {
 
