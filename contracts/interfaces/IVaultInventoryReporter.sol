@@ -9,6 +9,7 @@ interface IVaultInventoryReporter {
     event Remove(address indexed vault, address indexed reporter, bytes32 itemHash);
     event Clear(address indexed vault, address indexed reporter);
     event SetApproval(address indexed vault, address indexed target);
+    event SetGlobalApproval(address indexed target, bool isApproved);
 
     // ============= Errors ==============
 
@@ -107,4 +108,8 @@ interface IVaultInventoryReporter {
     function setApproval(address vault, address target) external;
 
     function isOwnerOrApproved(address vault, address target) external view returns (bool);
+
+    function setGlobalApproval(address caller, bool isApproved) external;
+
+    function isGloballyApproved(address target) external view returns (bool);
 }

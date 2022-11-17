@@ -10,6 +10,7 @@ import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableMap.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
 import "./VaultOwnershipChecker.sol";
 import "./OwnableERC721.sol";
@@ -32,7 +33,7 @@ import "../external/interfaces/IPunks.sol";
  * the report is also idempotent - any matching itemsHash will simply
  * update a status or amount, and will not increment any stored value.
  */
-contract VaultInventoryReporter is IVaultInventoryReporter, VaultOwnershipChecker, EIP712 {
+contract VaultInventoryReporter is IVaultInventoryReporter, VaultOwnershipChecker, EIP712, Ownable {
     using EnumerableSet for EnumerableSet.Bytes32Set;
     using Counters for Counters.Counter;
 
@@ -53,6 +54,10 @@ contract VaultInventoryReporter is IVaultInventoryReporter, VaultOwnershipChecke
     /// @notice Approvals to modify inventory contents for a vault
     ///         vault -> approved address
     mapping(address => address) public approved;
+    /// @notice Approvals to modify inventory contents for a vault,
+    ///         which apply to any vault. Can be set by admins.
+    ///         caller -> isApproved
+    mapping(address => bool) public globalApprovals;
 
     // ============= Permit Functionality ==============
 
@@ -436,6 +441,8 @@ contract VaultInventoryReporter is IVaultInventoryReporter, VaultOwnershipChecke
      *
      * @param vault                         The vault to check approval for.
      * @param target                        The address to check approval for.
+     *
+     * @return isApproved                   Whether the target is approved for the vault.
      */
     function isOwnerOrApproved(address vault, address target) public view override returns (bool) {
         address factory = OwnableERC721(vault).ownershipToken();
@@ -443,6 +450,32 @@ contract VaultInventoryReporter is IVaultInventoryReporter, VaultOwnershipChecke
         address owner = IERC721(factory).ownerOf(tokenId);
 
         return owner == target || approved[vault] == target;
+    }
+
+    /**
+     * @notice Sets a global approval for an address, such that the address can
+     *         update any vault. Can be used by protocol admins in order to
+     *         smooth integration with other contracts which integrate with the reporter
+     *         (like VaultDepositRouter).
+     *
+     * @param target                        The address to set approval for.
+     * @param isApproved                    Whether the address should be approved.
+     */
+    function setGlobalApproval(address target, bool isApproved) external override onlyOwner {
+        globalApprovals[target] = isApproved;
+        emit SetGlobalApproval(target, isApproved);
+    }
+
+    /**
+     * @notice Reports whether the target is has been put on the "global approval" list
+     *         - an admin managed list for contracts which integrate with the reporter.
+     *
+     * @param target                        The address to check approval for.
+     *
+     * @return isApproved                   Whether the target is approved for the vault.
+     */
+    function isGloballyApproved(address target) public view override returns (bool) {
+        return globalApprovals[target];
     }
 
     /**
@@ -566,7 +599,7 @@ contract VaultInventoryReporter is IVaultInventoryReporter, VaultOwnershipChecke
      */
     modifier validate(address caller, address vault) {
         // If caller is not owner or approved for vault, then revert
-        if (!isOwnerOrApproved(vault, caller)) revert VIR_NotApproved(vault, caller);
+        if (!isGloballyApproved(caller) && !isOwnerOrApproved(vault, caller)) revert VIR_NotApproved(vault, caller);
 
         _;
     }
