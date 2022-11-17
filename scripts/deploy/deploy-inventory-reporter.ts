@@ -35,6 +35,10 @@ export async function main(): Promise<DeployedResources> {
 
     console.log("Vault Deposit Router deployed to:", router.address);
 
+    await reporter.setGlobalApproval(router.address, true);
+
+    console.log("Global approval set for router.");
+
     return { reporter, router };
 }
 
