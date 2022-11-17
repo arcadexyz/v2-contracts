@@ -1187,6 +1187,39 @@ describe("VaultInventoryReporter", () => {
                 )
             ).to.be.revertedWith("VIR_InvalidPermitSignature");
         });
+
+        it("should not allow a non-admin to set a global approval", async () => {
+            const { reporter, other } = ctx;
+
+            await expect(
+                reporter.connect(other).setGlobalApproval(other.address, true)
+            ).to.be.revertedWith("Ownable");
+        });
+
+        it("should allow a contract owner to set a global approval", async () => {
+            const { reporter, user, other, vault } = ctx;
+
+            expect(await reporter.isGloballyApproved(other.address)).to.be.false;
+
+            await expect(
+                reporter.connect(user).setGlobalApproval(other.address, true)
+            ).to.emit(reporter, "SetGlobalApproval")
+                .withArgs(other.address, true);
+
+            expect(await reporter.isGloballyApproved(other.address)).to.be.true;
+
+            // Make sure can perform reporting
+            await expect(
+                reporter.connect(other).add(vault.address, defaultItems)
+            ).to.not.be.reverted;
+
+            await expect(
+                reporter.connect(user).setGlobalApproval(other.address, false)
+            ).to.emit(reporter, "SetGlobalApproval")
+                .withArgs(other.address, false);
+
+            expect(await reporter.isGloballyApproved(other.address)).to.be.false;
+        });
     });
 
 });
