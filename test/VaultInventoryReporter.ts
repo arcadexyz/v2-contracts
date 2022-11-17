@@ -1219,6 +1219,11 @@ describe("VaultInventoryReporter", () => {
                 .withArgs(other.address, false);
 
             expect(await reporter.isGloballyApproved(other.address)).to.be.false;
+
+            // Make sure cannot perform reporting
+            await expect(
+                reporter.connect(other).add(vault.address, defaultItems)
+            ).to.be.revertedWith("VIR_NotApproved")
         });
     });
 

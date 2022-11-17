@@ -415,9 +415,9 @@ describe("VaultDepositRouter", () => {
             await expect(
                 router.connect(user).depositERC1155Batch(
                     vault.address,
-                    [mockERC1155.address, otherMockERC1155.address, mockERC1155.address],
+                    [mockERC1155.address, otherMockERC1155.address],
                     [tokenId, tokenId2, tokenId3],
-                    [amount, amount]
+                    [amount, amount, amount]
                 )
             ).to.be.revertedWith("VDR_BatchLengthMismatch");
 

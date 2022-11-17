@@ -8,13 +8,20 @@ import "../interfaces/IVaultDepositRouter.sol";
 import "../interfaces/IVaultInventoryReporter.sol";
 import "../interfaces/IVaultFactory.sol";
 
+/**
+ * @title VaultOwnershipChecker
+ * @author Non-Fungible Technologies, Inc.
+ *
+ * This abstract contract contains utility functions for checking AssetVault
+ * ownership or approval, which is needed for many contracts which work with vaults.
+ */
 abstract contract VaultOwnershipChecker {
 
     // ============= Errors ==============
 
     error VOC_ZeroAddress();
     error VOC_InvalidVault(address vault);
-    error VOC_NotOwnerOrApproved(address vault, address caller);
+    error VOC_NotOwnerOrApproved(address vault, address owner, address caller);
 
     // ================ Ownership Check ================
 
@@ -37,7 +44,7 @@ abstract contract VaultOwnershipChecker {
             caller != owner
             && IERC721(factory).getApproved(tokenId) != caller
             && !IERC721(factory).isApprovedForAll(owner, caller)
-        ) revert VOC_NotOwnerOrApproved(vault, caller);
+        ) revert VOC_NotOwnerOrApproved(vault, owner, caller);
     }
 
     /**
@@ -55,6 +62,6 @@ abstract contract VaultOwnershipChecker {
         uint256 tokenId = uint256(uint160(vault));
         address owner = IERC721(factory).ownerOf(tokenId);
 
-        if (caller != owner) revert VOC_NotOwnerOrApproved(vault, caller);
+        if (caller != owner) revert VOC_NotOwnerOrApproved(vault, owner, caller);
     }
 }
