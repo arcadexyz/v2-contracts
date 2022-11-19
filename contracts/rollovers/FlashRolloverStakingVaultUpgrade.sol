@@ -16,6 +16,7 @@ import "../interfaces/ILoanCore.sol";
 import "../interfaces/IOriginationController.sol";
 import "../interfaces/IRepaymentController.sol";
 import "../interfaces/IFeeController.sol";
+import "../interfaces/IInstallmentsCalc.sol";
 
 // solhint-disable max-line-length
 
@@ -27,7 +28,7 @@ import "../interfaces/IFeeController.sol";
  * Switches from a V2 loan with an old asset vault
  * to a V2 loan with a new asset vault.
  */
-contract FlashRolloverStakingVaultUpgrade is ReentrancyGuard, ERC721Holder, ERC1155Holder {
+contract FlashRolloverStakingVaultUpgrade is ReentrancyGuard, ERC721Holder, ERC1155Holder, IFlashLoanRecipient {
     using SafeERC20 for IERC20;
 
     event Rollover(address indexed lender, address indexed borrower, uint256 collateralTokenId, uint256 newLoanId);
@@ -117,7 +118,10 @@ contract FlashRolloverStakingVaultUpgrade is ReentrancyGuard, ERC721Holder, ERC1
             assets[0] = IERC20(loanTerms.payableCurrency);
 
             uint256[] memory amounts = new uint256[](1);
-            amounts[0] = loanTerms.principal + loanTerms.interest;
+            amounts[0] = IInstallmentsCalc(address(contracts.loanCore)).getFullInterestAmount(
+                loanTerms.principal,
+                loanTerms.interestRate
+            );
 
             uint256[] memory modes = new uint256[](1);
             modes[0] = 0;
@@ -171,7 +175,7 @@ contract FlashRolloverStakingVaultUpgrade is ReentrancyGuard, ERC721Holder, ERC1
             require(asset.allowance(borrower, address(this)) >= needFromBorrower, "lacks borrower approval");
         }
 
-        _repayLoan(opContracts, loanData, borrower);
+        _repayLoan(opContracts, opData.loanId, loanData, borrower);
 
         {
             _recreateBundle(opContracts, loanData, opData.newLoanTerms.collateralId);
@@ -186,13 +190,9 @@ contract FlashRolloverStakingVaultUpgrade is ReentrancyGuard, ERC721Holder, ERC1
             emit Rollover(
                 lender,
                 borrower,
-                loanData.terms.collateralTokenId,
+                loanData.terms.collateralId,
                 newLoanId
             );
-
-            if (address(opData.contracts.sourceLoanCore) != address(opData.contracts.targetLoanCore)) {
-                emit Migration(address(opContracts.loanCore), address(opContracts.targetLoanCore), newLoanId);
-            }
         }
 
         if (leftoverPrincipal > 0) {
@@ -240,28 +240,31 @@ contract FlashRolloverStakingVaultUpgrade is ReentrancyGuard, ERC721Holder, ERC1
 
     function _repayLoan(
         OperationContracts memory contracts,
+        uint256 loanId,
         LoanLibrary.LoanData memory loanData,
         address borrower
     ) internal {
-        // TODO: Fix this by using loanId instead of borrowerNoteId,
-        //       and calculating interest rate
-
         // Take BorrowerNote from borrower
         // Must be approved for withdrawal
-        contracts.borrowerNote.transferFrom(borrower, address(this), loanData.borrowerNoteId);
+        contracts.borrowerNote.transferFrom(borrower, address(this), loanId);
 
         // Approve repayment
+        uint256 repayAmount = IInstallmentsCalc(address(contracts.loanCore)).getFullInterestAmount(
+            loanData.terms.principal,
+            loanData.terms.interestRate
+        );
+
         IERC20(loanData.terms.payableCurrency).approve(
             address(contracts.repaymentController),
-            loanData.terms.principal + loanData.terms.interest
+            repayAmount
         );
 
         // Repay loan
-        contracts.repaymentController.repay(loanData.borrowerNoteId);
+        contracts.repaymentController.repay(loanId);
 
         // contract now has asset wrapper but has lost funds
         require(
-            contracts.sourceAssetWrapper.ownerOf(loanData.terms.collateralTokenId) == address(this),
+            IERC721(loanData.terms.collateralAddress).ownerOf(loanData.terms.collateralId) == address(this),
             "collateral ownership"
         );
     }
@@ -294,7 +297,7 @@ contract FlashRolloverStakingVaultUpgrade is ReentrancyGuard, ERC721Holder, ERC1
             opData.nonce
         );
 
-        contracts.targetBorrowerNote.safeTransferFrom(address(this), borrower, newLoanId);
+        contracts.borrowerNote.safeTransferFrom(address(this), borrower, newLoanId);
 
         return newLoanId;
     }
