@@ -66,5 +66,18 @@
     "constructorArgs": [
       "0xb47e3cd837dDF8e4c57F05d70Ab865de6e193BBB"
     ]
+  },
+  "VaultInventoryReporter": {
+    "contractAddress": "0x144b1535A3FF4007Aad8921419EE2e02CFdB8e1d",
+    "constructorArgs": [
+      "Arcade.xyz Inventory Reporter v1.0"
+    ]
+  },
+  "VaultDepositRouter": {
+    "contractAddress": "0xFDda20a20cb4249e73e3356f468DdfdfB61483F6",
+    "constructorArgs": [
+      "A0x6e9B4c2f6Bd57b7b924d29b5dcfCa1273Ecc94A2",
+      "0x144b1535A3FF4007Aad8921419EE2e02CFdB8e1d"
+    ]
   }
 }

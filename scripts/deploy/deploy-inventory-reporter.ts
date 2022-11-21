@@ -19,8 +19,9 @@ export async function main(): Promise<DeployedResources> {
 
     console.log(SECTION_SEPARATOR);
 
-    // const VAULT_FACTORY = "0x6e9B4c2f6Bd57b7b924d29b5dcfCa1273Ecc94A2"; // mainnet
-    const VAULT_FACTORY = "0x0028BADf5d154DAE44F874AC58FFCd3fA56D9586" // goerli
+    const MULTISIG = "0x398e92C827C5FA0F33F171DC8E20570c5CfF330e";
+    const VAULT_FACTORY = "0x6e9B4c2f6Bd57b7b924d29b5dcfCa1273Ecc94A2"; // mainnet
+    // const VAULT_FACTORY = "0x0028BADf5d154DAE44F874AC58FFCd3fA56D9586" // goerli
 
     const reporterFactory = await ethers.getContractFactory("VaultInventoryReporter");
     const reporter = <VaultInventoryReporter>await reporterFactory.deploy("Arcade.xyz Inventory Reporter v1.0");
@@ -36,8 +37,9 @@ export async function main(): Promise<DeployedResources> {
     console.log("Vault Deposit Router deployed to:", router.address);
 
     await reporter.setGlobalApproval(router.address, true);
+    await reporter.transferOwnership(MULTISIG);
 
-    console.log("Global approval set for router.");
+    console.log("Global approval set for router. Ownership transferred to multisig");
 
     return { reporter, router };
 }
