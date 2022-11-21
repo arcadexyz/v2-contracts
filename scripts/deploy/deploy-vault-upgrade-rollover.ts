@@ -15,6 +15,7 @@ export async function main(): Promise<DeployedResources> {
     // to make sure everything is compiled
     // await run("compile");
 
+    const MULTISIG = "0x398e92C827C5FA0F33F171DC8E20570c5CfF330e";
     const VAULT_ADDRESS = "0xBA12222222228d8Ba445958a75a0704d566BF2C8";
 
     console.log(SECTION_SEPARATOR);
@@ -25,6 +26,10 @@ export async function main(): Promise<DeployedResources> {
     const flashRollover = <FlashRolloverStakingVaultUpgrade>await factory.deploy(VAULT_ADDRESS);
 
     console.log("Rollover deployed to:", flashRollover.address);
+
+    await flashRollover.transferOwnership(MULTISIG);
+
+    console.log("Rollover ownership transferred to multisig.");
 
     return { flashRollover };
 }

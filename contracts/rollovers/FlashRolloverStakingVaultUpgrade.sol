@@ -9,6 +9,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
 import "../external/interfaces/ILendingPool.sol";
 import "../interfaces/IFlashRolloverBalancer.sol";
@@ -18,6 +19,7 @@ import "../interfaces/IRepaymentController.sol";
 import "../interfaces/IFeeController.sol";
 import "../interfaces/IInstallmentsCalc.sol";
 import "../interfaces/IAssetVault.sol";
+import "../vault/OwnableERC721.sol";
 
 // TODO:
 // - add rescue function
@@ -32,7 +34,7 @@ import "../interfaces/IAssetVault.sol";
  * Switches from a V2 loan with an old asset vault
  * to a V2 loan with a new asset vault.
  */
-contract FlashRolloverStakingVaultUpgrade is ReentrancyGuard, ERC721Holder, ERC1155Holder, IFlashLoanRecipient {
+contract FlashRolloverStakingVaultUpgrade is ReentrancyGuard, Ownable, ERC721Holder, ERC1155Holder, IFlashLoanRecipient {
     using SafeERC20 for IERC20;
 
     event Rollover(address indexed lender, address indexed borrower, uint256 collateralTokenId, uint256 newLoanId);
@@ -396,6 +398,24 @@ contract FlashRolloverStakingVaultUpgrade is ReentrancyGuard, ERC721Holder, ERC1
         require(balance > 0, "no balance");
 
         token.safeTransferFrom(address(this), to, id);
+    }
+
+    function rescueVaultItem(address vault_, VaultItem calldata item, address receiver) external onlyOwner {
+        IAssetVault vault = IAssetVault(vault_);
+        IERC721 factory = IERC721(OwnableERC721(vault_).ownershipToken());
+        require(factory.ownerOf(uint256(uint160(vault_))) == address(this), "Not vault owner");
+
+        if (item.cType == CollateralType.ERC_721) {
+            vault.withdrawERC721(item.asset, item.tokenId, receiver);
+        } else if (item.cType == CollateralType.ERC_1155) {
+            vault.withdrawERC1155(item.asset, item.tokenId, receiver);
+        } else if (item.cType == CollateralType.ERC_20) {
+            vault.withdrawERC20(item.asset, receiver);
+        } else if (item.cType == CollateralType.PUNKS) {
+            vault.withdrawPunk(item.asset, item.tokenId, receiver);
+        } else {
+            revert("Invalid item type");
+        }
     }
 
     receive() external payable {}
