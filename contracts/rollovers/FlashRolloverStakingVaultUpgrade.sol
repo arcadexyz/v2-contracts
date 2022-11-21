@@ -17,6 +17,12 @@ import "../interfaces/IOriginationController.sol";
 import "../interfaces/IRepaymentController.sol";
 import "../interfaces/IFeeController.sol";
 import "../interfaces/IInstallmentsCalc.sol";
+import "../interfaces/IAssetVault.sol";
+
+// TODO:
+// - get compiling
+// - do test
+// - add rescue function
 
 // solhint-disable max-line-length
 
@@ -35,20 +41,23 @@ contract FlashRolloverStakingVaultUpgrade is ReentrancyGuard, ERC721Holder, ERC1
     event Migration(address indexed oldLoanCore, address indexed newLoanCore, uint256 newLoanId);
     event SetOwner(address owner);
 
-
-    struct ERC20Holding {
-        address tokenAddress;
-        uint256 amount;
+    /// @dev Enum describing the collateral type of a signature item
+    enum CollateralType {
+        ERC_721,
+        ERC_1155,
+        ERC_20,
+        PUNKS
     }
 
-    struct ERC721Holding {
-        address tokenAddress;
+    /// @dev Enum describing each item that should be withdrawn from vault
+    struct VaultItem {
+        // The type of collateral - which interface does it implement
+        CollateralType cType;
+        // The address of the collateral contract
+        address asset;
+        // The token ID of the collateral (only applicable to 721 and 1155)
         uint256 tokenId;
-    }
-
-    struct ERC1155Holding {
-        address tokenAddress;
-        uint256 tokenId;
+        // The minimum amount of collateral (only applicable for 20 and 1155)
         uint256 amount;
     }
 
@@ -66,6 +75,7 @@ contract FlashRolloverStakingVaultUpgrade is ReentrancyGuard, ERC721Holder, ERC1
         LoanLibrary.LoanTerms newLoanTerms;
         address lender;
         uint160 nonce;
+        VaultItem[] vaultItems;
         uint8 v;
         bytes32 r;
         bytes32 s;
@@ -76,7 +86,6 @@ contract FlashRolloverStakingVaultUpgrade is ReentrancyGuard, ERC721Holder, ERC1
         IERC721 borrowerNote;
         IERC721 lenderNote;
         IFeeController feeController;
-        IERC721 sourceAssetWrapper;
         IVaultFactory sourceVaultFactory;
         IVaultFactory targetVaultFactory;
         IRepaymentController repaymentController;
@@ -103,6 +112,7 @@ contract FlashRolloverStakingVaultUpgrade is ReentrancyGuard, ERC721Holder, ERC1
         LoanLibrary.LoanTerms calldata newLoanTerms,
         address lender,
         uint160 nonce,
+        VaultItem[] calldata vaultItems,
         uint8 v,
         bytes32 r,
         bytes32 s
@@ -123,11 +133,8 @@ contract FlashRolloverStakingVaultUpgrade is ReentrancyGuard, ERC721Holder, ERC1
                 loanTerms.interestRate
             );
 
-            uint256[] memory modes = new uint256[](1);
-            modes[0] = 0;
-
             bytes memory params = abi.encode(
-                OperationData({ contracts: contracts, loanId: loanId, newLoanTerms: newLoanTerms, lender: lender, nonce: nonce, v: v, r: r, s: s })
+                OperationData(contracts, loanId, newLoanTerms, lender, nonce, vaultItems, v, r, s)
             );
 
             // Flash loan based on principal + interest
@@ -178,7 +185,12 @@ contract FlashRolloverStakingVaultUpgrade is ReentrancyGuard, ERC721Holder, ERC1
         _repayLoan(opContracts, opData.loanId, loanData, borrower);
 
         {
-            _recreateBundle(opContracts, loanData, opData.newLoanTerms.collateralId);
+            _recreateBundle(
+                opContracts,
+                loanData,
+                opData.newLoanTerms.collateralId,
+                opData.vaultItems
+            );
 
             uint256 newLoanId = _initializeNewLoan(
                 opContracts,
@@ -305,61 +317,32 @@ contract FlashRolloverStakingVaultUpgrade is ReentrancyGuard, ERC721Holder, ERC1
     function _recreateBundle(
         OperationContracts memory contracts,
         LoanLibrary.LoanData memory loanData,
-        uint256 vaultId
+        uint256 newVaultId,
+        VaultItem[] memory vaultItems
     ) internal {
-        // TODO: Fix this by calling withdrawEnabled on old vault,
-        //       then withdrawing everything. Since we cannot enumerate contents,
-        //       we need to have them passed by the rollover function.
-        //       After withdrawing everythnig, we create a new vault with the new vault
-        //       factory, and send all the assets back in.
+        // Enable withdraw on old vault
+        uint256 oldVaultId = loanData.terms.collateralId;
+        IAssetVault vault = IAssetVault(contracts.sourceVaultFactory.instanceAt(oldVaultId));
+        vault.enableWithdraw();
 
+        address newVault = contracts.targetVaultFactory.instanceAt(newVaultId);
 
-        uint256 oldBundleId = loanData.terms.collateralTokenId;
-        IAssetWrapper sourceAssetWrapper = IAssetWrapper(address(contracts.sourceAssetWrapper));
+        // Move each vault item from old vault to new vault
+        uint256 numVaultItems = vaultItems.length;
+        for (uint256 i = 0; i < numVaultItems; i++) {
+            VaultItem memory item = vaultItems[i];
 
-        /**
-         * @dev Only ERC721 and ERC1155 bundle holdings supported (ERC20 and ETH
-         *      holdings will be ignored and get stuck). Only 20 of each supported
-         *      (any extras will get stuck).
-         */
-        ERC721Holding[] memory bundleERC721Holdings = new ERC721Holding[](20);
-        ERC1155Holding[] memory bundleERC1155Holdings = new ERC1155Holding[](20);
-
-        for (uint256 i = 0; i < bundleERC721Holdings.length; i++) {
-            try sourceAssetWrapper.bundleERC721Holdings(oldBundleId, i) returns (address tokenAddr, uint256 tokenId) {
-                bundleERC721Holdings[i] = ERC721Holding(tokenAddr, tokenId);
-            } catch { break; }
-        }
-
-        for (uint256 i = 0; i < bundleERC1155Holdings.length; i++) {
-            try sourceAssetWrapper.bundleERC1155Holdings(oldBundleId, i) returns (address tokenAddr, uint256 tokenId, uint256 amount) {
-                bundleERC1155Holdings[i] = ERC1155Holding(tokenAddr, tokenId, amount);
-            } catch { break; }
-        }
-
-        sourceAssetWrapper.withdraw(oldBundleId);
-
-        // Create new asset vault
-        address vault = address(uint160(vaultId));
-
-        for (uint256 i = 0; i < bundleERC721Holdings.length; i++) {
-            ERC721Holding memory h = bundleERC721Holdings[i];
-
-            if (h.tokenAddress == address(0)) {
-                break;
+            if (item.cType == CollateralType.ERC_721) {
+                vault.withdrawERC721(item.asset, item.tokenId, newVault);
+            } else if (item.cType == CollateralType.ERC_1155) {
+                vault.withdrawERC1155(item.asset, item.tokenId, newVault);
+            } else if (item.cType == CollateralType.ERC_20) {
+                vault.withdrawERC20(item.asset, newVault);
+            } else if (item.cType == CollateralType.PUNKS) {
+                vault.withdrawPunk(item.asset, item.tokenId, newVault);
+            } else {
+                revert("Invalid item type");
             }
-
-            IERC721(h.tokenAddress).safeTransferFrom(address(this), vault, h.tokenId);
-        }
-
-        for (uint256 i = 0; i < bundleERC1155Holdings.length; i++) {
-            ERC1155Holding memory h = bundleERC1155Holdings[i];
-
-            if (h.tokenAddress == address(0)) {
-                break;
-            }
-
-            IERC1155(h.tokenAddress).safeTransferFrom(address(this), vault, h.tokenId, h.amount, bytes(""));
         }
     }
 
@@ -414,7 +397,7 @@ contract FlashRolloverStakingVaultUpgrade is ReentrancyGuard, ERC721Holder, ERC1
         uint256 balance = token.balanceOf(address(this));
         require(balance > 0, "no balance");
 
-        token.transfer(to, balance);
+        token.safeTransferFrom(address(this), to, id);
     }
 
     receive() external payable {}
