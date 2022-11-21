@@ -20,8 +20,6 @@ import "../interfaces/IInstallmentsCalc.sol";
 import "../interfaces/IAssetVault.sol";
 
 // TODO:
-// - get compiling
-// - do test
 // - add rescue function
 
 // solhint-disable max-line-length
