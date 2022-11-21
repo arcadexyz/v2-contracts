@@ -27,7 +27,7 @@ export async function main(): Promise<DeployedResources> {
 
     console.log("Rollover deployed to:", flashRollover.address);
 
-    await flashRollover.transferOwnership(MULTISIG);
+    await flashRollover.setOwner(MULTISIG);
 
     console.log("Rollover ownership transferred to multisig.");
 

@@ -9,7 +9,6 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 
 import "../external/interfaces/ILendingPool.sol";
 import "../interfaces/IFlashRolloverBalancer.sol";
@@ -34,7 +33,7 @@ import "../vault/OwnableERC721.sol";
  * Switches from a V2 loan with an old asset vault
  * to a V2 loan with a new asset vault.
  */
-contract FlashRolloverStakingVaultUpgrade is ReentrancyGuard, Ownable, ERC721Holder, ERC1155Holder, IFlashLoanRecipient {
+contract FlashRolloverStakingVaultUpgrade is ReentrancyGuard, ERC721Holder, ERC1155Holder, IFlashLoanRecipient {
     using SafeERC20 for IERC20;
 
     event Rollover(address indexed lender, address indexed borrower, uint256 collateralTokenId, uint256 newLoanId);
@@ -400,7 +399,9 @@ contract FlashRolloverStakingVaultUpgrade is ReentrancyGuard, Ownable, ERC721Hol
         token.safeTransferFrom(address(this), to, id);
     }
 
-    function rescueVaultItem(address vault_, VaultItem calldata item, address receiver) external onlyOwner {
+    function rescueVaultItem(address vault_, VaultItem calldata item, address receiver) external {
+        require(msg.sender == owner, "Not owner");
+
         IAssetVault vault = IAssetVault(vault_);
         IERC721 factory = IERC721(OwnableERC721(vault_).ownershipToken());
         require(factory.ownerOf(uint256(uint160(vault_))) == address(this), "Not vault owner");

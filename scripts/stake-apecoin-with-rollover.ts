@@ -435,6 +435,7 @@ export async function main(): Promise<void> {
 
     console.log("Rolling over loan 4...");
 
+    const av4Old = av4;
     av4 = await createVault(factory, user4);
     terms4 = makeTerms(av4, factory);
     sig4 = await makeRolloverSig(lender, terms4, 6);
@@ -443,6 +444,8 @@ export async function main(): Promise<void> {
     await token.connect(user4).approve(rollover.address, ethers.utils.parseEther("10000"));
     await factory.connect(user4).approve(rollover.address, av4.address);
 
+    // FORGET one vault item.
+    // Then rescue it, and send it to the new vault.
     await rollover.connect(user4).rolloverLoan(
         rolloverContracts,
         note4Id,
@@ -456,16 +459,29 @@ export async function main(): Promise<void> {
                 tokenId: 21026,
                 amount: 0
             },
-            {
-                cType: 0,
-                asset: bakc.address,
-                tokenId: 3292,
-                amount: 0
-            }
+            // {
+            //     cType: 0,
+            //     asset: bakc.address,
+            //     tokenId: 3292,
+            //     amount: 0
+            // }
         ],
         sig4.v,
         sig4.r,
         sig4.s
+    );
+
+    console.log("Rescuing a loan 4 item after rollover...");
+
+    await rollover.rescueVaultItem(
+        av4Old.address,
+        {
+            cType: 0,
+            asset: bakc.address,
+            tokenId: 3292,
+            amount: 0
+        },
+        av4.address
     );
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
