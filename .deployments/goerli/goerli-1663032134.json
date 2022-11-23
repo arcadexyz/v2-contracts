@@ -69,5 +69,12 @@
     "contractAddress": "0x0913aD7F7f684749Dcf626312B59CA0d91B21f4f",
     "contractImplementationAddress": "0x82bBE1c93F77a3c39d8018454e12aa81d7f819F8",
     "constructorArgs": []
+  },
+  "FlashRolloverStakingVaultUpgrade": {
+    "contractAddress": "0xa1B1e697583210358Ef381690D607e3B5Faf74fd",
+    "contractImplementationAddress": "",
+    "constructorArgs": [
+      "0xBA12222222228d8Ba445958a75a0704d566BF2C8"
+    ]
   }
 }
