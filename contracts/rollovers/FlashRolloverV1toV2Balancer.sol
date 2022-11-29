@@ -10,16 +10,16 @@ import "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
-import "./external/interfaces/ILendingPool.sol";
-import "./interfaces/IFlashRolloverBalancer.sol";
-import "./interfaces/ILoanCore.sol";
-import "./interfaces/IOriginationController.sol";
-import "./interfaces/IRepaymentController.sol";
-import "./interfaces/IFeeController.sol";
+import "../external/interfaces/ILendingPool.sol";
+import "../interfaces/IFlashRolloverBalancer.sol";
+import "../interfaces/ILoanCore.sol";
+import "../interfaces/IOriginationController.sol";
+import "../interfaces/IRepaymentController.sol";
+import "../interfaces/IFeeController.sol";
 
-import "./v1/ILoanCoreV1.sol";
-import "./v1/IAssetWrapperV1.sol";
-import "./v1/LoanLibraryV1.sol";
+import "../v1/ILoanCoreV1.sol";
+import "../v1/IAssetWrapperV1.sol";
+import "../v1/LoanLibraryV1.sol";
 
 /**
  * @title BalancerFlashRolloverV1toV2
