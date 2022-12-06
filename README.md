@@ -4,9 +4,8 @@
 
 - 🌐 [Website](https://www.arcade.xyz) - Our app website, with a high-level overview of the project.
 - 📝 [Usage Documentation](https://docs.arcade.xyz) - Our user-facing documentation for Arcade and the Pawn Protocol.
-- 💬 [Discord](https://discord.gg/uNrDStEb) - Join the Arcade community! Great for further technical discussion and real-time support.
+- 💬 [Discord](https://discord.gg/arcadexyz) - Join the Arcade community! Great for further technical discussion and real-time support.
 - 🔔 [Twitter](https://twitter.com/arcade_xyz) - Follow us on Twitter for alerts and announcements.
-- 🐛 [Immunefi](https://immunefi.com/bounty/arcade/) - Participant in our bug bountry program with up to $300k bounties per finding.
 
 # Overview of Contracts
 

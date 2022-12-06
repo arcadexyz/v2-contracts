@@ -79,5 +79,27 @@
       "A0x6e9B4c2f6Bd57b7b924d29b5dcfCa1273Ecc94A2",
       "0x144b1535A3FF4007Aad8921419EE2e02CFdB8e1d"
     ]
+  },
+  "CallWhitelistApprovals": {
+    "contractAddress": "0xB4515A8e5616005f7138D9Eb25b581362d9FDB95",
+    "contractImplementationAddress": "",
+    "constructorArgs": []
+  },
+  "AssetVault[Staking]": {
+    "contractAddress": "0x833835fE565008Fa66FFF31156b78a1FD710bcB5",
+    "contractImplementationAddress": "",
+    "constructorArgs": []
+  },
+  "VaultFactory[Staking]": {
+    "contractAddress": "0x666faa632E5f7bA20a7FCe36596A6736f87133Be",
+    "contractImplementationAddress": "0x371e4F7698760Caac721989E5F1AF72B7d6C596f",
+    "constructorArgs": []
+  },
+  "FlashRolloverStakingVaultUpgrade": {
+    "contractAddress": "0x094Db3031258D6204a4CFc99415EB66F9A01A8C6",
+    "contractImplementationAddress": "",
+    "constructorArgs": [
+      "0xBA12222222228d8Ba445958a75a0704d566BF2C8"
+    ]
   }
 }
