@@ -20,9 +20,6 @@ import "../interfaces/IInstallmentsCalc.sol";
 import "../interfaces/IAssetVault.sol";
 import "../vault/OwnableERC721.sol";
 
-// TODO:
-// - add rescue function
-
 // solhint-disable max-line-length
 
 /**
@@ -60,35 +57,16 @@ contract FlashRolloverStakingVaultUpgrade is ReentrancyGuard, ERC721Holder, ERC1
         uint256 amount;
     }
 
-    struct VaultRolloverContractParams {
-        ILoanCore loanCore;
-        IRepaymentController repaymentController;
-        IOriginationController originationController;
-        IVaultFactory vaultFactory;
-        IVaultFactory targetVaultFactory;
-    }
-
     struct OperationData {
-        VaultRolloverContractParams contracts;
         uint256 loanId;
         LoanLibrary.LoanTerms newLoanTerms;
+        LoanLibrary.Predicate[] itemPredicates;
         address lender;
         uint160 nonce;
         VaultItem[] vaultItems;
         uint8 v;
         bytes32 r;
         bytes32 s;
-    }
-
-    struct OperationContracts {
-        ILoanCore loanCore;
-        IERC721 borrowerNote;
-        IERC721 lenderNote;
-        IFeeController feeController;
-        IVaultFactory sourceVaultFactory;
-        IVaultFactory targetVaultFactory;
-        IRepaymentController repaymentController;
-        IOriginationController originationController;
     }
 
     /* solhint-disable var-name-mixedcase */
@@ -98,48 +76,82 @@ contract FlashRolloverStakingVaultUpgrade is ReentrancyGuard, ERC721Holder, ERC1
     /* solhint-enable var-name-mixedcase */
 
     address private owner;
+    uint8 private flashLoanActive;
 
-    bool public flashLoanActive;
+    // Lending protocol contracts
 
-    constructor(IVault _vault) {
+    ILoanCore public immutable loanCore;
+    IPromissoryNote public immutable borrowerNote;
+    IPromissoryNote public immutable lenderNote;
+    IFeeController public immutable feeController;
+    IOriginationController public immutable originationController;
+    IRepaymentController public immutable repaymentController;
+    IVaultFactory public immutable vaultFactory;
+    IVaultFactory public immutable targetVaultFactory;
+
+    constructor(
+        IVault _vault,
+        ILoanCore _loanCore,
+        IRepaymentController _repaymentController,
+        IOriginationController _originationController,
+        IVaultFactory _vaultFactory,
+        IVaultFactory _targetVaultFactory
+    ) {
         VAULT = _vault;
+
+        loanCore = _loanCore;
+        borrowerNote = _loanCore.borrowerNote();
+        lenderNote = _loanCore.lenderNote();
+        feeController = _loanCore.feeController();
+        originationController = _originationController;
+        repaymentController = _repaymentController;
+        vaultFactory = _vaultFactory;
+        targetVaultFactory = _targetVaultFactory;
 
         owner = msg.sender;
     }
 
     function rolloverLoan(
-        VaultRolloverContractParams calldata contracts,
         uint256 loanId,
         LoanLibrary.LoanTerms calldata newLoanTerms,
         address lender,
         uint160 nonce,
         VaultItem[] calldata vaultItems,
+        LoanLibrary.Predicate[] calldata itemPredicates,
         uint8 v,
         bytes32 r,
         bytes32 s
     ) external {
-        LoanLibrary.LoanTerms memory loanTerms = contracts.loanCore.getLoan(loanId).terms;
+        LoanLibrary.LoanTerms memory loanTerms = loanCore.getLoan(loanId).terms;
 
-        {
-            _validateRollover(contracts.loanCore, contracts.vaultFactory, contracts.targetVaultFactory, loanTerms, newLoanTerms, loanId);
-        }
+        { _validateRollover(loanTerms, newLoanTerms, loanId); }
 
         {
             IERC20[] memory assets = new IERC20[](1);
             assets[0] = IERC20(loanTerms.payableCurrency);
 
             uint256[] memory amounts = new uint256[](1);
-            amounts[0] = IInstallmentsCalc(address(contracts.loanCore)).getFullInterestAmount(
+            amounts[0] = IInstallmentsCalc(address(loanCore)).getFullInterestAmount(
                 loanTerms.principal,
                 loanTerms.interestRate
             );
 
             bytes memory params = abi.encode(
-                OperationData(contracts, loanId, newLoanTerms, lender, nonce, vaultItems, v, r, s)
+                OperationData(
+                    loanId,
+                    newLoanTerms,
+                    itemPredicates,
+                    lender,
+                    nonce,
+                    vaultItems,
+                    v,
+                    r,
+                    s
+                )
             );
 
             // Flash loan based on principal + interest
-            flashLoanActive = true;
+            flashLoanActive = 1;
             VAULT.flashLoan(this, assets, amounts, params);
         }
     }
@@ -150,7 +162,7 @@ contract FlashRolloverStakingVaultUpgrade is ReentrancyGuard, ERC721Holder, ERC1
         uint256[] calldata feeAmounts,
         bytes calldata params
     ) external override nonReentrant {
-        require(flashLoanActive, "No rollover active");
+        require(flashLoanActive == 1, "No rollover active");
         require(msg.sender == address(VAULT), "unknown callback sender");
 
         _executeOperation(assets, amounts, feeAmounts, abi.decode(params, (OperationData)));
@@ -162,19 +174,17 @@ contract FlashRolloverStakingVaultUpgrade is ReentrancyGuard, ERC721Holder, ERC1
         uint256[] memory premiums,
         OperationData memory opData
     ) internal returns (bool) {
-        OperationContracts memory opContracts = _getContracts(opData.contracts);
-
         // Get loan details
-        LoanLibrary.LoanData memory loanData = opContracts.loanCore.getLoan(opData.loanId);
+        LoanLibrary.LoanData memory loanData = loanCore.getLoan(opData.loanId);
 
-        address borrower = opContracts.borrowerNote.ownerOf(opData.loanId);
-        address lender = opContracts.lenderNote.ownerOf(opData.loanId);
+        address borrower = borrowerNote.ownerOf(opData.loanId);
+        address lender = lenderNote.ownerOf(opData.loanId);
 
         // Do accounting to figure out amount each party needs to receive
         (uint256 flashAmountDue, uint256 needFromBorrower, uint256 leftoverPrincipal) = _ensureFunds(
             amounts[0],
             premiums[0],
-            opContracts.feeController.getOriginationFee(),
+            feeController.getOriginationFee(),
             opData.newLoanTerms.principal
         );
 
@@ -185,18 +195,16 @@ contract FlashRolloverStakingVaultUpgrade is ReentrancyGuard, ERC721Holder, ERC1
             require(asset.allowance(borrower, address(this)) >= needFromBorrower, "lacks borrower approval");
         }
 
-        _repayLoan(opContracts, opData.loanId, loanData, borrower);
+        _repayLoan(opData.loanId, loanData, borrower);
 
         {
             _recreateBundle(
-                opContracts,
                 loanData,
                 opData.newLoanTerms.collateralId,
                 opData.vaultItems
             );
 
             uint256 newLoanId = _initializeNewLoan(
-                opContracts,
                 borrower,
                 opData.lender,
                 opData
@@ -218,7 +226,7 @@ contract FlashRolloverStakingVaultUpgrade is ReentrancyGuard, ERC721Holder, ERC1
 
         // Make flash loan repayment
         // Unlike for AAVE, Balancer requires a transfer
-        flashLoanActive = false;
+        flashLoanActive = 2;
 
         asset.transfer(address(VAULT), flashAmountDue);
 
@@ -256,28 +264,27 @@ contract FlashRolloverStakingVaultUpgrade is ReentrancyGuard, ERC721Holder, ERC1
     }
 
     function _repayLoan(
-        OperationContracts memory contracts,
         uint256 loanId,
         LoanLibrary.LoanData memory loanData,
         address borrower
     ) internal {
         // Take BorrowerNote from borrower
         // Must be approved for withdrawal
-        contracts.borrowerNote.transferFrom(borrower, address(this), loanId);
+        borrowerNote.transferFrom(borrower, address(this), loanId);
 
         // Approve repayment
-        uint256 repayAmount = IInstallmentsCalc(address(contracts.loanCore)).getFullInterestAmount(
+        uint256 repayAmount = IInstallmentsCalc(address(loanCore)).getFullInterestAmount(
             loanData.terms.principal,
             loanData.terms.interestRate
         );
 
         IERC20(loanData.terms.payableCurrency).approve(
-            address(contracts.repaymentController),
+            address(repaymentController),
             repayAmount
         );
 
         // Repay loan
-        contracts.repaymentController.repay(loanId);
+        repaymentController.repay(loanId);
 
         // contract now has asset wrapper but has lost funds
         require(
@@ -287,7 +294,6 @@ contract FlashRolloverStakingVaultUpgrade is ReentrancyGuard, ERC721Holder, ERC1
     }
 
     function _initializeNewLoan(
-        OperationContracts memory contracts,
         address borrower,
         address lender,
         OperationData memory opData
@@ -295,14 +301,14 @@ contract FlashRolloverStakingVaultUpgrade is ReentrancyGuard, ERC721Holder, ERC1
         uint256 collateralId = opData.newLoanTerms.collateralId;
 
         // Withdraw vault token
-        IERC721(address(contracts.targetVaultFactory)).safeTransferFrom(borrower, address(this), collateralId);
+        IERC721(address(targetVaultFactory)).safeTransferFrom(borrower, address(this), collateralId);
 
         // approve originationController
-        IERC721(address(contracts.targetVaultFactory)).approve(address(contracts.originationController), collateralId);
+        IERC721(address(targetVaultFactory)).approve(address(originationController), collateralId);
 
         // start new loan
         // stand in for borrower to meet OriginationController's requirements
-        uint256 newLoanId = contracts.originationController.initializeLoan(
+        uint256 newLoanId = originationController.initializeLoanWithItems(
             opData.newLoanTerms,
             address(this),
             lender,
@@ -311,26 +317,26 @@ contract FlashRolloverStakingVaultUpgrade is ReentrancyGuard, ERC721Holder, ERC1
                 r: opData.r,
                 s: opData.s
             }),
-            opData.nonce
+            opData.nonce,
+            opData.itemPredicates
         );
 
-        contracts.borrowerNote.safeTransferFrom(address(this), borrower, newLoanId);
+        borrowerNote.safeTransferFrom(address(this), borrower, newLoanId);
 
         return newLoanId;
     }
 
     function _recreateBundle(
-        OperationContracts memory contracts,
         LoanLibrary.LoanData memory loanData,
         uint256 newVaultId,
         VaultItem[] memory vaultItems
     ) internal {
         // Enable withdraw on old vault
         uint256 oldVaultId = loanData.terms.collateralId;
-        IAssetVault vault = IAssetVault(contracts.sourceVaultFactory.instanceAt(oldVaultId));
+        IAssetVault vault = IAssetVault(vaultFactory.instanceAt(oldVaultId));
         vault.enableWithdraw();
 
-        address newVault = contracts.targetVaultFactory.instanceAt(newVaultId);
+        address newVault = targetVaultFactory.instanceAt(newVaultId);
 
         // Move each vault item from old vault to new vault
         uint256 numVaultItems = vaultItems.length;
@@ -351,32 +357,15 @@ contract FlashRolloverStakingVaultUpgrade is ReentrancyGuard, ERC721Holder, ERC1
         }
     }
 
-    function _getContracts(VaultRolloverContractParams memory contracts) internal returns (OperationContracts memory) {
-        return
-            OperationContracts({
-                loanCore: contracts.loanCore,
-                borrowerNote: contracts.loanCore.borrowerNote(),
-                lenderNote: contracts.loanCore.lenderNote(),
-                feeController: contracts.loanCore.feeController(),
-                sourceVaultFactory: contracts.vaultFactory,
-                targetVaultFactory: contracts.targetVaultFactory,
-                repaymentController: contracts.repaymentController,
-                originationController: contracts.originationController
-            });
-    }
-
     function _validateRollover(
-        ILoanCore sourceLoanCore,
-        IVaultFactory sourceVaultFactory,
-        IVaultFactory targetVaultFactory,
         LoanLibrary.LoanTerms memory sourceLoanTerms,
         LoanLibrary.LoanTerms calldata newLoanTerms,
         uint256 borrowerNoteId
-    ) internal {
-        require(sourceLoanCore.borrowerNote().ownerOf(borrowerNoteId) == msg.sender, "caller not borrower");
+    ) internal view {
+        require(borrowerNote.ownerOf(borrowerNoteId) == msg.sender, "caller not borrower");
         require(newLoanTerms.payableCurrency == sourceLoanTerms.payableCurrency, "currency mismatch");
         require(newLoanTerms.collateralAddress == address(targetVaultFactory), "must target new vault");
-        require(sourceLoanTerms.collateralAddress == address(sourceVaultFactory), "must roll over from old vault");
+        require(sourceLoanTerms.collateralAddress == address(vaultFactory), "must roll over from old vault");
     }
 
     function setOwner(address _owner) external {
