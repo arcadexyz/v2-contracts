@@ -111,49 +111,25 @@ contract FlashRolloverStakingVaultUpgrade is ReentrancyGuard, ERC721Holder, ERC1
         owner = msg.sender;
     }
 
-    function rolloverLoan(
-        uint256 loanId,
-        LoanLibrary.LoanTerms calldata newLoanTerms,
-        address lender,
-        uint160 nonce,
-        VaultItem[] calldata vaultItems,
-        LoanLibrary.Predicate[] calldata itemPredicates,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) external {
-        LoanLibrary.LoanTerms memory loanTerms = loanCore.getLoan(loanId).terms;
+    function rolloverLoan(OperationData calldata data) external {
+        LoanLibrary.LoanTerms memory loanTerms = loanCore.getLoan(data.loanId).terms;
 
-        { _validateRollover(loanTerms, newLoanTerms, loanId); }
+        _validateRollover(loanTerms, data.newLoanTerms, data.loanId);
 
-        {
-            IERC20[] memory assets = new IERC20[](1);
-            assets[0] = IERC20(loanTerms.payableCurrency);
+        // Flash loan based on principal + interest
+        flashLoanActive = 1;
 
-            uint256[] memory amounts = new uint256[](1);
-            amounts[0] = IInstallmentsCalc(address(loanCore)).getFullInterestAmount(
-                loanTerms.principal,
-                loanTerms.interestRate
-            );
+        IERC20[] memory assets = new IERC20[](1);
+        assets[0] = IERC20(loanTerms.payableCurrency);
 
-            bytes memory params = abi.encode(
-                OperationData(
-                    loanId,
-                    newLoanTerms,
-                    itemPredicates,
-                    lender,
-                    nonce,
-                    vaultItems,
-                    v,
-                    r,
-                    s
-                )
-            );
+        uint256[] memory amounts = new uint256[](1);
+        amounts[0] = IInstallmentsCalc(address(loanCore)).getFullInterestAmount(
+            loanTerms.principal,
+            loanTerms.interestRate
+        );
 
-            // Flash loan based on principal + interest
-            flashLoanActive = 1;
-            VAULT.flashLoan(this, assets, amounts, params);
-        }
+        bytes memory params = abi.encode(data);
+        VAULT.flashLoan(this, assets, amounts, params);
     }
 
     function receiveFlashLoan(
