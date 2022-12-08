@@ -99,6 +99,8 @@ contract FlashRolloverStakingVaultUpgrade is ReentrancyGuard, ERC721Holder, ERC1
 
     address private owner;
 
+    bool public flashLoanActive;
+
     constructor(IVault _vault) {
         VAULT = _vault;
 
@@ -137,6 +139,7 @@ contract FlashRolloverStakingVaultUpgrade is ReentrancyGuard, ERC721Holder, ERC1
             );
 
             // Flash loan based on principal + interest
+            flashLoanActive = true;
             VAULT.flashLoan(this, assets, amounts, params);
         }
     }
@@ -147,6 +150,7 @@ contract FlashRolloverStakingVaultUpgrade is ReentrancyGuard, ERC721Holder, ERC1
         uint256[] calldata feeAmounts,
         bytes calldata params
     ) external override nonReentrant {
+        require(flashLoanActive, "No rollover active");
         require(msg.sender == address(VAULT), "unknown callback sender");
 
         _executeOperation(assets, amounts, feeAmounts, abi.decode(params, (OperationData)));
@@ -214,6 +218,8 @@ contract FlashRolloverStakingVaultUpgrade is ReentrancyGuard, ERC721Holder, ERC1
 
         // Make flash loan repayment
         // Unlike for AAVE, Balancer requires a transfer
+        flashLoanActive = false;
+
         asset.transfer(address(VAULT), flashAmountDue);
 
         return true;
