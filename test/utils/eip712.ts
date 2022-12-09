@@ -147,7 +147,7 @@ export async function createLoanItemsSignature(
     itemsHash: string,
     signer: SignerWithAddress,
     version = "1",
-    nonce = "1",
+    nonce: BigNumberish = "1",
     _side: "b" | "l",
 ): Promise<ECDSASignature> {
     const side = _side === "b" ? 0 : 1;

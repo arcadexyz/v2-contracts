@@ -1,12 +1,16 @@
 /* eslint no-unused-vars: 0 */
 
 import hre, { ethers, upgrades } from "hardhat";
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
+
 import { ApeCoinStaking, AssetVault, CallWhitelistApprovals, MockERC20, OriginationController, PromissoryNote, VaultFactory, RepaymentController, FlashRolloverStakingVaultUpgrade } from "../typechain";
 
 import { createVault } from "./utils/vault";
-import { LoanTerms } from "../test/utils/types";
-import { createLoanTermsSignature } from "../test/utils/eip712";
-import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
+import { ItemsPredicate, LoanTerms, SignatureItem } from "../test/utils/types";
+import { createLoanItemsSignature } from "../test/utils/eip712";
+import { encodePredicates, encodeSignatureItems } from "../test/utils/loans";
+import { main as deployRollover } from "./deploy/deploy-vault-upgrade-rollover";
+import { encode } from "querystring";
 
 /**
  * This script runs apecoin staking through end-to-end, by:
@@ -36,8 +40,10 @@ export async function main(): Promise<void> {
     const BAYC = "0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D";
     const MAYC = "0x60E4d786628Fea6478F785A6d7e704777c86a7c6";
     const BAKC = "0xba30E5F9Bb24caa003E9f2f0497Ad287FDF95623";
-    const WHALE = "0x54BE3a794282C030b15E43aE2bB182E14c409C5e";
+    const BAYC_WHALE = "0x54BE3a794282C030b15E43aE2bB182E14c409C5e";
+    const ETH_WHALE = "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045";
     const OWNER = "0xA2852f6E66cbA2A69685da5cB0A7e48dB8b3E05a";
+    const VAULT = "0xBA12222222228d8Ba445958a75a0704d566BF2C8";
 
     const LOAN_CORE = "0x81b2F8Fc75Bab64A6b144aa6d2fAa127B4Fa7fD9";
     const ORIGINATION_CONTROLLER = "0x4c52ca29388A8A854095Fd2BeB83191D68DC840b";
@@ -45,16 +51,25 @@ export async function main(): Promise<void> {
     const BORROWER_NOTE = "0x337104A4f06260Ff327d6734C555A0f5d8F863aa";
     const ARCADE_MSIG = "0x398e92C827C5FA0F33F171DC8E20570c5CfF330e";
     const OLD_FACTORY = "0x6e9B4c2f6Bd57b7b924d29b5dcfCa1273Ecc94A2";
-    const VAULT = "0xBA12222222228d8Ba445958a75a0704d566BF2C8";
+    const VERIFIER = "0xAbfD9D9E4157695DB5812eeE279D923a4f948Df0";
 
     const [user1, user2, user3, user4, lender] = await ethers.getSigners();
 
     await hre.network.provider.request({
         method: "hardhat_impersonateAccount",
-        params: [WHALE],
+        params: [BAYC_WHALE],
     });
 
-    const whale = await hre.ethers.getSigner(WHALE);
+    const baycWhale = await hre.ethers.getSigner(BAYC_WHALE);
+
+    await hre.network.provider.request({
+        method: "hardhat_impersonateAccount",
+        params: [ETH_WHALE],
+    });
+
+    const ethWhale = await hre.ethers.getSigner(ETH_WHALE);
+
+    await ethWhale.sendTransaction({ to: BAYC_WHALE, value: ethers.utils.parseEther("10") });
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ///////////////////////////////////      STEP 1: TOKEN DISTRIBUTION        ////////////////////////////////////////
@@ -75,28 +90,28 @@ export async function main(): Promise<void> {
     const apeAmount = ethers.utils.parseEther("100");
 
     // Send APE to users
-    await ape.connect(whale).transfer(user1.address, apeAmount);
-    await ape.connect(whale).transfer(user2.address, apeAmount);
-    await ape.connect(whale).transfer(user3.address, apeAmount);
-    await ape.connect(whale).transfer(user4.address, apeAmount);
-    await ape.connect(whale).transfer(OWNER, ethers.utils.parseEther("100000"));
+    await ape.connect(baycWhale).transfer(user1.address, apeAmount);
+    await ape.connect(baycWhale).transfer(user2.address, apeAmount);
+    await ape.connect(baycWhale).transfer(user3.address, apeAmount);
+    await ape.connect(baycWhale).transfer(user4.address, apeAmount);
+    await ape.connect(baycWhale).transfer(OWNER, ethers.utils.parseEther("100000"));
 
     // Send NFTs to users
-    await bayc.connect(whale).transferFrom(whale.address, user1.address, 3518);
-    await bayc.connect(whale).transferFrom(whale.address, user3.address, 1044);
-    await mayc.connect(whale).transferFrom(whale.address, user2.address, 11706);
-    await mayc.connect(whale).transferFrom(whale.address, user4.address, 21026);
-    await bakc.connect(whale).transferFrom(whale.address, user3.address, 6037);
-    await bakc.connect(whale).transferFrom(whale.address, user4.address, 3292);
+    await bayc.connect(baycWhale).transferFrom(baycWhale.address, user1.address, 3518);
+    await bayc.connect(baycWhale).transferFrom(baycWhale.address, user3.address, 1044);
+    await mayc.connect(baycWhale).transferFrom(baycWhale.address, user2.address, 11706);
+    await mayc.connect(baycWhale).transferFrom(baycWhale.address, user4.address, 21026);
+    await bakc.connect(baycWhale).transferFrom(baycWhale.address, user3.address, 6037);
+    await bakc.connect(baycWhale).transferFrom(baycWhale.address, user4.address, 3292);
 
     // Send ETH to users for gas
-    await whale.sendTransaction({ to: user1.address, value: ethers.utils.parseEther("0.5") });
-    await whale.sendTransaction({ to: user2.address, value: ethers.utils.parseEther("0.5") });
-    await whale.sendTransaction({ to: user3.address, value: ethers.utils.parseEther("0.5") });
-    await whale.sendTransaction({ to: user4.address, value: ethers.utils.parseEther("0.5") });
-    await whale.sendTransaction({ to: lender.address, value: ethers.utils.parseEther("0.5") });
-    await whale.sendTransaction({ to: OWNER, value: ethers.utils.parseEther("0.5") });
-    await whale.sendTransaction({ to: ARCADE_MSIG, value: ethers.utils.parseEther("0.5") });
+    await ethWhale.sendTransaction({ to: user1.address, value: ethers.utils.parseEther("0.5") });
+    await ethWhale.sendTransaction({ to: user2.address, value: ethers.utils.parseEther("0.5") });
+    await ethWhale.sendTransaction({ to: user3.address, value: ethers.utils.parseEther("0.5") });
+    await ethWhale.sendTransaction({ to: user4.address, value: ethers.utils.parseEther("0.5") });
+    await ethWhale.sendTransaction({ to: lender.address, value: ethers.utils.parseEther("0.5") });
+    await ethWhale.sendTransaction({ to: OWNER, value: ethers.utils.parseEther("0.5") });
+    await ethWhale.sendTransaction({ to: ARCADE_MSIG, value: ethers.utils.parseEther("0.5") });
 
     // Send mock tokens for loan principal
     const tokenFactory = await ethers.getContractFactory("MockERC20");
@@ -223,8 +238,13 @@ export async function main(): Promise<void> {
     /////////////////////////////////          STEP 5: ROLLOVER DEPLOY          ///////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    const rolloverFactory = await hre.ethers.getContractFactory("FlashRolloverStakingVaultUpgrade");
-    const rollover = <FlashRolloverStakingVaultUpgrade>await rolloverFactory.deploy(VAULT);
+    const { flashRollover: rollover } = await deployRollover(
+        LOAN_CORE,
+        REPAYMENT_CONTROLLER,
+        ORIGINATION_CONTROLLER,
+        OLD_FACTORY,
+        factory.address,
+    );
 
     const noteFactory = await hre.ethers.getContractFactory("PromissoryNote");
     const note = <PromissoryNote>await noteFactory.attach(BORROWER_NOTE);
@@ -247,11 +267,12 @@ export async function main(): Promise<void> {
         deadline: Math.floor(Date.now() / 1000 + 1000)
     });
 
-    const makeSig = async (signer: SignerWithAddress, terms: LoanTerms, nonce = 2) =>
-        createLoanTermsSignature(
+    const makeSig = async (signer: SignerWithAddress, terms: LoanTerms, predicates: ItemsPredicate[], nonce = 2) =>
+        createLoanItemsSignature(
             ORIGINATION_CONTROLLER,
             "OriginationController",
             terms,
+            encodePredicates(predicates),
             signer,
             "2",
             nonce,
@@ -266,11 +287,25 @@ export async function main(): Promise<void> {
     await oldFactory.connect(user1).approve(ORIGINATION_CONTROLLER, av1.address);
 
     let terms1 = makeTerms(av1);
-    let sig1 = await makeSig(user1, terms1);
+    const items1: SignatureItem[] = [
+        {
+            cType: 0,
+            asset: bayc.address,
+            tokenId: 3518,
+            amount: 0
+        }
+    ];
+    const predicates1: ItemsPredicate[] = [
+        {
+            verifier: VERIFIER,
+            data: encodeSignatureItems(items1)
+        }
+    ];
+    let sig1 = await makeSig(user1, terms1, predicates1);
 
     await originationController
         .connect(lender)
-        .initializeLoan(terms1, user1.address, lender.address, sig1, 2);
+        .initializeLoanWithItems(terms1, user1.address, lender.address, sig1, 2, predicates1);
 
     console.log("Starting loan 2...");
 
@@ -280,11 +315,25 @@ export async function main(): Promise<void> {
     await oldFactory.connect(user2).approve(ORIGINATION_CONTROLLER, av2.address);
 
     let terms2 = makeTerms(av2);
-    let sig2 = await makeSig(user2, terms2);
+    const items2: SignatureItem[] = [
+        {
+            cType: 0,
+            asset: mayc.address,
+            tokenId: 11706,
+            amount: 0
+        }
+    ];
+    const predicates2: ItemsPredicate[] = [
+        {
+            verifier: VERIFIER,
+            data: encodeSignatureItems(items2)
+        }
+    ];
+    let sig2 = await makeSig(user2, terms2, predicates2);
 
     await originationController
         .connect(lender)
-        .initializeLoan(terms2, user2.address, lender.address, sig2, 2);
+        .initializeLoanWithItems(terms2, user2.address, lender.address, sig2, 2, predicates2);
 
     console.log("Starting loan 3...");
 
@@ -295,11 +344,31 @@ export async function main(): Promise<void> {
     await oldFactory.connect(user3).approve(ORIGINATION_CONTROLLER, av3.address);
 
     let terms3 = makeTerms(av3);
-    let sig3 = await makeSig(user3, terms3);
+    const items3: SignatureItem[] = [
+        {
+            cType: 0,
+            asset: bayc.address,
+            tokenId: 1044,
+            amount: 0
+        },
+        {
+            cType: 0,
+            asset: bakc.address,
+            tokenId: 6037,
+            amount: 0
+        }
+    ];
+    const predicates3: ItemsPredicate[] = [
+        {
+            verifier: VERIFIER,
+            data: encodeSignatureItems(items3)
+        }
+    ];
+    let sig3 = await makeSig(user3, terms3, predicates3);
 
     await originationController
         .connect(lender)
-        .initializeLoan(terms3, user3.address, lender.address, sig3, 2);
+        .initializeLoanWithItems(terms3, user3.address, lender.address, sig3, 2, predicates3);
 
     console.log("Starting loan 4...");
 
@@ -310,53 +379,68 @@ export async function main(): Promise<void> {
     await oldFactory.connect(user4).approve(ORIGINATION_CONTROLLER, av4.address);
 
     let terms4 = makeTerms(av4);
-    let sig4 = await makeSig(user4, terms4);
+    const items4: SignatureItem[] = [
+        {
+            cType: 0,
+            asset: mayc.address,
+            tokenId: 21026,
+            amount: 0
+        },
+        // DO NOT include, since this item will be forgotten
+        // in the rollover vaultItems
+        // {
+        //     cType: 0,
+        //     asset: bakc.address,
+        //     tokenId: 3292,
+        //     amount: 0
+        // }
+    ];
+    const predicates4: ItemsPredicate[] = [
+        {
+            verifier: VERIFIER,
+            data: encodeSignatureItems(items4)
+        }
+    ];
+    let sig4 = await makeSig(user4, terms4, predicates4);
 
     await originationController
         .connect(lender)
-        .initializeLoan(terms4, user4.address, lender.address, sig4, 2);
+        .initializeLoanWithItems(terms4, user4.address, lender.address, sig4, 2, predicates4);
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ///////////////////////////////////            STEP 7: ROLLOVERS             //////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    const makeRolloverSig = async (signer: SignerWithAddress, terms: LoanTerms, nonce = 3) =>
-        createLoanTermsSignature(
+    const makeRolloverSig = async (signer: SignerWithAddress, terms: LoanTerms, predicates: ItemsPredicate[], nonce = 3) =>
+        createLoanItemsSignature(
             ORIGINATION_CONTROLLER,
             "OriginationController",
             terms,
+            encodePredicates(predicates),
             signer,
             "2",
             nonce,
             "l"
         );
 
-    const rolloverContracts = {
-        loanCore: LOAN_CORE,
-        repaymentController: REPAYMENT_CONTROLLER,
-        originationController: ORIGINATION_CONTROLLER,
-        vaultFactory: OLD_FACTORY,
-        targetVaultFactory: factory.address
-    };
-
     // Roll over each loan to a new vault
     console.log("Rolling over loan 1...");
 
     av1 = await createVault(factory, user1);
     terms1 = makeTerms(av1, factory);
-    sig1 = await makeRolloverSig(lender, terms1, 3);
+    sig1 = await makeRolloverSig(lender, terms1, predicates1, 3);
     let note1Id = await note.tokenOfOwnerByIndex(user1.address, 0);
     await note.connect(user1).approve(rollover.address, note1Id);
     await token.connect(user1).approve(rollover.address, ethers.utils.parseEther("10000"));
     await factory.connect(user1).approve(rollover.address, av1.address);
 
-    await rollover.connect(user1).rolloverLoan(
-        rolloverContracts,
-        note1Id,
-        terms1,
-        lender.address,
-        3,
-        [
+    await rollover.connect(user1).rolloverLoan({
+        loanId: note1Id,
+        newLoanTerms: terms1,
+        itemPredicates: predicates1,
+        lender: lender.address,
+        nonce: 3,
+        vaultItems: [
             {
                 cType: 0,
                 asset: bayc.address,
@@ -364,28 +448,28 @@ export async function main(): Promise<void> {
                 amount: 0
             }
         ],
-        sig1.v,
-        sig1.r,
-        sig1.s
-    );
+        v: sig1.v,
+        r: sig1.r,
+        s: sig1.s
+    });
 
     console.log("Rolling over loan 2...");
 
     av2 = await createVault(factory, user2);
     terms2 = makeTerms(av2, factory);
-    sig2 = await makeRolloverSig(lender, terms2, 4);
+    sig2 = await makeRolloverSig(lender, terms2, predicates2, 4);
     let note2Id = await note.tokenOfOwnerByIndex(user2.address, 0);
     await note.connect(user2).approve(rollover.address, note2Id);
     await token.connect(user2).approve(rollover.address, ethers.utils.parseEther("10000"));
     await factory.connect(user2).approve(rollover.address, av2.address);
 
-    await rollover.connect(user2).rolloverLoan(
-        rolloverContracts,
-        note2Id,
-        terms2,
-        lender.address,
-        4,
-        [
+    await rollover.connect(user2).rolloverLoan({
+        loanId: note2Id,
+        newLoanTerms: terms2,
+        itemPredicates: predicates2,
+        lender: lender.address,
+        nonce: 4,
+        vaultItems: [
             {
                 cType: 0,
                 asset: mayc.address,
@@ -393,28 +477,28 @@ export async function main(): Promise<void> {
                 amount: 0
             }
         ],
-        sig2.v,
-        sig2.r,
-        sig2.s
-    );
+        v: sig2.v,
+        r: sig2.r,
+        s: sig2.s
+    });
 
     console.log("Rolling over loan 3...");
 
     av3 = await createVault(factory, user3);
     terms3 = makeTerms(av3, factory);
-    sig3 = await makeRolloverSig(lender, terms3, 5);
+    sig3 = await makeRolloverSig(lender, terms3, predicates3, 5);
     let note3Id = await note.tokenOfOwnerByIndex(user3.address, 0);
     await note.connect(user3).approve(rollover.address, note3Id);
     await token.connect(user3).approve(rollover.address, ethers.utils.parseEther("10000"));
     await factory.connect(user3).approve(rollover.address, av3.address);
 
-    await rollover.connect(user3).rolloverLoan(
-        rolloverContracts,
-        note3Id,
-        terms3,
-        lender.address,
-        5,
-        [
+    await rollover.connect(user3).rolloverLoan({
+        loanId: note3Id,
+        newLoanTerms: terms3,
+        itemPredicates: predicates3,
+        lender: lender.address,
+        nonce: 5,
+        vaultItems: [
             {
                 cType: 0,
                 asset: bayc.address,
@@ -428,17 +512,17 @@ export async function main(): Promise<void> {
                 amount: 0
             }
         ],
-        sig3.v,
-        sig3.r,
-        sig3.s
-    );
+        v: sig3.v,
+        r: sig3.r,
+        s: sig3.s
+    });
 
     console.log("Rolling over loan 4...");
 
     const av4Old = av4;
     av4 = await createVault(factory, user4);
     terms4 = makeTerms(av4, factory);
-    sig4 = await makeRolloverSig(lender, terms4, 6);
+    sig4 = await makeRolloverSig(lender, terms4, predicates4, 6);
     let note4Id = await note.tokenOfOwnerByIndex(user4.address, 0);
     await note.connect(user4).approve(rollover.address, note4Id);
     await token.connect(user4).approve(rollover.address, ethers.utils.parseEther("10000"));
@@ -446,13 +530,13 @@ export async function main(): Promise<void> {
 
     // FORGET one vault item.
     // Then rescue it, and send it to the new vault.
-    await rollover.connect(user4).rolloverLoan(
-        rolloverContracts,
-        note4Id,
-        terms4,
-        lender.address,
-        6,
-        [
+    await rollover.connect(user4).rolloverLoan({
+        loanId: note4Id,
+        newLoanTerms: terms4,
+        itemPredicates: predicates4,
+        lender: lender.address,
+        nonce: 6,
+        vaultItems: [
             {
                 cType: 0,
                 asset: mayc.address,
@@ -466,10 +550,10 @@ export async function main(): Promise<void> {
             //     amount: 0
             // }
         ],
-        sig4.v,
-        sig4.r,
-        sig4.s
-    );
+        v: sig4.v,
+        r: sig4.r,
+        s: sig4.s
+    });
 
     console.log("Rescuing a loan 4 item after rollover...");
 

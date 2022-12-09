@@ -5,11 +5,30 @@ import {
     FlashRolloverStakingVaultUpgrade
 } from "../../typechain";
 
+import fs from "fs";
+
+const DEPLOYMENTS_DIR = `./.deployments/${hre.network.name}`;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let deployment: any;
+
+if (fs.existsSync(DEPLOYMENTS_DIR)) {
+    const deployments = fs.readdirSync(DEPLOYMENTS_DIR);
+    const latestDeployment = deployments[deployments.length - 1];
+    deployment = JSON.parse(fs.readFileSync(`${DEPLOYMENTS_DIR}/${latestDeployment}`, "utf8"));
+}
+
+
 export interface DeployedResources {
     flashRollover: FlashRolloverStakingVaultUpgrade;
 }
 
-export async function main(): Promise<DeployedResources> {
+export async function main(
+    loanCore = deployment?.["LoanCore"].contractAddress,
+    repaymentController = deployment?.["RepaymentController"].contractAddress,
+    originationController = deployment?.["OriginationController"].contractAddress,
+    vaultFactory = deployment?.["VaultFactory"].contractAddress,
+    stakingVaultFactory = deployment?.["VaultFactory[Staking]"].contractAddress
+): Promise<DeployedResources> {
     // Hardhat always runs the compile task when running scripts through it.
     // If this runs in a standalone fashion you may want to call compile manually
     // to make sure everything is compiled
@@ -23,13 +42,22 @@ export async function main(): Promise<DeployedResources> {
     console.log("Deploying rollover...");
 
     const factory = await ethers.getContractFactory("FlashRolloverStakingVaultUpgrade")
-    const flashRollover = <FlashRolloverStakingVaultUpgrade>await factory.deploy(VAULT_ADDRESS);
+    const flashRollover = <FlashRolloverStakingVaultUpgrade>await factory.deploy(
+        VAULT_ADDRESS,
+        loanCore,
+        repaymentController,
+        originationController,
+        vaultFactory,
+        stakingVaultFactory
+    );
 
     console.log("Rollover deployed to:", flashRollover.address);
 
-    await flashRollover.setOwner(MULTISIG);
+    if (hre.network.name === "mainnet") {
+        await flashRollover.setOwner(MULTISIG);
 
-    console.log("Rollover ownership transferred to multisig.");
+        console.log("Rollover ownership transferred to multisig.");
+    }
 
     return { flashRollover };
 }
