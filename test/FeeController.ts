@@ -85,7 +85,7 @@ describe("FeeController", () => {
                 await expect(feeController.connect(user).setRolloverFee(10_000)).to.be.revertedWith("FC_FeeTooLarge");
             });
 
-            it("sets origination fee", async () => {
+            it("sets rollover fee", async () => {
                 const { feeController, user } = await loadFixture(fixture);
                 await expect(feeController.connect(user).setRolloverFee(123))
                     .to.emit(feeController, "UpdateRolloverFee")
@@ -108,6 +108,86 @@ describe("FeeController", () => {
 
                 const rolloverFee = await feeController.connect(user).getRolloverFee();
                 expect(rolloverFee).to.equal(newFee);
+            });
+        });
+
+        describe("setCollateralSaleFee", () => {
+            it("reverts if sender does not have admin role", async () => {
+                const { feeController, other } = await loadFixture(fixture);
+                await expect(feeController.connect(other).setCollateralSaleFee(1234)).to.be.revertedWith(
+                    "Ownable: caller is not the owner",
+                );
+            });
+
+            it("reverts if new fee is over the maximum", async () => {
+                const { feeController, user } = await loadFixture(fixture);
+                await expect(feeController.connect(user).setCollateralSaleFee(10_000)).to.be.revertedWith(
+                    "FC_FeeTooLarge",
+                );
+            });
+
+            it("sets collateralSale fee", async () => {
+                const { feeController, user } = await loadFixture(fixture);
+                await expect(feeController.connect(user).setCollateralSaleFee(123))
+                    .to.emit(feeController, "UpdateCollateralSaleFee")
+                    .withArgs(123);
+            });
+        });
+
+        describe("getCollateralSaleFee", () => {
+            it("initially returns 0.0%", async () => {
+                const { feeController, user } = await loadFixture(fixture);
+                const collateralSaleFee = await feeController.connect(user).getCollateralSaleFee();
+                expect(collateralSaleFee).to.equal(0);
+            });
+
+            it("returns updated collateralSale fee after set", async () => {
+                const { feeController, user } = await loadFixture(fixture);
+                const newFee = 200;
+
+                await feeController.connect(user).setCollateralSaleFee(newFee);
+
+                const collateralSaleFee = await feeController.connect(user).getCollateralSaleFee();
+                expect(collateralSaleFee).to.equal(newFee);
+            });
+        });
+
+        describe("setPayLaterFee", () => {
+            it("reverts if sender does not have admin role", async () => {
+                const { feeController, other } = await loadFixture(fixture);
+                await expect(feeController.connect(other).setPayLaterFee(1234)).to.be.revertedWith(
+                    "Ownable: caller is not the owner",
+                );
+            });
+
+            it("reverts if new fee is over the maximum", async () => {
+                const { feeController, user } = await loadFixture(fixture);
+                await expect(feeController.connect(user).setPayLaterFee(10_000)).to.be.revertedWith("FC_FeeTooLarge");
+            });
+
+            it("sets payLater fee", async () => {
+                const { feeController, user } = await loadFixture(fixture);
+                await expect(feeController.connect(user).setPayLaterFee(123))
+                    .to.emit(feeController, "UpdatePayLaterFee")
+                    .withArgs(123);
+            });
+        });
+
+        describe("getPayLaterFee", () => {
+            it("initially returns 0.0%", async () => {
+                const { feeController, user } = await loadFixture(fixture);
+                const payLaterFee = await feeController.connect(user).getPayLaterFee();
+                expect(payLaterFee).to.equal(0);
+            });
+
+            it("returns updated collateralSale fee after set", async () => {
+                const { feeController, user } = await loadFixture(fixture);
+                const newFee = 200;
+
+                await feeController.connect(user).setPayLaterFee(newFee);
+
+                const payLaterFee = await feeController.connect(user).getPayLaterFee();
+                expect(payLaterFee).to.equal(newFee);
             });
         });
     });

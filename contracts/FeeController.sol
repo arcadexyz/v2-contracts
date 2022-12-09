@@ -26,11 +26,17 @@ contract FeeController is IFeeController, Ownable {
     ///      which drain principal.
     uint256 public constant MAX_ORIGINATION_FEE = 1000;
     uint256 public constant MAX_ROLLOVER_FEE = 500;
+    uint256 public constant MAX_COLLATERALSALE_FEE = 500;
+    uint256 public constant MAX_PAYLATER_FEE = 500;
 
     /// @dev Fee for origination - default is 0.5%
     uint256 private originationFee = 50;
     /// @dev Fee for rollovers - default is 0.1%
     uint256 private rolloverFee = 10;
+    /// @dev Fee for collateral sale - default is 0.0%
+    uint256 private collateralSaleFee = 0;
+    /// @dev Fee for pay later - default is 0.0%
+    uint256 private payLaterFee = 0;
 
     // ========================================= FEE SETTERS ===========================================
 
@@ -48,7 +54,7 @@ contract FeeController is IFeeController, Ownable {
     }
 
     /**
-     * @notice Set the origination fee to the given value. The caller
+     * @notice Set the rollover fee to the given value. The caller
      *         must be the owner of the contract.
      *
      * @param _rolloverFee          The new rollover fee, in bps.
@@ -58,6 +64,32 @@ contract FeeController is IFeeController, Ownable {
 
         rolloverFee = _rolloverFee;
         emit UpdateRolloverFee(_rolloverFee);
+    }
+
+    /**
+     * @notice Set the collateralSale fee to the given value. The caller
+     *         must be the owner of the contract.
+     *
+     * @param _collateralSaleFee     The new collateralSale fee, in bps.
+     */
+    function setCollateralSaleFee(uint256 _collateralSaleFee) external override onlyOwner {
+        if (_collateralSaleFee > MAX_COLLATERALSALE_FEE) revert FC_FeeTooLarge();
+
+        collateralSaleFee = _collateralSaleFee;
+        emit UpdateCollateralSaleFee(_collateralSaleFee);
+    }
+
+    /**
+     * @notice Set the payLater fee to the given value. The caller
+     *         must be the owner of the contract.
+     *
+     * @param _payLaterFee          The new payLater fee, in bps.
+     */
+    function setPayLaterFee(uint256 _payLaterFee) external override onlyOwner {
+        if (_payLaterFee > MAX_PAYLATER_FEE) revert FC_FeeTooLarge();
+
+        payLaterFee = _payLaterFee;
+        emit UpdatePayLaterFee(_payLaterFee);
     }
 
     // ========================================= FEE GETTERS ===========================================
@@ -72,11 +104,29 @@ contract FeeController is IFeeController, Ownable {
     }
 
     /**
-     * @notice Get the current origination fee in bps.
+     * @notice Get the current rollover fee in bps.
      *
      * @return rolloverFee       The current fee in bps.
      */
     function getRolloverFee() public view override returns (uint256) {
         return rolloverFee;
+    }
+
+    /**
+     * @notice Get the current collateralSale fee in bps.
+     *
+     * @return collateralSaleFee   The current fee in bps.
+     */
+    function getCollateralSaleFee() public view override returns (uint256) {
+        return collateralSaleFee;
+    }
+
+    /**
+     * @notice Get the current payLater fee in bps.
+     *
+     * @return payLaterFee   The current fee in bps.
+     */
+    function getPayLaterFee() public view override returns (uint256) {
+        return payLaterFee;
     }
 }
