@@ -180,7 +180,7 @@ describe("FeeController", () => {
                 expect(payLaterFee).to.equal(0);
             });
 
-            it("returns updated collateralSale fee after set", async () => {
+            it("returns updated payLater fee after set", async () => {
                 const { feeController, user } = await loadFixture(fixture);
                 const newFee = 200;
 
