@@ -34,6 +34,12 @@ export async function main(
     // to make sure everything is compiled
     // await run("compile");
 
+    console.log("ADDRESS: ", loanCore)
+    console.log("ADDRESS: ", repaymentController)
+    console.log("ADDRESS: ", originationController)
+    console.log("ADDRESS: ", vaultFactory)
+    console.log("ADDRESS: ", stakingVaultFactory)
+
     const MULTISIG = "0x398e92C827C5FA0F33F171DC8E20570c5CfF330e";
     const VAULT_ADDRESS = "0xBA12222222228d8Ba445958a75a0704d566BF2C8";
 
