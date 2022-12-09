@@ -12,7 +12,7 @@ interface TestContext {
     signers: Signer[];
 }
 
-describe.only("FeeController", () => {
+describe("FeeController", () => {
     const fixture = async (): Promise<TestContext> => {
         const signers: Signer[] = await hre.ethers.getSigners();
         const feeController = <FeeController>await deploy("FeeController", signers[0], []);
