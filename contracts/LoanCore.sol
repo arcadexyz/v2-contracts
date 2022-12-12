@@ -501,7 +501,10 @@ contract LoanCore is
 
             // if the borrower is currently borrowing against this vault,
             // return true
-            if (loans[loanId].terms.collateralId == uint256(uint160(vault))) {
+            if (
+                loans[loanId].terms.collateralAddress == OwnableERC721(vault).ownershipToken() &&
+                loans[loanId].terms.collateralId == uint256(uint160(vault))
+            ) {
                 return true;
             }
         }
