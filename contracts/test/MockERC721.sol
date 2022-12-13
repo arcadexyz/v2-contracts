@@ -26,6 +26,19 @@ contract MockERC721 is Context, ERC721Enumerable {
         _tokenIdTracker.increment();
     }
 
+
+    /**
+     * @dev Creates a new token for `to`. Public for any test to call.
+     *
+     * See {ERC721-_mint}.
+     */
+    function mintId(uint256 id, address to) external returns (uint256 tokenId) {
+        _mint(to, id);
+        _tokenIdTracker.increment();
+
+        return id;
+    }
+
     /**
      * @dev Burn the given token, can be called by anyone
      */
